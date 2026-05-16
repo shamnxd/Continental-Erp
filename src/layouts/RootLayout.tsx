@@ -54,7 +54,24 @@ export function RootLayout() {
     }
     return false;
   });
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
+
+  const notifications = [
+    { id: 1, title: "New Enquiry", message: "New enquiry from ABC Corporation", time: "2 mins ago", type: "enquiry" },
+    { id: 2, title: "AMC Due", message: "AMC visit for XYZ Industries is due tomorrow", time: "1 hour ago", type: "amc" },
+    { id: 3, title: "Complaint Assigned", message: "You have been assigned a new complaint", time: "3 hours ago", type: "complaint" },
+  ];
+
+  const searchResults = searchQuery 
+    ? navigation.flatMap(item => 
+        item.submenu 
+          ? item.submenu.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
+          : item.name.toLowerCase().includes(searchQuery.toLowerCase()) ? [item] : []
+      )
+    : [];
 
   useEffect(() => {
     if (darkMode) {
@@ -219,7 +236,7 @@ export function RootLayout() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2.5 hover:bg-muted rounded-xl transition-colors relative group"
@@ -231,13 +248,113 @@ export function RootLayout() {
                 <Moon className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
               )}
             </button>
-            <button className="p-2.5 hover:bg-muted rounded-xl transition-colors relative group">
-              <Search className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
-            </button>
-            <button className="p-2.5 hover:bg-muted rounded-xl transition-colors relative group">
-              <Bell className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full ring-2 ring-card"></span>
-            </button>
+            {/* Global Search Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowSearch(!showSearch);
+                  setShowNotifications(false);
+                }}
+                className={`p-2.5 hover:bg-muted rounded-xl transition-colors relative group ${showSearch ? 'bg-muted text-foreground' : ''}`}
+              >
+                <Search className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+              </button>
+              
+              {showSearch && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSearch(false)} />
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-4 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Search pages (e.g. AMC, Clients)..."
+                          className="w-full pl-10 pr-4 py-2 bg-muted/50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto p-2">
+                      {searchResults.length > 0 ? (
+                        searchResults.map((item: any) => (
+                          <Link
+                            key={item.href || item.name}
+                            to={item.href}
+                            onClick={() => {
+                              setShowSearch(false);
+                              setSearchQuery("");
+                            }}
+                            className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-xl transition-colors text-sm font-medium text-foreground"
+                          >
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                              {item.icon ? <item.icon className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                            </div>
+                            {item.name}
+                          </Link>
+                        ))
+                      ) : (
+                        <p className="p-4 text-center text-xs text-muted-foreground">
+                          {searchQuery ? "No pages found" : "Start typing to search pages..."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Notification Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowSearch(false);
+                }}
+                className={`p-2.5 hover:bg-muted rounded-xl transition-colors relative group ${showNotifications ? 'bg-muted text-foreground' : ''}`}
+              >
+                <Bell className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full ring-2 ring-card"></span>
+              </button>
+
+              {showNotifications && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-4 border-b border-border flex items-center justify-between">
+                      <h3 className="font-bold text-foreground">Notifications</h3>
+                      <button className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline">Mark all as read</button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.map((n) => (
+                        <div key={n.id} className="p-4 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0 cursor-pointer group">
+                          <div className="flex gap-3">
+                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              n.type === 'enquiry' ? 'bg-blue-100 text-blue-600' : 
+                              n.type === 'amc' ? 'bg-pink-100 text-pink-600' : 'bg-amber-100 text-amber-600'
+                            }`}>
+                              {n.type === 'enquiry' ? <FileText className="h-4 w-4" /> : 
+                               n.type === 'amc' ? <Calendar className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{n.title}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                              <p className="text-[10px] text-muted-foreground mt-1 font-medium">{n.time}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-3 bg-muted/30 text-center">
+                      <button className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">View all notifications</button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="ml-2 h-10 w-10 rounded-full overflow-hidden ring-2 ring-primary/20 cursor-pointer hover:ring-primary/40 transition-all shadow-md shrink-0">
               <img
                 src={`https://i.pravatar.cc/150?u=dd`}

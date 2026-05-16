@@ -94,7 +94,7 @@ export function QuotationDetail() {
                     </TabsTrigger>
                     <TabsTrigger
                       value="remarks"
-                      className="h-full rounded-none border-b-2 border-transparent data-[state=active]:border-pink-600 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none data-[state=active]:text-pink-700 px-4 text-sm font-bold transition-all"
+                      className="h-full rounded-md !border-b-2 border-0 border-transparent data-[state=active]:border-pink-600 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none data-[state=active]:text-pink-700 px-4 text-sm font-bold transition-all"
                     >
                       Remarks
                     </TabsTrigger>

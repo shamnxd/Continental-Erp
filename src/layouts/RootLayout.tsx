@@ -49,7 +49,8 @@ export function RootLayout() {
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("theme");
-      return saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      // Default to light mode (false) if no theme is saved, ignoring system preferences
+      return saved === "dark";
     }
     return false;
   });

@@ -13,7 +13,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   accessToken: null,
-  loading: true,
+  loading: true, // Stays true until restoreSession completes — prevents flash redirect to /login
   error: null,
 };
 

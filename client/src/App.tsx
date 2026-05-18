@@ -9,7 +9,6 @@ import { restoreSession } from "./store/slices/authSlice";
 function AppContent() {
   const dispatch = useAppDispatch();
 
-  // Perform a silent, secure auto-login restore check immediately on portal boot
   useEffect(() => {
     dispatch(restoreSession());
   }, [dispatch]);

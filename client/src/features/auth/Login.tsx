@@ -3,38 +3,43 @@ import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { useAuth } from "./AuthContext";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { loginUser, setError } from "../../store/slices/authSlice";
 import { Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, error, clearError, user } = useAuth();
+  const dispatch = useAppDispatch();
+  const { user, error } = useAppSelector((state) => state.auth);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Redirect if already authenticated
+  // Auto-redirect if already signed in statefully
   useEffect(() => {
     if (user) {
       navigate("/", { replace: true });
     }
   }, [user, navigate]);
 
-  // Clear errors when the user types
+  // Clear errors dynamically when the user starts typing
   useEffect(() => {
     if (error) {
-      clearError();
+      dispatch(setError(null));
     }
-  }, [email, password]);
+  }, [email, password, dispatch]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await login(email, password);
-      navigate("/", { replace: true });
+      const result = await dispatch(loginUser({ email, password }));
+      if (loginUser.fulfilled.match(result)) {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
-      console.warn("Authentication failed:", err);
+      console.warn("Sign-in handling failure:", err);
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +62,7 @@ export function Login() {
             <p className="text-sm text-slate-400">Service Management Dispatch System</p>
           </div>
 
-          {/* Premium animated error alert */}
+          {/* High-end slide-in alert notice */}
           {error && (
             <div className="mb-6 p-4 bg-red-950/40 border border-red-900/50 rounded-2xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
               <AlertCircle className="h-5 w-5 text-red-400 shrink-0 mt-0.5" />

@@ -1,5 +1,5 @@
 import { Navigate } from "react-router";
-import { useAuth } from "../features/auth/AuthContext";
+import { useAppSelector } from "../store/hooks";
 import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppSelector((state) => state.auth);
 
   if (loading) {
     return (
@@ -28,7 +28,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
                 alt="Continental Logo" 
                 className="h-10 w-10 object-contain animate-bounce" 
                 onError={(e) => {
-                  // Fallback if public logo doesn't load
                   e.currentTarget.style.display = 'none';
                 }}
               />

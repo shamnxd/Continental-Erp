@@ -49,14 +49,14 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-4">
       {/* Background radial glowing effects */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-pink-700/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-600/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
         <div className="bg-slate-950/80 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 border border-slate-800/80">
           <div className="text-center mb-8">
             <div className="inline-flex h-16 w-16 mb-4 items-center justify-center shrink-0 rounded-2xl bg-slate-900 border border-slate-800 shadow-inner relative">
-              <div className="absolute inset-0 bg-teal-500/10 rounded-2xl blur-sm" />
+              <div className="absolute inset-0 bg-pink-600/10 rounded-2xl blur-sm" />
               <img src="/clogo.png" alt="Continental Logo" className="h-10 w-10 object-contain relative z-10" />
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Continental</h1>
@@ -85,7 +85,7 @@ export function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={submitting}
-                className="mt-1 bg-slate-900/50 border-slate-800 text-white placeholder-slate-600 focus:border-teal-500 focus:ring-teal-500/20 rounded-xl"
+                className="mt-1 bg-slate-900/50 border-slate-800 text-white placeholder-slate-600 focus:border-pink-600 focus:ring-pink-600/20 rounded-xl"
               />
             </div>
 
@@ -99,14 +99,14 @@ export function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={submitting}
-                className="mt-1 bg-slate-900/50 border-slate-800 text-white placeholder-slate-600 focus:border-teal-500 focus:ring-teal-500/20 rounded-xl"
+                className="mt-1 bg-slate-900/50 border-slate-800 text-white placeholder-slate-600 focus:border-pink-600 focus:ring-pink-600/20 rounded-xl"
               />
             </div>
 
             <Button 
               type="submit" 
               disabled={submitting}
-              className="w-full py-6 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-teal-500/10 hover:shadow-teal-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-6 bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 text-white font-bold rounded-xl shadow-lg shadow-pink-700/10 hover:shadow-pink-700/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border-none"
             >
               {submitting ? (
                 <>
@@ -120,7 +120,7 @@ export function Login() {
           </form>
 
           <div className="mt-8 pt-6 border-t border-slate-850 flex items-center justify-center gap-2 text-xs text-slate-500">
-            <ShieldAlert className="h-4 w-4 text-teal-500/60" />
+            <ShieldAlert className="h-4 w-4 text-pink-600/60" />
             <span>Secure Dispatch Gateway Session</span>
           </div>
         </div>

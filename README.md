@@ -1,5 +1,3 @@
-# 🔒 Continental Service Management Suite (Proprietary)
-
 > **⚠️ CONFIDENTIAL & PROPRIETARY**
 > This repository contains proprietary commercial software developed exclusively for internal corporate operations. Unauthorized copying, distribution, or modifications of this project, via any medium, is strictly prohibited. Intellectual property rights are reserved under corporate policy.
 

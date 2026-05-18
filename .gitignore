@@ -1,40 +1,64 @@
-# Dependencies
-/node_modules
-/.pnp
+# =========================================================================
+# CONTINENTAL SERVICE MANAGEMENT SUITE - GLOBAL VERSION CONTROL EXCLUSIONS
+# =========================================================================
+
+# 1. Dependency Directories
+node_modules/
+jspm_packages/
+web_modules/
+.pnp
 .pnp.js
-/.yarn/install-state.gz
 
-# Testing
-/coverage
-
-# Next.js
-/.next/
-/out/
-
-# Production
-/build
-
-# Misc
-.DS_Store
+# 2. Local Configuration & Secrets (Prevent Credential Leaks)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 *.pem
+*.key
+*.cert
+*.pfx
 
-# Debug
+# 3. Dynamic Log Files & Rotation Targets (From Custom Logger)
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# Local Env Files
-.env*.local
+# 4. Production Build Outputs & Bundles
+dist/
+build/
+out/
+.next/
+.nuxt/
+.docusaurus/
+.svelte-kit/
+.serverless/
+coverage/
+.nyc_output/
 
-# TypeScript
-*.tsbuildinfo
+# 5. Diagnostic and Temporary Directories
+.tmp/
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+.stylelintcache
+.tsbuildinfo
 
-# Vercel
-.vercel
-
-# Editor directories and files
-.vscode/
+# 6. IDE, System, and OS Garbage
 .idea/
-*.sublime-project
-*.sublime-workspace
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+desktop.ini

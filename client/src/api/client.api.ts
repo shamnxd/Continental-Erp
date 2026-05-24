@@ -39,7 +39,7 @@ export async function getClientsApi(query?: GetClientsQuery): Promise<GetClients
   return await api.get(url);
 }
 
-export async function createClientApi(clientData: Omit<Client, "id" | "projectsCount">): Promise<ClientResponse> {
+export async function createClientApi(clientData: Omit<Client, "id" | "projectsCount" | "amcStatus"> & { amcStatus?: "Active" | "Inactive" | "Expired" }): Promise<ClientResponse> {
   return await api.post(ApiRoute.CLIENTS, clientData);
 }
 

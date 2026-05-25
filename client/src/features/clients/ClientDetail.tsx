@@ -27,6 +27,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Client } from "../../interfaces/client.interface";
 import { getClientByIdApi, deleteClientApi } from "../../api/client.api";
+import { getComplaintsApi } from "../../api/complaint.api";
+import { Complaint } from "../../interfaces/complaint.interface";
 import { ClientFormModal } from "./ClientFormModal";
 import { mockComplaints } from "../complaints/Complaints";
 import { mockEnquiries } from "../enquiries/Enquiries";
@@ -168,82 +170,81 @@ export function ClientDetail() {
 
   return (
     <div className="space-y-4 pb-8">
-      {/* ── Header Card ── */}
-      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-primary via-pink-400 to-primary/40" />
-        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/clients")}
-              className="gap-2 h-9 px-3 hover:bg-muted shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline font-medium">Back</span>
-            </Button>
-            <div className="h-8 w-px bg-border hidden sm:block shrink-0" />
+      <Tabs defaultValue="overview" className="space-y-4">
+        {/* ── Header Card ── */}
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/50">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow">
-                <img
-                  src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(client.companyName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                  alt={client.companyName}
-                  className="h-full w-full object-cover"
-                />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/clients")}
+                className="gap-2 h-9 px-3 hover:bg-muted shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline font-medium">Back</span>
+              </Button>
+              <div className="h-8 w-px bg-border hidden sm:block shrink-0" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow">
+                  <img
+                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(client.companyName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                    alt={client.companyName}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-xl font-bold text-foreground truncate leading-tight">
+                    {client.companyName}
+                  </h1>
+                  <p className="text-xs text-muted-foreground mt-0.5">{client.contactPerson}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl font-bold text-foreground truncate leading-tight">
-                  {client.companyName}
-                </h1>
-                <p className="text-xs text-muted-foreground mt-0.5">{client.contactPerson}</p>
-              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${amc.bg} ${amc.color}`}>
+                <AmcIcon className="h-3.5 w-3.5" />
+                {amc.label}
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-2">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="hidden sm:inline">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[160px]">
+                  <DropdownMenuItem onClick={() => setIsEditOpen(true)} className="cursor-pointer">
+                    <Edit className="mr-2 h-4 w-4 text-green-500" /> Edit Client
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={() => setIsDeleteOpen(true)} className="cursor-pointer">
+                    <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Delete Client
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${amc.bg} ${amc.color}`}>
-              <AmcIcon className="h-3.5 w-3.5" />
-              {amc.label}
-            </span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 gap-2">
-                  <MoreVertical className="h-4 w-4" />
-                  <span className="hidden sm:inline">Actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem onClick={() => setIsEditOpen(true)} className="cursor-pointer">
-                  <Edit className="mr-2 h-4 w-4 text-green-500" /> Edit Client
-                </DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" onClick={() => setIsDeleteOpen(true)} className="cursor-pointer">
-                  <Trash2 className="mr-2 h-4 w-4 text-destructive" /> Delete Client
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Tabs inside Header Card */}
+          <div className="px-4 sm:px-6">
+            <TabsList className="w-full h-12 bg-transparent p-0 rounded overflow-x-auto flex-nowrap justify-start gap-6 lg:gap-8">
+              {[
+                { value: "overview", label: "Overview" },
+                { value: "amc", label: "AMC Details" },
+                { value: "invoices", label: "Invoices" },
+                { value: "history", label: "History" },
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="h-full shrink-0 rounded border-0 !border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 text-xs font-bold uppercase tracking-wider transition-all hover:text-primary"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
           </div>
-        </div>
-      </div>
-
-      {/* ── Tabs ── */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-          <TabsList className="w-full h-12 bg-transparent p-0 rounded-none border-b border-border overflow-x-auto flex-nowrap justify-start gap-0">
-            {[
-              { value: "overview", label: "Overview" },
-              { value: "amc", label: "AMC Details" },
-              { value: "invoices", label: "Invoices" },
-              { value: "history", label: "History" },
-            ].map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="h-full shrink-0 rounded-none border-0 !border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-primary/5 data-[state=active]:shadow-none px-5 text-sm font-semibold transition-all"
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
         </div>
 
         {/* ══════════════ OVERVIEW TAB ══════════════ */}

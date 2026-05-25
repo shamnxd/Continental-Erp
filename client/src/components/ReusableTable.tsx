@@ -33,8 +33,8 @@ export function ReusableTable<T>({
   rowKey,
 }: ReusableTableProps<T>) {
   return (
-    <div className="relative w-full overflow-x-auto">
-      <Table>
+    <div className="relative w-full overflow-hidden">
+      <Table className="table-fixed w-full">
         <TableHeader className="bg-muted/50 border-b border-border">
           <TableRow>
             {columns.map((column, idx) => (

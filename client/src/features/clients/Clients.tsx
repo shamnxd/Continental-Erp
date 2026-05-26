@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   Plus, Search, Edit, Trash2, Eye, MapPin, Phone, Mail,
-  Loader2, Filter, MoreVertical, ChevronLeft, ChevronRight,
+  Loader2, MoreVertical, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -24,10 +24,11 @@ import {
 } from "../../components/ui/alert-dialog";
 import { Client } from "../../interfaces/client.interface";
 import { getClientsApi, deleteClientApi } from "../../api/client.api";
+import { getComplaintsApi } from "../../api/complaint.api";
 import { ClientFormModal } from "./ClientFormModal";
-import { mockComplaints } from "../complaints/Complaints";
 import { mockEnquiries } from "../enquiries/Enquiries";
 import { useDebounce } from "../../hooks/useDebounce";
+import { FilterStatChips } from "../../components/FilterStatChips";
 import { ReusableTable } from "../../components/ReusableTable";
 
 type FilterType = "all" | "active-amc" | "expired-amc" | "active-complaints" | "active-enquiries";
@@ -41,15 +42,6 @@ const filterLabels: Record<FilterType, string> = {
 };
 
 const PAGE_SIZE = 10;
-
-// Derive company names from mocked data
-const activeComplaintCompanies = [
-  ...new Set(
-    mockComplaints
-      .filter((c) => c.status !== "Resolved")
-      .map((c) => c.clientName)
-  ),
-];
 
 const activeEnquiryCompanies = [
   ...new Set(
@@ -78,33 +70,78 @@ export function Clients() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
+  const [activeComplaintCompanies, setActiveComplaintCompanies] = useState<string[]>([]);
+  const [complaintCountsByClientId, setComplaintCountsByClientId] = useState<Record<string, number>>({});
+  const [complaintCountsByCompanyName, setComplaintCountsByCompanyName] = useState<Record<string, number>>({});
+
   // Stat counts (fetched separately without pagination)
   const [statCounts, setStatCounts] = useState({
     total: 0,
     activeAmc: 0,
     expiredAmc: 0,
-    activeComplaints: activeComplaintCompanies.length,
+    activeComplaints: 0,
     activeEnquiries: activeEnquiryCompanies.length,
   });
 
+  const loadActiveComplaintData = useCallback(async (): Promise<number> => {
+    try {
+      const [pendingRes, inProgressRes] = await Promise.all([
+        getComplaintsApi({ status: "Pending", page: 1, limit: 500 }),
+        getComplaintsApi({ status: "In Progress", page: 1, limit: 500 }),
+      ]);
+
+      const active = [
+        ...(pendingRes.success ? pendingRes.data : []),
+        ...(inProgressRes.success ? inProgressRes.data : []),
+      ];
+
+      const byClientId: Record<string, number> = {};
+      const byCompanyName: Record<string, number> = {};
+      const companyNames = new Set<string>();
+
+      for (const c of active) {
+        if (c.clientId) {
+          byClientId[c.clientId] = (byClientId[c.clientId] ?? 0) + 1;
+        }
+        const nameKey = c.clientName?.trim().toLowerCase();
+        if (nameKey) {
+          byCompanyName[nameKey] = (byCompanyName[nameKey] ?? 0) + 1;
+          companyNames.add(c.clientName);
+        }
+      }
+
+      setComplaintCountsByClientId(byClientId);
+      setComplaintCountsByCompanyName(byCompanyName);
+      setActiveComplaintCompanies([...companyNames]);
+      return companyNames.size;
+    } catch (err) {
+      console.error("Failed to fetch active complaints:", err);
+      setComplaintCountsByClientId({});
+      setComplaintCountsByCompanyName({});
+      setActiveComplaintCompanies([]);
+      return 0;
+    }
+  }, []);
+
   const fetchStatCounts = useCallback(async () => {
     try {
-      const [allRes, activeAmcRes, expiredAmcRes] = await Promise.all([
+      const [allRes, activeAmcRes, expiredAmcRes, activeComplaintClientCount] = await Promise.all([
         getClientsApi({ page: 1, limit: 1 }),
         getClientsApi({ page: 1, limit: 1, filter: "active-amc" }),
         getClientsApi({ page: 1, limit: 1, filter: "expired-amc" }),
+        loadActiveComplaintData(),
       ]);
       setStatCounts({
         total: allRes.total ?? 0,
         activeAmc: activeAmcRes.total ?? 0,
         expiredAmc: expiredAmcRes.total ?? 0,
-        activeComplaints: activeComplaintCompanies.length,
+        activeComplaints: activeComplaintClientCount,
         activeEnquiries: activeEnquiryCompanies.length,
       });
     } catch (err) {
       console.error("Failed to fetch stat counts:", err);
     }
-  }, []);
+  }, [loadActiveComplaintData]);
 
   const fetchClients = useCallback(async (page: number, search: string, filter: FilterType) => {
     setIsLoading(true);
@@ -134,7 +171,7 @@ export function Clients() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeComplaintCompanies]);
 
   // Re-fetch whenever debounced search, filter, or page changes
   useEffect(() => {
@@ -186,47 +223,19 @@ export function Clients() {
     }
   };
 
-  const getActiveComplaintsCount = (companyName: string) =>
-    mockComplaints.filter(
-      (c) => c.clientName.toLowerCase() === companyName.toLowerCase() && c.status !== "Resolved"
-    ).length;
+  const getActiveComplaintsCount = (client: Client) => {
+    if (client.id && complaintCountsByClientId[client.id] != null) {
+      return complaintCountsByClientId[client.id];
+    }
+    return complaintCountsByCompanyName[client.companyName.trim().toLowerCase()] ?? 0;
+  };
 
-  const statCards = [
-    {
-      label: "Total Clients",
-      value: statCounts.total,
-      color: "text-foreground",
-      filter: "all" as FilterType,
-      bg: activeFilter === "all" ? "bg-primary/5 ring-1 ring-primary/20" : "bg-card",
-    },
-    {
-      label: "Active AMC",
-      value: statCounts.activeAmc,
-      color: "text-green-500",
-      filter: "active-amc" as FilterType,
-      bg: activeFilter === "active-amc" ? "bg-green-500/10 ring-1 ring-green-500/30" : "bg-card",
-    },
-    {
-      label: "Expired AMC",
-      value: statCounts.expiredAmc,
-      color: "text-red-500",
-      filter: "expired-amc" as FilterType,
-      bg: activeFilter === "expired-amc" ? "bg-red-500/10 ring-1 ring-red-500/30" : "bg-card",
-    },
-    {
-      label: "Active Complaints",
-      value: statCounts.activeComplaints,
-      color: "text-orange-500",
-      filter: "active-complaints" as FilterType,
-      bg: activeFilter === "active-complaints" ? "bg-orange-500/10 ring-1 ring-orange-500/30" : "bg-card",
-    },
-    {
-      label: "Active Enquiries",
-      value: statCounts.activeEnquiries,
-      color: "text-blue-500",
-      filter: "active-enquiries" as FilterType,
-      bg: activeFilter === "active-enquiries" ? "bg-blue-500/10 ring-1 ring-blue-500/30" : "bg-card",
-    },
+  const filterChips = [
+    { value: "all" as FilterType, label: "All Clients", count: statCounts.total, tone: "primary" as const },
+    { value: "active-amc" as FilterType, label: "Active AMC", count: statCounts.activeAmc, tone: "green" as const },
+    { value: "expired-amc" as FilterType, label: "Expired AMC", count: statCounts.expiredAmc, tone: "red" as const },
+    { value: "active-complaints" as FilterType, label: "Active Complaints", count: statCounts.activeComplaints, tone: "orange" as const },
+    { value: "active-enquiries" as FilterType, label: "Active Enquiries", count: statCounts.activeEnquiries, tone: "blue" as const },
   ];
 
   const columns = [
@@ -283,7 +292,7 @@ export function Clients() {
     {
       header: "Active Complaints",
       accessor: (client: Client) => {
-        const count = getActiveComplaintsCount(client.companyName);
+        const count = getActiveComplaintsCount(client);
         return count > 0 ? (
           <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/10 text-orange-500">
             {count}
@@ -359,26 +368,7 @@ export function Clients() {
         />
       </div>
 
-      {/* Stats Cards */}
-      <div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-        {statCards.map((card) => (
-          <button
-            key={card.label}
-            onClick={() => setActiveFilter(card.filter)}
-            className={`rounded-lg shadow-sm border border-border p-3 sm:p-4 text-left transition-all cursor-pointer hover:shadow-md ${card.bg} ${
-              activeFilter === card.filter ? "shadow-md" : ""
-            }`}
-          >
-            <p className="text-[11px] sm:text-xs text-muted-foreground font-medium leading-tight">{card.label}</p>
-            <div className={`text-xl sm:text-2xl font-bold mt-1 ${card.color}`}>
-              {card.value}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Search + Filter Tabs */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4 space-y-3">
+      <div className="bg-card rounded-lg shadow-sm border border-border p-4 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
@@ -388,34 +378,7 @@ export function Clients() {
             className="pl-10"
           />
         </div>
-
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(filterLabels) as FilterType[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => setActiveFilter(key)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all border ${
-                activeFilter === key
-                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                  : "bg-muted/50 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
-              }`}
-            >
-              {key !== "all" && <Filter className="h-3 w-3" />}
-              {filterLabels[key]}
-              {key !== "all" && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                  activeFilter === key ? "bg-white/20" : "bg-border"
-                }`}>
-                  {key === "active-amc" && statCounts.activeAmc}
-                  {key === "expired-amc" && statCounts.expiredAmc}
-                  {key === "active-complaints" && statCounts.activeComplaints}
-                  {key === "active-enquiries" && statCounts.activeEnquiries}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        <FilterStatChips options={filterChips} value={activeFilter} onChange={setActiveFilter} />
       </div>
 
       {/* Clients Table / Card List */}
@@ -489,7 +452,7 @@ export function Clients() {
           ) : (
             <div className="divide-y divide-border">
               {clients.map((client) => {
-                const complaintsCount = getActiveComplaintsCount(client.companyName);
+                const complaintsCount = getActiveComplaintsCount(client);
                 return (
                   <div key={client.id || client.companyName} className="px-4 py-3 hover:bg-muted/30 transition-colors">
                     <div className="flex items-start justify-between gap-3">

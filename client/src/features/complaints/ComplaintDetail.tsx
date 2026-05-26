@@ -21,7 +21,8 @@ import { getSMRsByComplaintApi } from "../../api/smr.api";
 import { Complaint } from "../../interfaces/complaint.interface";
 import { Client } from "../../interfaces/client.interface";
 import { SMR } from "../../interfaces/smr.interface";
-import { mockAMCContracts } from "../amc/AMC";
+import { getAmcApi } from "../../api/amc.api";
+import type { AmcContract } from "../../interfaces/amc.interface";
 import { SMRReportView } from "./SMRReportView";
 import { SMRApprovalModal } from "./SMRApprovalModal";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
@@ -35,6 +36,7 @@ export function ComplaintDetail() {
   
   const [complaint, setComplaint] = useState<Complaint | null>(null);
   const [client, setClient] = useState<Client | null>(null);
+  const [clientAmc, setClientAmc] = useState<AmcContract | null>(null);
   const [smrs, setSmrs] = useState<SMR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newRemark, setNewRemark] = useState("");
@@ -58,6 +60,15 @@ export function ComplaintDetail() {
           const clientRes = await getClientByIdApi(res.data.clientId);
           if (clientRes.success) {
             setClient(clientRes.data);
+          }
+          const amcRes = await getAmcApi({ clientId: res.data.clientId, page: 1, limit: 10 });
+          if (amcRes.success && amcRes.data.length > 0) {
+            const active =
+              amcRes.data.find((c) => c.status === "Active" || c.status === "Due for Renewal") ??
+              amcRes.data[0];
+            setClientAmc(active);
+          } else {
+            setClientAmc(null);
           }
         } catch (cErr) {
           console.error("Failed to load client details for complaint:", cErr);
@@ -398,10 +409,7 @@ export function ComplaintDetail() {
                       </div>
                       
                       {(() => {
-                        const activeAmc = mockAMCContracts.find(
-                          (c) => c.clientName.toLowerCase() === (client?.companyName ?? complaint.clientName).toLowerCase()
-                        );
-                        
+                        const activeAmc = clientAmc;
                         const status = client?.amcStatus ?? (activeAmc ? "Active" : "Inactive");
                         const badgeColor = 
                           status === "Active" ? "bg-green-500/10 text-green-600"
@@ -424,8 +432,8 @@ export function ComplaintDetail() {
                                   <span className="text-foreground">{activeAmc.amcNo}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Plan Name</span>
-                                  <span className="text-foreground">{activeAmc.planName}</span>
+                                  <span className="text-muted-foreground">Service Type</span>
+                                  <span className="text-foreground">{activeAmc.serviceType}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Frequency</span>

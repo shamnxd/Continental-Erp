@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, Building2,
   User, FileText, ShieldCheck, ShieldX, Shield, Loader2,
   MoreVertical, AlertTriangle, MessageSquare, Calendar,
   CheckCircle, Clock, IndianRupee, TrendingUp, Wrench,
-  Download, Send, Eye, AlertCircle,
+  Download, Send, Eye, AlertCircle, Plus, RefreshCw,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
@@ -30,9 +30,11 @@ import { getClientByIdApi, deleteClientApi } from "../../api/client.api";
 import { getComplaintsApi } from "../../api/complaint.api";
 import { Complaint } from "../../interfaces/complaint.interface";
 import { ClientFormModal } from "./ClientFormModal";
-import { mockComplaints } from "../complaints/Complaints";
+import { AmcFormModal } from "../../components/AmcFormModal";
+import { canRenewAmc, hasBlockingAmcContract } from "../../utils/amcRenewal";
 import { mockEnquiries } from "../enquiries/Enquiries";
-import { mockAMCContracts } from "../amc/AMC";
+import { getAmcApi } from "../../api/amc.api";
+import type { AmcContract } from "../../interfaces/amc.interface";
 import { mockInvoices } from "../invoices/Invoices";
 
 // ── helpers ──────────────────────────────────────────────
@@ -85,6 +87,10 @@ export function ClientDetail() {
   const [notFound, setNotFound] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [clientAMC, setClientAMC] = useState<AmcContract[]>([]);
+  const [clientComplaints, setClientComplaints] = useState<Complaint[]>([]);
+  const [isAmcAddOpen, setIsAmcAddOpen] = useState(false);
+  const [renewAmcContract, setRenewAmcContract] = useState<AmcContract | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -96,6 +102,28 @@ export function ClientDetail() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setIsLoading(false));
+  }, [id]);
+
+  const loadClientAmc = useCallback(() => {
+    if (!id) return;
+    getAmcApi({ clientId: id, page: 1, limit: 50 })
+      .then((res) => {
+        if (res.success) setClientAMC(res.data);
+      })
+      .catch((err) => console.error("Failed to load client AMC contracts", err));
+  }, [id]);
+
+  useEffect(() => {
+    loadClientAmc();
+  }, [loadClientAmc]);
+
+  useEffect(() => {
+    if (!id) return;
+    getComplaintsApi({ clientId: id, limit: 100 })
+      .then((res) => {
+        if (res.success) setClientComplaints(res.data);
+      })
+      .catch((err) => console.error("Failed to load client complaints", err));
   }, [id]);
 
   const handleDelete = async () => {
@@ -112,17 +140,13 @@ export function ClientDetail() {
   const byCompany = (name: string) => (s: string) =>
     s.toLowerCase() === name.toLowerCase();
 
-  const clientAMC = client
-    ? mockAMCContracts.filter((c) => byCompany(client.companyName)(c.clientName))
-    : [];
+  const latestAMC =
+    clientAMC.find((c) => c.status === "Active" || c.status === "Due for Renewal") ?? clientAMC[0] ?? null;
 
-  const latestAMC = clientAMC[0] ?? null;
-
-  const allComplaints = client
-    ? mockComplaints.filter((c) => byCompany(client.companyName)(c.clientName))
-    : [];
-
+  const allComplaints = clientComplaints;
   const activeComplaints = allComplaints.filter((c) => c.status !== "Resolved");
+  const blockingAmc = hasBlockingAmcContract(clientAMC);
+  const renewableAmc = clientAMC.find((c) => canRenewAmc(c)) ?? null;
 
   const allEnquiries = client
     ? mockEnquiries.filter((e) => byCompany(client.companyName)(e.clientName))
@@ -138,10 +162,6 @@ export function ClientDetail() {
   const paidAmount = clientInvoices.filter((i) => i.status === "Paid").reduce((s, i) => s + i.totalAmount, 0);
   const pendingAmount = totalInvoiced - paidAmount;
 
-  // ── AMC payment simulation ──
-  const amcTotal = latestAMC?.amount ?? 0;
-  const amcAdvancePaid = latestAMC ? Math.round(amcTotal * 0.4) : 0;
-  const amcNeedToPay = amcTotal - amcAdvancePaid;
 
   // ── loading/not-found ──
   if (isLoading) {
@@ -305,15 +325,20 @@ export function ClientDetail() {
                 {allComplaints.length === 0 ? (
                   <Empty icon={AlertTriangle} text="No complaints on record" />
                 ) : (
-                  <div className="space-y-2">
-                    {allComplaints.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
+                  <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+                    {allComplaints.map((c) => (
+                      <button
+                        key={c.id ?? c.complaintNo}
+                        type="button"
+                        onClick={() => c.id && navigate(`/complaints/${c.id}`)}
+                        className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                      >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{c.complaintNo ?? `Complaint #${i + 1}`}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{c.issue ?? c.description ?? "—"}</p>
+                          <p className="text-sm font-semibold text-foreground truncate">{c.complaintNo}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{c.issue}</p>
                         </div>
                         <StatusPill status={c.status} map={complaintStatusMap} />
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}
@@ -370,7 +395,7 @@ export function ClientDetail() {
                 </div>
                 {latestAMC && (
                   <div className="mt-3 pt-3 border-t border-border/40 space-y-1 text-xs text-muted-foreground">
-                    <div className="flex justify-between"><span>Plan</span><span className="font-medium text-foreground">{latestAMC.planName}</span></div>
+                    <div className="flex justify-between"><span>Service</span><span className="font-medium text-foreground">{latestAMC.serviceType}</span></div>
                     <div className="flex justify-between"><span>Expires</span><span className="font-medium text-foreground">{fmtDate(latestAMC.endDate)}</span></div>
                   </div>
                 )}
@@ -401,15 +426,39 @@ export function ClientDetail() {
 
         {/* ══════════════ AMC DETAILS TAB ══════════════ */}
         <TabsContent value="amc" className="m-0 space-y-4">
+          <div className="flex flex-wrap justify-end gap-2">
+            {!blockingAmc && (
+              <Button
+                size="sm"
+                className="bg-pink-700 hover:bg-pink-800 text-white"
+                onClick={() => setIsAmcAddOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Create AMC
+              </Button>
+            )}
+            {renewableAmc && (
+              <Button size="sm" variant="outline" onClick={() => setRenewAmcContract(renewableAmc)}>
+                <RefreshCw className="h-4 w-4 mr-1.5 text-amber-600" />
+                Renew AMC
+              </Button>
+            )}
+          </div>
+
           {clientAMC.length === 0 ? (
             <div className="bg-card rounded-xl border border-border shadow-sm p-12 text-center text-muted-foreground">
               <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p className="font-medium">No AMC contracts for this client</p>
             </div>
           ) : (
-            clientAMC.map((contract) => (
+            clientAMC.map((contract) => {
+              const payments = contract.payments ?? [];
+              const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+              const advancePaid = contract.advancePaid ?? 0;
+              const pendingPay = Math.max(0, (contract.amount || 0) - totalPaid);
+
+              return (
               <div key={contract.id} className="space-y-4">
-                {/* AMC Contract Card */}
                 <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
                   <div className="h-1.5 bg-gradient-to-r from-green-400 to-blue-500" />
                   <div className="p-4 sm:p-5">
@@ -426,7 +475,7 @@ export function ClientDetail() {
 
                     {/* Plan + Dates */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                      <InfoField label="Plan" value={contract.planName} />
+                      <InfoField label="Service Type" value={contract.serviceType} />
                       <InfoField label="Frequency" value={contract.frequency} />
                       <InfoField label="Start Date" value={fmtDate(contract.startDate)} />
                       <InfoField label="End Date" value={fmtDate(contract.endDate)} />
@@ -446,7 +495,15 @@ export function ClientDetail() {
                       </div>
                     </div>
 
-                    {/* Payment breakdown */}
+                    {contract.notes?.trim() && (
+                      <div className="mb-5 pt-3 border-t border-border/50">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+                          Contract Notes
+                        </p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{contract.notes}</p>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="rounded-lg bg-muted/50 border border-border p-3 text-center">
                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Contract Value</p>
@@ -454,101 +511,34 @@ export function ClientDetail() {
                       </div>
                       <div className="rounded-lg bg-green-500/5 border border-green-500/20 p-3 text-center">
                         <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Advance Paid</p>
-                        <p className="text-lg font-bold text-green-600 mt-1">{fmt(amcAdvancePaid)}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">40% of contract</p>
+                        <p className="text-lg font-bold text-green-600 mt-1">{fmt(advancePaid)}</p>
                       </div>
                       <div className="rounded-lg bg-red-500/5 border border-red-500/20 p-3 text-center">
-                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Balance Due</p>
-                        <p className="text-lg font-bold text-red-500 mt-1">{fmt(amcNeedToPay)}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">60% remaining</p>
+                        <p className="text-[10px] font-bold text-red-500 uppercase tracking-wider">Pending</p>
+                        <p className="text-lg font-bold text-red-500 mt-1">{fmt(pendingPay)}</p>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Service History / Logs */}
-                <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-5">
-                  <SectionHeader icon={Wrench} iconBg="bg-amber-500/10" iconColor="text-amber-500" title="Service History" />
-                  {contract.serviceLogs.length === 0 ? (
-                    <Empty icon={Wrench} text="No service logs yet" />
-                  ) : (
-                    <div className="mt-4 space-y-3">
-                      {contract.serviceLogs.map((log) => {
-                        const materialCost = log.materials.reduce((s, m) => s + m.cost, 0);
-                        const totalCost = log.petrolExpense + log.otherExpenses + materialCost;
-                        return (
-                          <div key={log.id} className="rounded-lg border border-border bg-muted/20 p-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border">
-                                  <img src={`https://i.pravatar.cc/150?u=${encodeURIComponent(log.technician)}`} alt={log.technician} className="h-full w-full object-cover" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-foreground">{log.technician}</p>
-                                  <p className="text-[11px] text-muted-foreground">{fmtDate(log.date)}</p>
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{log.travelTime}m travel</span>
-                                <span className="flex items-center gap-1"><Wrench className="h-3.5 w-3.5" />{log.workTime}m work</span>
-                                <span className="flex items-center gap-1 font-semibold text-foreground"><IndianRupee className="h-3.5 w-3.5" />{fmt(totalCost)}</span>
-                              </div>
-                            </div>
-
-                            {/* Materials */}
-                            {log.materials.length > 0 && (
-                              <div className="mb-3">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Materials Used</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {log.materials.map((m, mi) => (
-                                    <span key={mi} className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[11px] font-medium">
-                                      {m.name} ×{m.quantity} — {fmt(m.cost)}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex flex-wrap gap-3 text-xs pt-2 border-t border-border/40">
-                              <span className="text-muted-foreground">Petrol: <span className="font-medium text-foreground">{fmt(log.petrolExpense)}</span></span>
-                              {log.otherExpenses > 0 && <span className="text-muted-foreground">Other: <span className="font-medium text-foreground">{fmt(log.otherExpenses)}</span></span>}
-                              <span className="text-muted-foreground">Materials: <span className="font-medium text-foreground">{fmt(materialCost)}</span></span>
-                            </div>
-
-                            {log.remarks && (
-                              <p className="mt-2 text-xs text-muted-foreground italic">"{log.remarks}"</p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* AMC Remarks */}
-                {contract.remarks.length > 0 && (
-                  <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-5">
-                    <SectionHeader icon={MessageSquare} iconBg="bg-purple-500/10" iconColor="text-purple-500" title="Contract Notes" />
-                    <div className="mt-4 space-y-3">
-                      {contract.remarks.map((r, i) => (
-                        <div key={i} className="flex gap-3">
-                          <div className="h-7 w-7 rounded-full overflow-hidden shrink-0 border border-border">
-                            <img src={`https://i.pravatar.cc/150?u=${encodeURIComponent(r.user)}`} alt={r.user} className="h-full w-full object-cover" />
-                          </div>
-                          <div className="flex-1 bg-muted/40 rounded-lg px-3 py-2">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-xs font-semibold text-foreground">{r.user}</p>
-                              <p className="text-[10px] text-muted-foreground">{fmtDate(r.date)}</p>
-                            </div>
-                            <p className="text-xs text-foreground">{r.text}</p>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="flex flex-wrap justify-end gap-2 mt-5 pt-4 border-t border-border/50">
+                      {canRenewAmc(contract) && (
+                        <Button size="sm" variant="outline" onClick={() => setRenewAmcContract(contract)}>
+                          <RefreshCw className="h-4 w-4 mr-1.5 text-amber-600" />
+                          Renew
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => contract.id && navigate(`/amc/${contract.id}`)}
+                      >
+                        View Full Contract
+                      </Button>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            ))
+            );
+            })
           )}
         </TabsContent>
 
@@ -657,7 +647,7 @@ export function ClientDetail() {
                   type: "amc" as const,
                   date: a.startDate,
                   title: `AMC Contract: ${a.amcNo}`,
-                  description: `${a.planName} · ${a.serviceType}`,
+                  description: a.serviceType,
                   status: a.status,
                   color: "bg-green-500",
                   icon: ShieldCheck,
@@ -714,6 +704,21 @@ export function ClientDetail() {
         onClose={() => setIsEditOpen(false)}
         onSuccess={(updated) => { setClient(updated); setIsEditOpen(false); }}
         client={client}
+      />
+
+      <AmcFormModal
+        isOpen={isAmcAddOpen}
+        onClose={() => setIsAmcAddOpen(false)}
+        onSuccess={loadClientAmc}
+        contract={null}
+        initialClientId={id}
+      />
+      <AmcFormModal
+        isOpen={!!renewAmcContract}
+        onClose={() => setRenewAmcContract(null)}
+        onSuccess={loadClientAmc}
+        contract={null}
+        renewalSource={renewAmcContract}
       />
 
       {/* ── Delete Dialog ── */}

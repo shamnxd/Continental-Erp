@@ -10,6 +10,8 @@ type StoreLike = {
   getState: () => { auth: { accessToken: string | null } };
 };
 
+type RequestConfigWithRetry = InternalAxiosRequestConfig & { _retry?: boolean; _skipAuth?: boolean };
+
 function resolveAccessToken(store: StoreLike | null): string | null {
   const token = store?.getState().auth.accessToken;
   return token?.trim() ? token.trim() : null;
@@ -27,6 +29,11 @@ function attachBearerToken(config: InternalAxiosRequestConfig, token: string): v
   }
 }
 
+function isAuthRoute(url?: string): boolean {
+  if (!url) return false;
+  return url.includes("/auth/login") || url.includes("/auth/refresh");
+}
+
 export const api = axios.create({
   baseURL: "http://localhost:5000/api/v1",
   withCredentials: true,
@@ -34,43 +41,98 @@ export const api = axios.create({
 
 let authCallbacks: AuthCallbacks | null = null;
 let boundStore: StoreLike | null = null;
+let requestInterceptorId: number | null = null;
 let responseInterceptorId: number | null = null;
+
+/** One in-flight refresh so parallel API calls don't race the refresh cookie. */
+let refreshInFlight: Promise<string | null> | null = null;
+
+function extractAccessToken(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const direct = (payload as { accessToken?: string }).accessToken;
+  if (direct) return direct;
+  const nested = (payload as { data?: { accessToken?: string } }).data?.accessToken;
+  return nested ?? null;
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!authCallbacks) return null;
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    try {
+      const response = await api.post(
+        ApiRoute.AUTH_REFRESH,
+        {},
+        { _retry: true, _skipAuth: true } as RequestConfigWithRetry,
+      );
+      const token = extractAccessToken(response);
+      if (!token) {
+        throw new Error("Refresh response missing accessToken");
+      }
+      authCallbacks!.setAccessToken(token);
+      return token;
+    } catch {
+      authCallbacks?.logout();
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+async function getValidAccessToken(): Promise<string | null> {
+  const existing = resolveAccessToken(boundStore);
+  if (existing) return existing;
+  return refreshAccessToken();
+}
 
 export const setupInterceptors = (store: StoreLike, callbacks: AuthCallbacks) => {
   boundStore = store;
   authCallbacks = callbacks;
 
+  if (requestInterceptorId !== null) {
+    api.interceptors.request.eject(requestInterceptorId);
+  }
   if (responseInterceptorId !== null) {
     api.interceptors.response.eject(responseInterceptorId);
   }
 
+  requestInterceptorId = api.interceptors.request.use(
+    async (config) => {
+      const cfg = config as RequestConfigWithRetry;
+      if (cfg._skipAuth || isAuthRoute(cfg.url)) {
+        return config;
+      }
+
+      const token = await getValidAccessToken();
+      if (token) {
+        attachBearerToken(config, token);
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
   responseInterceptorId = api.interceptors.response.use(
     (response) => response.data,
     async (error) => {
-      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      const originalRequest = error.config as RequestConfigWithRetry | undefined;
 
       if (
         error.response?.status === 401 &&
         originalRequest &&
         !originalRequest._retry &&
-        !originalRequest.url?.includes("/auth/login") &&
-        !originalRequest.url?.includes("/auth/refresh")
+        !isAuthRoute(originalRequest.url)
       ) {
         originalRequest._retry = true;
         try {
-          const refreshResponse = await api.post(ApiRoute.AUTH_REFRESH, {}, {
-            _retry: true,
-          } as InternalAxiosRequestConfig & { _retry?: boolean });
-
-          const newAccessToken =
-            (refreshResponse as { accessToken?: string })?.accessToken ??
-            (refreshResponse as { data?: { accessToken?: string } })?.data?.accessToken;
-
+          const newAccessToken = await refreshAccessToken();
           if (!newAccessToken) {
-            throw new Error("Refresh response missing accessToken");
+            throw new Error("Unable to refresh session");
           }
-
-          authCallbacks?.setAccessToken(newAccessToken);
           attachBearerToken(originalRequest, newAccessToken);
           return api(originalRequest);
         } catch (refreshError) {
@@ -79,18 +141,6 @@ export const setupInterceptors = (store: StoreLike, callbacks: AuthCallbacks) =>
         }
       }
       return Promise.reject(error);
-    }
+    },
   );
 };
-
-api.interceptors.request.use(
-  (config) => {
-    if (!boundStore) return config;
-    const token = resolveAccessToken(boundStore);
-    if (token) {
-      attachBearerToken(config, token);
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);

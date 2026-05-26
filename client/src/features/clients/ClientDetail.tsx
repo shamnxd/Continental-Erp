@@ -32,7 +32,8 @@ import { Complaint } from "../../interfaces/complaint.interface";
 import { ClientFormModal } from "./ClientFormModal";
 import { AmcFormModal } from "../../components/AmcFormModal";
 import { canRenewAmc, hasBlockingAmcContract } from "../../utils/amcRenewal";
-import { mockEnquiries } from "../enquiries/Enquiries";
+import { getEnquiriesApi } from "../../api/enquiry.api";
+import { Enquiry } from "../../interfaces/enquiry.interface";
 import { getAmcApi } from "../../api/amc.api";
 import type { AmcContract } from "../../interfaces/amc.interface";
 import { mockInvoices } from "../invoices/Invoices";
@@ -77,6 +78,18 @@ const complaintStatusMap: Record<string, string> = {
   Pending: "bg-amber-500/10 text-amber-600",
 };
 
+const enquiryStatusMap: Record<string, string> = {
+  "Site Visit Scheduled": "bg-blue-500/10 text-blue-600",
+  "Quotation Prepared": "bg-amber-500/10 text-amber-600",
+  "Follow-up Required": "bg-orange-500/10 text-orange-600",
+  "Converted to Project": "bg-green-500/10 text-green-600",
+  Closed: "bg-slate-500/10 text-slate-600",
+};
+
+function isActiveEnquiry(status: string) {
+  return status !== "Converted to Project" && status !== "Closed";
+}
+
 // ── main component ────────────────────────────────────────
 export function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -89,6 +102,7 @@ export function ClientDetail() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [clientAMC, setClientAMC] = useState<AmcContract[]>([]);
   const [clientComplaints, setClientComplaints] = useState<Complaint[]>([]);
+  const [clientEnquiries, setClientEnquiries] = useState<Enquiry[]>([]);
   const [isAmcAddOpen, setIsAmcAddOpen] = useState(false);
   const [renewAmcContract, setRenewAmcContract] = useState<AmcContract | null>(null);
 
@@ -126,6 +140,15 @@ export function ClientDetail() {
       .catch((err) => console.error("Failed to load client complaints", err));
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    getEnquiriesApi({ clientId: id, limit: 100 })
+      .then((res) => {
+        if (res.success) setClientEnquiries(res.data);
+      })
+      .catch((err) => console.error("Failed to load client enquiries", err));
+  }, [id]);
+
   const handleDelete = async () => {
     if (!id) return;
     try {
@@ -148,11 +171,8 @@ export function ClientDetail() {
   const blockingAmc = hasBlockingAmcContract(clientAMC);
   const renewableAmc = clientAMC.find((c) => canRenewAmc(c)) ?? null;
 
-  const allEnquiries = client
-    ? mockEnquiries.filter((e) => byCompany(client.companyName)(e.clientName))
-    : [];
-
-  const activeEnquiries = allEnquiries.filter((e) => e.status !== "Converted to Project");
+  const allEnquiries = clientEnquiries;
+  const activeEnquiries = allEnquiries.filter((e) => isActiveEnquiry(e.status));
 
   const clientInvoices = client
     ? mockInvoices.filter((inv) => byCompany(client.companyName)(inv.clientName))
@@ -348,20 +368,35 @@ export function ClientDetail() {
               <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <SectionHeader icon={MessageSquare} iconBg="bg-blue-500/10" iconColor="text-blue-500" title="Enquiries" />
-                  {activeEnquiries.length > 0 && <Pill text={`${activeEnquiries.length} active`} cls="bg-blue-500/10 text-blue-500" />}
+                  <div className="flex items-center gap-2">
+                    {activeEnquiries.length > 0 && (
+                      <Pill text={`${activeEnquiries.length} active`} cls="bg-blue-500/10 text-blue-500" />
+                    )}
+                    <span className="text-xs text-muted-foreground">{allEnquiries.length} total</span>
+                  </div>
                 </div>
                 {allEnquiries.length === 0 ? (
                   <Empty icon={MessageSquare} text="No enquiries on record" />
                 ) : (
-                  <div className="space-y-2">
-                    {allEnquiries.map((e, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/50">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{e.enquiryNo ?? `Enquiry #${i + 1}`}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{e.requirement}</p>
+                  <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+                    {allEnquiries.map((e) => (
+                      <button
+                        key={e.id ?? e.enquiryNo}
+                        type="button"
+                        onClick={() => e.id && navigate(`/enquiries/${e.id}`)}
+                        className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 text-left hover:bg-muted/40 transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground truncate">{e.enquiryNo}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{e.requirement}</p>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] text-muted-foreground">
+                            <span>{fmtDate(e.date)}</span>
+                            {e.assignedTo?.trim() && <span>Assigned: {e.assignedTo}</span>}
+                            <span className="font-medium text-foreground/80">{e.priority} priority</span>
+                          </div>
                         </div>
-                        <span className="ml-3 shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-500">{e.status}</span>
-                      </div>
+                        <StatusPill status={e.status} map={enquiryStatusMap} />
+                      </button>
                     ))}
                   </div>
                 )}

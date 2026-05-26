@@ -25,8 +25,8 @@ import {
 import { Client } from "../../interfaces/client.interface";
 import { getClientsApi, deleteClientApi } from "../../api/client.api";
 import { getComplaintsApi } from "../../api/complaint.api";
+import { getEnquiriesApi } from "../../api/enquiry.api";
 import { ClientFormModal } from "./ClientFormModal";
-import { mockEnquiries } from "../enquiries/Enquiries";
 import { useDebounce } from "../../hooks/useDebounce";
 import { FilterStatChips } from "../../components/FilterStatChips";
 import { ReusableTable } from "../../components/ReusableTable";
@@ -42,14 +42,6 @@ const filterLabels: Record<FilterType, string> = {
 };
 
 const PAGE_SIZE = 10;
-
-const activeEnquiryCompanies = [
-  ...new Set(
-    mockEnquiries
-      .filter((e) => e.status !== "Converted to Project")
-      .map((e) => e.clientName)
-  ),
-];
 
 export function Clients() {
   const navigate = useNavigate();
@@ -71,8 +63,11 @@ export function Clients() {
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
   const [activeComplaintCompanies, setActiveComplaintCompanies] = useState<string[]>([]);
+  const [activeEnquiryCompanies, setActiveEnquiryCompanies] = useState<string[]>([]);
   const [complaintCountsByClientId, setComplaintCountsByClientId] = useState<Record<string, number>>({});
   const [complaintCountsByCompanyName, setComplaintCountsByCompanyName] = useState<Record<string, number>>({});
+  const [enquiryCountsByClientId, setEnquiryCountsByClientId] = useState<Record<string, number>>({});
+  const [enquiryCountsByCompanyName, setEnquiryCountsByCompanyName] = useState<Record<string, number>>({});
 
   // Stat counts (fetched separately without pagination)
   const [statCounts, setStatCounts] = useState({
@@ -80,7 +75,7 @@ export function Clients() {
     activeAmc: 0,
     expiredAmc: 0,
     activeComplaints: 0,
-    activeEnquiries: activeEnquiryCompanies.length,
+    activeEnquiries: 0,
   });
 
   const loadActiveComplaintData = useCallback(async (): Promise<number> => {
@@ -123,25 +118,65 @@ export function Clients() {
     }
   }, []);
 
+  const loadActiveEnquiryData = useCallback(async (): Promise<number> => {
+    try {
+      const statuses = ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] as const;
+      const responses = await Promise.all(
+        statuses.map((status) => getEnquiriesApi({ status, page: 1, limit: 500 })),
+      );
+
+      const byClientId: Record<string, number> = {};
+      const byCompanyName: Record<string, number> = {};
+      const companyNames = new Set<string>();
+
+      for (const res of responses) {
+        if (!res.success) continue;
+        for (const e of res.data) {
+          if (e.clientId) {
+            byClientId[e.clientId] = (byClientId[e.clientId] ?? 0) + 1;
+          }
+          const nameKey = e.clientName?.trim().toLowerCase();
+          if (nameKey) {
+            byCompanyName[nameKey] = (byCompanyName[nameKey] ?? 0) + 1;
+            companyNames.add(e.clientName);
+          }
+        }
+      }
+
+      setEnquiryCountsByClientId(byClientId);
+      setEnquiryCountsByCompanyName(byCompanyName);
+      setActiveEnquiryCompanies([...companyNames]);
+      return companyNames.size;
+    } catch (err) {
+      console.error("Failed to fetch active enquiries:", err);
+      setEnquiryCountsByClientId({});
+      setEnquiryCountsByCompanyName({});
+      setActiveEnquiryCompanies([]);
+      return 0;
+    }
+  }, []);
+
   const fetchStatCounts = useCallback(async () => {
     try {
-      const [allRes, activeAmcRes, expiredAmcRes, activeComplaintClientCount] = await Promise.all([
-        getClientsApi({ page: 1, limit: 1 }),
-        getClientsApi({ page: 1, limit: 1, filter: "active-amc" }),
-        getClientsApi({ page: 1, limit: 1, filter: "expired-amc" }),
-        loadActiveComplaintData(),
-      ]);
+      const [allRes, activeAmcRes, expiredAmcRes, activeComplaintClientCount, activeEnquiryClientCount] =
+        await Promise.all([
+          getClientsApi({ page: 1, limit: 1 }),
+          getClientsApi({ page: 1, limit: 1, filter: "active-amc" }),
+          getClientsApi({ page: 1, limit: 1, filter: "expired-amc" }),
+          loadActiveComplaintData(),
+          loadActiveEnquiryData(),
+        ]);
       setStatCounts({
         total: allRes.total ?? 0,
         activeAmc: activeAmcRes.total ?? 0,
         expiredAmc: expiredAmcRes.total ?? 0,
         activeComplaints: activeComplaintClientCount,
-        activeEnquiries: activeEnquiryCompanies.length,
+        activeEnquiries: activeEnquiryClientCount,
       });
     } catch (err) {
       console.error("Failed to fetch stat counts:", err);
     }
-  }, [loadActiveComplaintData]);
+  }, [loadActiveComplaintData, loadActiveEnquiryData]);
 
   const fetchClients = useCallback(async (page: number, search: string, filter: FilterType) => {
     setIsLoading(true);
@@ -171,7 +206,7 @@ export function Clients() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeComplaintCompanies]);
+  }, [activeComplaintCompanies, activeEnquiryCompanies]);
 
   // Re-fetch whenever debounced search, filter, or page changes
   useEffect(() => {
@@ -228,6 +263,13 @@ export function Clients() {
       return complaintCountsByClientId[client.id];
     }
     return complaintCountsByCompanyName[client.companyName.trim().toLowerCase()] ?? 0;
+  };
+
+  const getActiveEnquiriesCount = (client: Client) => {
+    if (client.id && enquiryCountsByClientId[client.id] != null) {
+      return enquiryCountsByClientId[client.id];
+    }
+    return enquiryCountsByCompanyName[client.companyName.trim().toLowerCase()] ?? 0;
   };
 
   const filterChips = [
@@ -295,6 +337,20 @@ export function Clients() {
         const count = getActiveComplaintsCount(client);
         return count > 0 ? (
           <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/10 text-orange-500">
+            {count}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">0</span>
+        );
+      },
+      className: "px-6 py-4 text-sm",
+    },
+    {
+      header: "Active Enquiries",
+      accessor: (client: Client) => {
+        const count = getActiveEnquiriesCount(client);
+        return count > 0 ? (
+          <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-blue-500/10 text-blue-500">
             {count}
           </span>
         ) : (

@@ -13,6 +13,8 @@ interface StaffSelectDropdownProps {
   label?: string;
   /** Opens above the trigger (best inside forms/modals near the bottom) */
   placement?: "top" | "bottom";
+  /** Fallback display names while staff list loads (staffId -> fullName) */
+  nameById?: Record<string, string>;
 }
 
 export function StaffSelectDropdown({
@@ -20,6 +22,7 @@ export function StaffSelectDropdown({
   onChange,
   label = "Assign Staff",
   placement = "top",
+  nameById,
 }: StaffSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
@@ -42,9 +45,10 @@ export function StaffSelectDropdown({
   }, []);
 
   useEffect(() => {
-    if (!isOpen) return;
-    loadStaff();
-  }, [isOpen, loadStaff]);
+    if (isOpen || selected.length > 0) {
+      loadStaff();
+    }
+  }, [isOpen, selected.length, loadStaff]);
 
   useEffect(() => {
     if (!isOpen) setSearch("");
@@ -69,7 +73,10 @@ export function StaffSelectDropdown({
     }
   };
 
-  const getName = (id: string) => staffList.find((s) => s.id === id)?.fullName ?? id;
+  const resolveStaffId = (s: Staff) => s.id || (s as { _id?: string })._id || "";
+
+  const getName = (id: string) =>
+    staffList.find((s) => resolveStaffId(s) === id)?.fullName ?? nameById?.[id] ?? null;
 
   const handleStaffCreated = (created: Staff) => {
     if (created.id) {
@@ -96,6 +103,8 @@ export function StaffSelectDropdown({
           >
             {selected.length === 0 ? (
               <span className="text-muted-foreground font-medium">Select staff members...</span>
+            ) : selected.length === 1 && getName(selected[0]) ? (
+              <span className="text-foreground font-semibold truncate">{getName(selected[0])}</span>
             ) : (
               <span className="text-foreground font-semibold">{selected.length} staff selected</span>
             )}
@@ -135,12 +144,13 @@ export function StaffSelectDropdown({
                 <p className="py-6 text-center text-xs text-muted-foreground">No staff found.</p>
               ) : (
                 filtered.map((s) => {
-                  const isSelected = selected.includes(s.id!);
+                  const sid = resolveStaffId(s);
+                  const isSelected = selected.includes(sid);
                   return (
                     <button
-                      key={s.id}
+                      key={sid}
                       type="button"
-                      onClick={() => toggle(s.id!)}
+                      onClick={() => toggle(sid)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 text-left ${
                         isSelected ? "bg-pink-50/50" : ""
                       }`}
@@ -184,7 +194,7 @@ export function StaffSelectDropdown({
               key={id}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20 text-xs font-semibold text-pink-700"
             >
-              {getName(id)}
+              {getName(id) ?? "Loading…"}
               <button type="button" onClick={() => toggle(id)}>
                 <X className="h-3 w-3" />
               </button>

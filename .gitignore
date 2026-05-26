@@ -30,6 +30,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Uploaded files (local storage; use S3 in production)
+server/uploads/
+
 # 4. Production Build Outputs & Bundles
 dist/
 build/

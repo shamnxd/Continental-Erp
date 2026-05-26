@@ -11,6 +11,10 @@ function getEnv(key: string): string {
   return value;
 }
 
+function getEnvOptional(key: string, defaultValue: string): string {
+  return process.env[key] ?? defaultValue;
+}
+
 export const env = {
   NODE_ENV: getEnv('NODE_ENV'),
   PORT: getEnv('PORT'),
@@ -22,4 +26,9 @@ export const env = {
   COOKIE_NAME_REFRESH: getEnv('COOKIE_NAME_REFRESH'),
   FRONTEND_URL: getEnv('FRONTEND_URL'),
   LOG_RETENTION_DAYS: getEnv('LOG_RETENTION_DAYS'),
+  /** `local` (disk) or `s3` — swap without changing upload handlers */
+  FILE_STORAGE_PROVIDER: getEnvOptional('FILE_STORAGE_PROVIDER', 'local') as 'local' | 's3',
+  UPLOAD_DIR: getEnvOptional('UPLOAD_DIR', './uploads'),
+  API_PUBLIC_URL: getEnvOptional('API_PUBLIC_URL', `http://localhost:${getEnvOptional('PORT', '5000')}`),
+  MAX_UPLOAD_MB: parseInt(getEnvOptional('MAX_UPLOAD_MB', '15'), 10),
 };

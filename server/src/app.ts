@@ -9,6 +9,7 @@ import { clientRouter } from "./routes/client.routes";
 import { complaintRouter } from "./routes/complaint.routes";
 import { smrRouter } from "./routes/smr.routes";
 import { staffRouter } from "./routes/staff.routes";
+import { amcRouter } from "./routes/amc.routes";
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/smrs", smrRouter);
 app.use("/api/v1/staff", staffRouter);
+app.use("/api/v1/amc", amcRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

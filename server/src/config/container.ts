@@ -55,12 +55,34 @@ import { UpdateStaffUseCase } from "../usecases/staff/UpdateStaffUseCase";
 import { DeleteStaffUseCase } from "../usecases/staff/DeleteStaffUseCase";
 import { GetStaffWorkHistoryUseCase } from "../usecases/staff/GetStaffWorkHistoryUseCase";
 
+import { IAmcRepository, GetAmcQuery, PaginatedAmc } from "../interfaces/repositories/IAmcRepository";
+import { AmcRepository } from "../repositories/mongo/AmcRepository";
+import { IAmc } from "../interfaces/models/IAmc";
+import { CreateAmcDto, UpdateAmcDto } from "../dtos/amc.dto";
+import { CreateAmcUseCase } from "../usecases/amc/CreateAmcUseCase";
+import { GetAmcUseCase } from "../usecases/amc/GetAmcUseCase";
+import { GetAmcByIdUseCase } from "../usecases/amc/GetAmcByIdUseCase";
+import { UpdateAmcUseCase } from "../usecases/amc/UpdateAmcUseCase";
+import { DeleteAmcUseCase } from "../usecases/amc/DeleteAmcUseCase";
+import { IAmcVisitRepository } from "../interfaces/repositories/IAmcVisitRepository";
+import { AmcVisitRepository } from "../repositories/mongo/AmcVisitRepository";
+import { IAmcVisit } from "../interfaces/models/IAmcVisit";
+import { ScheduleAmcVisitDto, UpdateAmcVisitDto } from "../dtos/amcVisit.dto";
+import { GetAmcVisitsUseCase } from "../usecases/amc/GetAmcVisitsUseCase";
+import { ScheduleAmcVisitUseCase } from "../usecases/amc/ScheduleAmcVisitUseCase";
+import { UpdateAmcVisitUseCase } from "../usecases/amc/UpdateAmcVisitUseCase";
+import { AddAmcRemarkUseCase } from "../usecases/amc/AddAmcRemarkUseCase";
+import { RecordAmcPaymentUseCase } from "../usecases/amc/RecordAmcPaymentUseCase";
+import { AddAmcRemarkDto, RecordAmcPaymentDto } from "../dtos/amcRemark.dto";
+
 // Register repositories
 container.registerSingleton<IUserRepository>("UserRepository", UserRepository);
 container.registerSingleton<IClientRepository>("ClientRepository", ClientRepository);
 container.registerSingleton<IComplaintRepository>("ComplaintRepository", ComplaintRepository);
 container.registerSingleton<ISMRRepository>("SMRRepository", SMRRepository);
 container.registerSingleton<IStaffRepository>("StaffRepository", StaffRepository);
+container.registerSingleton<IAmcRepository>("AmcRepository", AmcRepository);
+container.registerSingleton<IAmcVisitRepository>("AmcVisitRepository", AmcVisitRepository);
 
 // Register use case abstractions
 container.registerSingleton<IUseCase<LoginRequestDto, LoginResponseDto>>("LoginUseCase", LoginUseCase);
@@ -92,4 +114,24 @@ container.registerSingleton<IUseCase<string, IStaff | null>>("GetStaffByIdUseCas
 container.registerSingleton<IUseCase<{ id: string; data: UpdateStaffDto }, IStaff | null>>("UpdateStaffUseCase", UpdateStaffUseCase);
 container.registerSingleton<IUseCase<string, boolean>>("DeleteStaffUseCase", DeleteStaffUseCase);
 container.registerSingleton<IUseCase<string, StaffWorkHistoryItem[]>>("GetStaffWorkHistoryUseCase", GetStaffWorkHistoryUseCase);
+
+container.registerSingleton<IUseCase<CreateAmcDto, IAmc>>("CreateAmcUseCase", CreateAmcUseCase);
+container.registerSingleton<IUseCase<GetAmcQuery, PaginatedAmc>>("GetAmcUseCase", GetAmcUseCase);
+container.registerSingleton<IUseCase<string, IAmc | null>>("GetAmcByIdUseCase", GetAmcByIdUseCase);
+container.registerSingleton<IUseCase<{ id: string; data: UpdateAmcDto }, IAmc | null>>("UpdateAmcUseCase", UpdateAmcUseCase);
+container.registerSingleton<IUseCase<string, boolean>>("DeleteAmcUseCase", DeleteAmcUseCase);
+container.registerSingleton<IUseCase<string, IAmcVisit[]>>("GetAmcVisitsUseCase", GetAmcVisitsUseCase);
+container.registerSingleton<IUseCase<{ amcId: string; data: ScheduleAmcVisitDto }, IAmcVisit>>(
+  "ScheduleAmcVisitUseCase",
+  ScheduleAmcVisitUseCase
+);
+container.registerSingleton<
+  IUseCase<{ amcId: string; visitId: string; data: UpdateAmcVisitDto }, IAmcVisit | null>
+>("UpdateAmcVisitUseCase", UpdateAmcVisitUseCase);
+container.registerSingleton<
+  IUseCase<{ amcId: string; data: AddAmcRemarkDto; user: string }, IAmc | null>
+>("AddAmcRemarkUseCase", AddAmcRemarkUseCase);
+container.registerSingleton<
+  IUseCase<{ amcId: string; data: RecordAmcPaymentDto; user: string }, IAmc | null>
+>("RecordAmcPaymentUseCase", RecordAmcPaymentUseCase);
 

@@ -5,6 +5,16 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { RemarksPanel } from "../../components/RemarksPanel";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Label } from "../../components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -48,6 +58,16 @@ export function ComplaintDetail() {
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [isResolveConfirmOpen, setIsResolveConfirmOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [editIssue, setEditIssue] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPriority, setEditPriority] = useState<Complaint["priority"]>("Medium");
+  const [editExpectedResolution, setEditExpectedResolution] = useState("");
+  const [editContactPerson, setEditContactPerson] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editLocation, setEditLocation] = useState("");
 
   const fetchComplaintDetails = async () => {
     if (!id) return;
@@ -91,6 +111,67 @@ export function ComplaintDetail() {
   useEffect(() => {
     fetchComplaintDetails();
   }, [id]);
+
+  const openEditComplaint = () => {
+    if (!complaint) return;
+    setEditIssue(complaint.issue ?? "");
+    setEditDescription(complaint.description ?? "");
+    setEditPriority(complaint.priority);
+    setEditExpectedResolution(
+      complaint.expectedResolution ? new Date(complaint.expectedResolution).toISOString().split("T")[0] : ""
+    );
+    setEditContactPerson(complaint.contactPerson ?? "");
+    setEditPhone(complaint.phone ?? "");
+    setEditLocation(complaint.location ?? "");
+    setIsEditOpen(true);
+  };
+
+  const handleSaveComplaintEdit = async () => {
+    if (!complaint || !id) return;
+    if (!editIssue.trim()) {
+      toast.error("Issue is required");
+      return;
+    }
+    if (!editDescription.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+    if (!editPhone.trim()) {
+      toast.error("Phone is required");
+      return;
+    }
+    if (!editLocation.trim()) {
+      toast.error("Location is required");
+      return;
+    }
+    if (!editExpectedResolution) {
+      toast.error("Expected resolution date is required");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const res = await updateComplaintApi(id, {
+        issue: editIssue.trim(),
+        description: editDescription.trim(),
+        priority: editPriority,
+        expectedResolution: new Date(editExpectedResolution).toISOString(),
+        contactPerson: editContactPerson.trim(),
+        phone: editPhone.trim(),
+        location: editLocation.trim(),
+      });
+      if (res.success) {
+        setComplaint(res.data);
+        setIsEditOpen(false);
+        toast.success("Complaint updated");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update complaint");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleEditRemark = async (remarkKey: string, text: string) => {
     if (!complaint || !id) return;
@@ -253,6 +334,16 @@ export function ComplaintDetail() {
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(complaint.status)}`}>
                 {complaint.status}
               </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openEditComplaint}
+                className="h-9 px-3 font-bold"
+                disabled={complaint.status === "Resolved"}
+              >
+                <Pencil className="h-4 w-4 mr-1.5" />
+                <span className="hidden sm:inline">Edit</span>
+              </Button>
               {complaint.status !== "Resolved" ? (
                 <Button
                   size="sm"
@@ -667,6 +758,84 @@ export function ComplaintDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Complaint Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl bg-card border border-border shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-foreground font-bold">Edit Complaint</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Issue *</Label>
+              <Input value={editIssue} onChange={(e) => setEditIssue(e.target.value)} />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Description *</Label>
+              <Textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="min-h-[110px]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Priority *</Label>
+              <Select value={editPriority} onValueChange={(v) => setEditPriority(v as Complaint["priority"])}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Critical", "High", "Medium", "Low"] as const).map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Expected Resolution *</Label>
+              <Input
+                type="date"
+                value={editExpectedResolution}
+                onChange={(e) => setEditExpectedResolution(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Contact Person</Label>
+              <Input value={editContactPerson} onChange={(e) => setEditContactPerson(e.target.value)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Phone *</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Location *</Label>
+              <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border/50 mt-4">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} disabled={isSavingEdit}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveComplaintEdit}
+              disabled={isSavingEdit}
+              className="bg-pink-700 hover:bg-pink-800 text-white font-bold"
+            >
+              {isSavingEdit ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

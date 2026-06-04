@@ -3,7 +3,6 @@ import { staffApi } from "../../api/staffApi";
 import { 
   CalendarDays, 
   Plus, 
-  X, 
   Calendar, 
   FileText,
   AlertCircle,
@@ -12,6 +11,9 @@ import {
   XCircle,
   Clock
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { Label } from "../../components/ui/label";
+import { Button } from "../../components/ui/button";
 
 interface LeaveRequest {
   id: string;
@@ -169,100 +171,92 @@ export function StaffLeaves() {
       )}
 
       {/* Request Leave Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-lg p-6 relative animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-bold text-foreground">Request Leave</h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+      <Dialog open={showModal} onOpenChange={(open) => {
+        if (!open) setShowModal(false);
+      }}>
+        <DialogContent 
+          className="w-[calc(100vw-2rem)] max-w-lg rounded-xl sm:rounded-lg"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Request Leave</DialogTitle>
+          </DialogHeader>
+
+          {submitError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-3 rounded-xl flex items-center gap-2 mt-4 text-xs">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span className="font-medium">{submitError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="fromDate">From Date</Label>
+                <input
+                  id="fromDate"
+                  type="date"
+                  value={form.fromDate}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2 mt-1 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+              </div>
+              <div>
+                <Label htmlFor="toDate">To Date</Label>
+                <input
+                  id="toDate"
+                  type="date"
+                  value={form.toDate}
+                  min={form.fromDate || new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setForm({ ...form, toDate: e.target.value })}
+                  required
+                  className="w-full px-3.5 py-2 mt-1 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+              </div>
             </div>
 
-            {submitError && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-3 rounded-xl flex items-center gap-2 mb-4 text-xs">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span className="font-medium">{submitError}</span>
+            {form.fromDate && form.toDate && (
+              <div className="bg-primary/10 border border-primary/10 rounded-xl p-3 text-xs text-primary font-semibold">
+                📅 Duration: {calcDays()} day{calcDays() !== 1 ? "s" : ""}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-foreground/80 block mb-1.5">Leave Type</label>
-                <select
-                  value={form.leaveType}
-                  onChange={(e) => setForm({ ...form, leaveType: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                >
-                  {LEAVE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+            <div>
+              <Label htmlFor="reason">Reason *</Label>
+              <textarea
+                id="reason"
+                value={form.reason}
+                onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                placeholder="Detailed reason for leave..."
+                rows={3}
+                className="w-full px-3.5 py-2 mt-1 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none font-sans"
+                required
+              />
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-foreground/80 block mb-1.5">From Date</label>
-                  <input
-                    type="date"
-                    value={form.fromDate}
-                    min={new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-foreground/80 block mb-1.5">To Date</label>
-                  <input
-                    type="date"
-                    value={form.toDate}
-                    min={form.fromDate || new Date().toISOString().split("T")[0]}
-                    onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                    required
-                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                  />
-                </div>
-              </div>
-
-              {form.fromDate && form.toDate && (
-                <div className="bg-primary/10 border border-primary/10 rounded-xl p-3 text-xs text-primary font-semibold">
-                  📅 Duration: {calcDays()} day{calcDays() !== 1 ? "s" : ""}
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-semibold text-foreground/80 block mb-1.5">Reason (optional)</label>
-                <textarea
-                  value={form.reason}
-                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                  placeholder="Brief reason for leave..."
-                  rows={3}
-                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none font-sans"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-border hover:bg-muted text-muted-foreground text-sm font-semibold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-75 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm"
-                >
-                  {submitting ? "Submitting..." : "Submit Request"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowModal(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white"
+              >
+                {submitting ? "Submitting..." : "Submit Request"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

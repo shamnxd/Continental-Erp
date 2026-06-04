@@ -5,6 +5,7 @@ import { ILeaveRequestRepository } from "../interfaces/repositories/ILeaveReques
 import { LeaveStatus } from "../interfaces/models/ILeaveRequest";
 import { AppError } from "../errors/AppError";
 import { StatusCode } from "../constants/statusCodes";
+import { AuditLogger } from "../utils/AuditLogger";
 
 export class LeaveController {
   /** GET /api/v1/leaves */
@@ -14,8 +15,9 @@ export class LeaveController {
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 15;
       const status = req.query.status as string | undefined;
+      const staffId = req.query.staffId as string | undefined;
 
-      const result = await leaveRepo.findPaginated({ status, page, limit });
+      const result = await leaveRepo.findPaginated({ staffId, status, page, limit });
       res.status(StatusCode.OK).json({ success: true, ...result });
     } catch (error) {
       next(error);
@@ -36,6 +38,13 @@ export class LeaveController {
       const leaveRepo = container.resolve<ILeaveRequestRepository>("LeaveRequestRepository");
       const updated = await leaveRepo.updateStatus(id, status as LeaveStatus, adminNote);
       if (!updated) throw new AppError("Leave request not found", StatusCode.NOT_FOUND);
+
+      await AuditLogger.log(
+        req.user?.name || "Admin",
+        "Leave Request Decision",
+        "Administration",
+        `Leave request for ${updated.staffName} (${updated.staffNo}) was ${status}${adminNote ? ` with note: "${adminNote}"` : ""}`
+      );
 
       res.status(StatusCode.OK).json({ success: true, data: updated });
     } catch (error) {

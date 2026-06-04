@@ -36,7 +36,6 @@ import { getEnquiriesApi } from "../../api/enquiry.api";
 import { Enquiry } from "../../interfaces/enquiry.interface";
 import { getAmcApi } from "../../api/amc.api";
 import type { AmcContract } from "../../interfaces/amc.interface";
-import { mockInvoices } from "../invoices/Invoices";
 
 // ── helpers ──────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -89,6 +88,34 @@ const enquiryStatusMap: Record<string, string> = {
 function isActiveEnquiry(status: string) {
   return status !== "Converted to Project" && status !== "Closed";
 }
+
+// Local placeholder invoices for client detail until Finance API is wired.
+const mockInvoices = [
+  {
+    id: "inv-1",
+    invoiceNo: "INV-2026-043",
+    date: "2026-05-10",
+    clientName: "ABC Corporation",
+    amount: 200000,
+    gst: 36000,
+    totalAmount: 236000,
+    dueDate: "2026-05-25",
+    status: "Paid",
+    type: "AMC Upfront",
+  },
+  {
+    id: "inv-2",
+    invoiceNo: "INV-2026-044",
+    date: "2026-05-14",
+    clientName: "ABC Corporation",
+    amount: 7800,
+    gst: 1404,
+    totalAmount: 9204,
+    dueDate: "2026-05-29",
+    status: "Pending",
+    type: "Supplementary",
+  },
+];
 
 // ── main component ────────────────────────────────────────
 export function ClientDetail() {

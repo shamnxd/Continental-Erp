@@ -8,6 +8,7 @@ import {
   Loader2,
   Pencil,
   MessageSquare,
+  Receipt,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -201,6 +202,20 @@ export function QuotationDetail() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {(quotation.status === "Approved" || quotation.status === "Pending Approval") && (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          navigate(AppRoute.FINANCE_INVOICE_CREATE, {
+                            state: { quotationId: quotation.id },
+                          })
+                        }
+                        className="h-9 px-4 font-semibold gap-1.5 bg-pink-700 hover:bg-pink-800"
+                      >
+                        <Receipt className="h-4 w-4" />
+                        Create invoice
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"

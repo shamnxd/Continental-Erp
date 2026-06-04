@@ -230,7 +230,7 @@ export function AuditLogs() {
       onFilterChange={setModuleFilter}
       extraFilters={
         <Select value={selectedAdmin} onValueChange={setSelectedAdmin}>
-          <SelectTrigger className="w-full sm:w-[220px] h-11 border-border">
+          <SelectTrigger className="w-full sm:w-[220px] !h-11 !rounded-xl border-input px-4">
             <SelectValue placeholder="Filter by Admin" />
           </SelectTrigger>
           <SelectContent>

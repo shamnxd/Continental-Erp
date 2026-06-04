@@ -41,6 +41,7 @@ export class AuditLogController {
           limit: result.limit,
           totalPages: result.totalPages,
         },
+        counts: result.counts,
       });
     } catch (error) {
       next(error);

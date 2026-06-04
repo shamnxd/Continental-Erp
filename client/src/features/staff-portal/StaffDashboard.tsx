@@ -73,7 +73,7 @@ export function StaffDashboard() {
   }
 
   return (
-    <div className="w-full max-w-[92%] lg:max-w-[85%] mx-auto space-y-8 py-2">
+    <div className="space-y-8">
       {/* Welcome Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">

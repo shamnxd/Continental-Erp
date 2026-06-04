@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api } from "../../api";
 import { toast } from "sonner";
+import { ShieldAlert } from "lucide-react";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
 import {
@@ -41,6 +42,7 @@ export function AuditLogs() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [counts, setCounts] = useState({
     all: 0,
     Clients: 0,
@@ -53,6 +55,7 @@ export function AuditLogs() {
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
+      setError(null);
       const response: any = await api.get("/audit-logs", {
         params: {
           page: currentPage,
@@ -71,7 +74,9 @@ export function AuditLogs() {
       }
     } catch (err: any) {
       console.error(err);
-      toast.error(err.response?.data?.message || "Failed to load audit logs");
+      const errMsg = err.response?.data?.message || "Failed to load audit logs";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -125,6 +130,20 @@ export function AuditLogs() {
       className: tableCellClass.narrow,
     },
   ];
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto my-16 bg-card border border-border rounded-xl shadow-sm">
+        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 text-red-500 mb-5 animate-pulse">
+          <ShieldAlert className="w-7 h-7" />
+        </div>
+        <h3 className="text-xl font-bold text-foreground mb-2">Access Denied</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+          {error}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <ManagementListPage

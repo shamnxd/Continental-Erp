@@ -51,6 +51,7 @@ import { StaffLayout } from "./features/staff-portal/StaffLayout";
 import { StaffDashboard } from "./features/staff-portal/StaffDashboard";
 import { StaffTasks } from "./features/staff-portal/StaffTasks";
 import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
+import { StaffSchedules } from "./features/staff-portal/StaffSchedules";
 
 export const router = createBrowserRouter([
   {
@@ -140,7 +141,7 @@ export const router = createBrowserRouter([
       { path: "dashboard", element: <StaffDashboard /> },
       { path: "tasks", element: <StaffTasks /> },
       { path: "leaves", element: <StaffLeaves /> },
-      { path: "schedules", element: <Schedules /> },
+      { path: "schedules", element: <StaffSchedules /> },
     ],
   },
 ]);

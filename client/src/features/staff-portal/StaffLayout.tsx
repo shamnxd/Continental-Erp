@@ -10,6 +10,11 @@ import {
   ChevronDown,
   Sun,
   Moon,
+  Search,
+  Bell,
+  FileText,
+  AlertCircle,
+  Calendar,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -61,6 +66,22 @@ export function StaffLayout() {
     }
     return false;
   });
+
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const notifications = [
+    { id: 1, title: "New Complaint Assigned", message: "A new complaint ENQ-2026-001 has been assigned to you.", time: "5 mins ago", type: "complaint" },
+    { id: 2, title: "Leave Request Approved", message: "Your leave request for Annual Leave has been approved.", time: "2 hours ago", type: "leave" },
+    { id: 3, title: "Upcoming Visit scheduled", message: "AMC Quarterly Service is scheduled for tomorrow.", time: "4 hours ago", type: "amc" },
+  ];
+
+  const searchResults = searchQuery
+    ? navigation.filter((item) =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
   useEffect(() => {
     if (!isStaffLoggedIn()) {
@@ -187,7 +208,7 @@ export function StaffLayout() {
 
       {/* Main content — offset for fixed sidebar on desktop */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-64">
-        {/* Top bar (Header matching admin header) */}
+        {/* Top bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 lg:px-8 shadow-sm shrink-0">
           <div className="flex items-center gap-4 flex-1">
             <button
@@ -202,7 +223,7 @@ export function StaffLayout() {
           </div>
 
           <div className="flex items-center gap-2 relative">
-            {/* Dark Mode toggle */}
+            {/* Dark Mode Toggle */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2.5 hover:bg-muted rounded-xl transition-colors relative group"
@@ -215,7 +236,136 @@ export function StaffLayout() {
               )}
             </button>
 
-            {/* Profile dropdown dropdown matching admin */}
+            {/* Global Search Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowSearch(!showSearch);
+                  setShowNotifications(false);
+                }}
+                className={`p-2.5 hover:bg-muted rounded-xl transition-colors relative group ${
+                  showSearch ? "bg-muted text-foreground" : ""
+                }`}
+              >
+                <Search className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+              </button>
+
+              {showSearch && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSearch(false)} />
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-4 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Search pages (e.g. Tasks, Leave)..."
+                          className="w-full pl-10 pr-4 py-2 bg-muted/50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto p-2">
+                      {searchResults.length > 0 ? (
+                        searchResults.map((item) => (
+                          <Link
+                            key={item.href}
+                            to={item.href}
+                            onClick={() => {
+                              setShowSearch(false);
+                              setSearchQuery("");
+                            }}
+                            className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted rounded-xl transition-colors text-sm font-medium text-foreground"
+                          >
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                              <item.icon className="h-4 w-4" />
+                            </div>
+                            {item.name}
+                          </Link>
+                        ))
+                      ) : (
+                        <p className="p-4 text-center text-xs text-muted-foreground">
+                          {searchQuery ? "No pages found" : "Start typing to search pages..."}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Notification Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setShowSearch(false);
+                }}
+                className={`p-2.5 hover:bg-muted rounded-xl transition-colors relative group ${
+                  showNotifications ? "bg-muted text-foreground" : ""
+                }`}
+              >
+                <Bell className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+                <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full ring-2 ring-card"></span>
+              </button>
+
+              {showNotifications && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                  <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden">
+                    <div className="p-4 border-b border-border flex items-center justify-between">
+                      <h3 className="font-bold text-foreground">Notifications</h3>
+                      <button className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline">
+                        Mark all as read
+                      </button>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className="p-4 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0 cursor-pointer group"
+                        >
+                          <div className="flex gap-3">
+                            <div
+                              className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                n.type === "leave"
+                                  ? "bg-blue-100 text-blue-600"
+                                  : n.type === "amc"
+                                  ? "bg-pink-100 text-pink-600"
+                                  : "bg-amber-100 text-amber-600"
+                              }`}
+                            >
+                              {n.type === "leave" ? (
+                                <FileText className="h-4 w-4" />
+                              ) : n.type === "amc" ? (
+                                <Calendar className="h-4 w-4" />
+                              ) : (
+                                <AlertCircle className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                                {n.title}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
+                                {n.message}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+                                {n.time}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Profile dropdown */}
             {staff && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -14,6 +14,7 @@ import { staffRouter } from "./routes/staff.routes";
 import { amcRouter } from "./routes/amc.routes";
 import { enquiryRouter } from "./routes/enquiry.routes";
 import { quotationRouter } from "./routes/quotation.routes";
+import { financeRouter } from "./routes/finance.routes";
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
@@ -47,6 +48,7 @@ app.use("/api/v1/staff", staffRouter);
 app.use("/api/v1/amc", amcRouter);
 app.use("/api/v1/enquiries", enquiryRouter);
 app.use("/api/v1/quotations", quotationRouter);
+app.use("/api/v1/finance", financeRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

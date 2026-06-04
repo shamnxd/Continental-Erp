@@ -64,17 +64,40 @@ export function PublicComplaintRegister() {
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center">
         
         {/* Left Side: Logo & Branding */}
-        <div className="md:col-span-5 flex flex-col items-center md:items-start text-center md:text-left gap-2 border-b md:border-b-0 md:border-r border-slate-100 pb-6 md:pb-0 md:pr-12">
-          <img
-            src="/clogo.png"
-            alt="Continental Logo"
-            className="h-16 w-16 object-contain mb-2"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Continental
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">Service Register Portal</p>
+        <div className="md:col-span-5 flex flex-col justify-center items-center md:items-start text-center md:text-left gap-6 border-b md:border-b-0 md:border-r border-slate-100 pb-8 md:pb-0 md:pr-12">
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <div className="h-16 w-16 bg-pink-50 rounded-2xl flex items-center justify-center border border-pink-100/50 shadow-sm">
+              <img
+                src="/clogo.png"
+                alt="Continental Logo"
+                className="h-11 w-11 object-contain"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+            </div>
+            <div className="space-y-0.5">
+              <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                Continental
+              </h1>
+              <p className="text-xs font-bold text-pink-700 tracking-widest uppercase">
+                Service Register Portal
+              </p>
+            </div>
+          </div>
+
+          <div className="hidden md:flex flex-col gap-4 text-sm text-slate-500 pt-5 border-t border-slate-100 w-full">
+            <div className="flex items-center gap-3">
+              <span className="text-base text-pink-700">⚡</span>
+              <p className="font-semibold text-slate-600">Quick breakdown registration without login</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-base text-pink-700">🔧</span>
+              <p className="font-semibold text-slate-600">Automated technician review & allocation</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-base text-pink-700">📋</span>
+              <p className="font-semibold text-slate-600">Directly converted to operational complaints</p>
+            </div>
+          </div>
         </div>
 
         {/* Right Side: Form or Success Card */}

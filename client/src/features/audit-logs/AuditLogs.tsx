@@ -16,6 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
+import { ScrollText } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 
 type ModuleFilter = "all" | "Clients" | "AMC" | "Complaints" | "Staff" | "Finance" | "Administration";
 
@@ -42,6 +49,7 @@ const moduleTone = (m: string): "pink" | "blue" | "amber" | "green" | "orange" |
 
 export function AuditLogs() {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+  const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
@@ -211,48 +219,129 @@ export function AuditLogs() {
   }
 
   return (
-    <ManagementListPage
-      title="Audit Logs"
-      subtitle="System activity and change history"
-      searchPlaceholder="Search by user, action, or details..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-      filterOptions={[
-        { value: "all", label: "All Modules", count: counts.all, tone: "primary" },
-        { value: "Clients", label: "Clients", count: counts.Clients, tone: "blue" },
-        { value: "AMC", label: "AMC", count: counts.AMC, tone: "pink" },
-        { value: "Complaints", label: "Complaints", count: counts.Complaints, tone: "amber" },
-        { value: "Staff", label: "Staff", count: counts.Staff, tone: "green" },
-        { value: "Finance", label: "Finance", count: counts.Finance, tone: "orange" },
-        { value: "Administration", label: "Administration", count: counts.Administration, tone: "red" },
-      ]}
-      filterValue={moduleFilter}
-      onFilterChange={setModuleFilter}
-      extraFilters={
-        <Select value={selectedAdmin} onValueChange={setSelectedAdmin}>
-          <SelectTrigger className="w-full sm:w-[220px] !h-11 !rounded-xl border-input px-4">
-            <SelectValue placeholder="Filter by Admin" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Administrators</SelectItem>
-            {admins.map((admin) => (
-              <SelectItem key={admin.id} value={admin.name}>
-                {admin.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      }
-      columns={columns}
-      data={logs}
-      isLoading={isLoading}
-      emptyMessage="No audit log entries yet."
-      currentPage={currentPage}
-      totalPages={totalPages}
-      total={total}
-      pageSize={PAGE_SIZE}
-      onPageChange={setCurrentPage}
-      entityLabel="log entries"
-    />
+    <>
+      <ManagementListPage
+        title="Audit Logs"
+        subtitle="System activity and change history"
+        searchPlaceholder="Search by user, action, or details..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterOptions={[
+          { value: "all", label: "All Modules", count: counts.all, tone: "primary" },
+          { value: "Clients", label: "Clients", count: counts.Clients, tone: "blue" },
+          { value: "AMC", label: "AMC", count: counts.AMC, tone: "pink" },
+          { value: "Complaints", label: "Complaints", count: counts.Complaints, tone: "amber" },
+          { value: "Staff", label: "Staff", count: counts.Staff, tone: "green" },
+          { value: "Finance", label: "Finance", count: counts.Finance, tone: "orange" },
+          { value: "Administration", label: "Administration", count: counts.Administration, tone: "red" },
+        ]}
+        filterValue={moduleFilter}
+        onFilterChange={setModuleFilter}
+        extraFilters={
+          <Select value={selectedAdmin} onValueChange={setSelectedAdmin}>
+            <SelectTrigger className="w-full sm:w-[220px] !h-11 !rounded-xl border-input px-4">
+              <SelectValue placeholder="Filter by Admin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Administrators</SelectItem>
+              {admins.map((admin) => (
+                <SelectItem key={admin.id} value={admin.name}>
+                  {admin.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+        columns={columns}
+        data={logs}
+        isLoading={isLoading}
+        onRowClick={setSelectedLog}
+        emptyMessage="No audit log entries yet."
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setCurrentPage}
+        entityLabel="log entries"
+      />
+
+      <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
+        <DialogContent className="max-w-lg bg-white rounded-2xl p-6 border-0 shadow-lg">
+          <DialogHeader className="border-b border-slate-100 pb-4">
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <ScrollText className="h-5 w-5 text-pink-700" />
+              Audit Log Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedLog && (
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+                    Performed By
+                  </span>
+                  <p className="text-sm font-semibold text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                    {selectedLog.user}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+                    Module
+                  </span>
+                  <div className="inline-block mt-0.5">
+                    <TableStatusBadge label={selectedLog.module} tone={moduleTone(selectedLog.module)} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+                  Action
+                </span>
+                <p className="text-sm font-medium text-slate-800 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                  {selectedLog.action}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+                  Timestamp
+                </span>
+                <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+                  {new Date(selectedLog.timestamp).toLocaleString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                  })}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-1">
+                  Full Details
+                </span>
+                <div className="text-sm text-slate-700 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100 min-h-[80px] break-words whitespace-pre-wrap leading-relaxed font-mono">
+                  {selectedLog.details}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t border-slate-100">
+            <button
+              onClick={() => setSelectedLog(null)}
+              className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

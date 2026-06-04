@@ -24,7 +24,9 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
   public async findPaginated(query: GetAuditLogsQuery): Promise<PaginatedAuditLogs> {
     const { search, module, user, page = 1, limit = 15 } = query;
 
-    const mongoFilter: Record<string, any> = {};
+    const mongoFilter: Record<string, any> = {
+      action: { $nin: ["Staff Login", "Staff Logout"] }
+    };
 
     if (module && module !== "all") {
       if (module === "Administration") {
@@ -34,7 +36,9 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
       }
     }
 
-    const countFilter: Record<string, any> = {};
+    const countFilter: Record<string, any> = {
+      action: { $nin: ["Staff Login", "Staff Logout"] }
+    };
 
     if (user && user !== "all") {
       mongoFilter.user = user;

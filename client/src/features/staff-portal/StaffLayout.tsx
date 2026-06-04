@@ -22,8 +22,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { staffApi, clearStaffToken, isStaffLoggedIn } from "../../api/staffApi";
+import { staffApi } from "../../api/staffApi";
 import { AppRoute } from "../../constants/routes.enum";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { logOut } from "../../store/slices/staffAuthSlice";
 
 interface StaffProfile {
   id: string;
@@ -57,8 +59,9 @@ function getPageTitle(pathname: string): string {
 export function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
+  const { staff, loading } = useAppSelector((state) => state.staffAuth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [staff, setStaff] = useState<StaffProfile | null>(null);
   
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -85,17 +88,10 @@ export function StaffLayout() {
     : [];
 
   useEffect(() => {
-    if (!isStaffLoggedIn()) {
+    if (!loading && !staff) {
       navigate(AppRoute.STAFF_LOGIN, { replace: true });
-      return;
     }
-    staffApi.get("/staff/portal/me").then((res: any) => {
-      setStaff(res.data);
-    }).catch(() => {
-      clearStaffToken();
-      navigate(AppRoute.STAFF_LOGIN, { replace: true });
-    });
-  }, [navigate]);
+  }, [staff, loading, navigate]);
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -113,7 +109,7 @@ export function StaffLayout() {
 
   const handleLogout = async () => {
     try { await staffApi.post("/staff/auth/logout"); } catch {}
-    clearStaffToken();
+    dispatch(logOut());
     navigate(AppRoute.STAFF_LOGIN, { replace: true });
   };
 

@@ -57,7 +57,7 @@ export class StaffAuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      await AuditLogger.log(staff.fullName, "Staff Login", "Auth", `Staff logged in: ${staff.email}`);
+
 
       res.status(StatusCode.OK).json({
         success: true,
@@ -133,7 +133,6 @@ export class StaffAuthController {
           if (decoded?.id) {
             const staffRepo = container.resolve<IStaffRepository>("StaffRepository");
             await staffRepo.updateRefreshToken(decoded.id, null);
-            await AuditLogger.log(decoded.fullName || "Staff", "Staff Logout", "Auth", "Staff logged out");
           }
         } catch {}
       }

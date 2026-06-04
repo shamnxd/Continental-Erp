@@ -1,32 +1,77 @@
-import axios from "axios";
+import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from "axios";
 
-const STAFF_TOKEN_KEY = "staff_access_token";
+type AuthCallbacks = {
+  setAccessToken: (token: string) => void;
+  logout: () => void;
+};
+
+type StoreLike = {
+  getState: () => { staffAuth: { accessToken: string | null } };
+};
+
+type RequestConfigWithRetry = InternalAxiosRequestConfig & { _retry?: boolean; _skipAuth?: boolean };
+
+function resolveAccessToken(store: StoreLike | null): string | null {
+  const token = store?.getState().staffAuth.accessToken;
+  return token?.trim() ? token.trim() : null;
+}
+
+function attachBearerToken(config: InternalAxiosRequestConfig, token: string): void {
+  const bearer = `Bearer ${token}`;
+  if (!config.headers) {
+    config.headers = new AxiosHeaders();
+  }
+  if (config.headers instanceof AxiosHeaders) {
+    config.headers.set("Authorization", bearer);
+  } else {
+    (config.headers as Record<string, string>).Authorization = bearer;
+  }
+}
+
+function isAuthRoute(url?: string): boolean {
+  if (!url) return false;
+  return url.includes("/staff/auth/");
+}
 
 export const staffApi = axios.create({
   baseURL: "http://localhost:5000/api/v1",
   withCredentials: true,
 });
 
+let authCallbacks: AuthCallbacks | null = null;
+let boundStore: StoreLike | null = null;
+let requestInterceptorId: number | null = null;
+let responseInterceptorId: number | null = null;
+
 let refreshInFlight: Promise<string | null> | null = null;
 
+function extractAccessToken(payload: any): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const direct = payload.accessToken;
+  if (direct) return direct;
+  const nested = payload.data?.accessToken;
+  return nested ?? null;
+}
+
 async function refreshStaffToken(): Promise<string | null> {
+  if (!authCallbacks) return null;
   if (refreshInFlight) return refreshInFlight;
 
   refreshInFlight = (async () => {
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/v1/staff/auth/refresh",
+      const response = await staffApi.post(
+        "/staff/auth/refresh",
         {},
-        { withCredentials: true }
+        { _retry: true, _skipAuth: true } as RequestConfigWithRetry
       );
-      const token = response.data?.accessToken;
-      if (token) {
-        setStaffToken(token);
-        return token;
+      const token = extractAccessToken(response);
+      if (!token) {
+        throw new Error("Refresh response missing accessToken");
       }
-      throw new Error("No token returned");
+      authCallbacks!.setAccessToken(token);
+      return token;
     } catch {
-      clearStaffToken();
+      authCallbacks?.logout();
       return null;
     } finally {
       refreshInFlight = null;
@@ -36,70 +81,69 @@ async function refreshStaffToken(): Promise<string | null> {
   return refreshInFlight;
 }
 
-staffApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem(STAFF_TOKEN_KEY);
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+async function getValidAccessToken(): Promise<string | null> {
+  const existing = resolveAccessToken(boundStore);
+  if (existing) return existing;
+  return refreshStaffToken();
+}
+
+export const setupStaffInterceptors = (store: StoreLike, callbacks: AuthCallbacks) => {
+  boundStore = store;
+  authCallbacks = callbacks;
+
+  if (requestInterceptorId !== null) {
+    staffApi.interceptors.request.eject(requestInterceptorId);
   }
-  return config;
-});
+  if (responseInterceptorId !== null) {
+    staffApi.interceptors.response.eject(responseInterceptorId);
+  }
 
-staffApi.interceptors.response.use(
-  (response) => response.data,
-  async (error) => {
-    const originalRequest = error.config;
-    const url = originalRequest?.url || "";
-    const isAuthRoute = url.includes("/staff/auth/");
-
-    if (
-      error.response?.status === 401 &&
-      originalRequest &&
-      !originalRequest._retry &&
-      !isAuthRoute
-    ) {
-      originalRequest._retry = true;
-      try {
-        const newAccessToken = await refreshStaffToken();
-        if (newAccessToken) {
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return staffApi(originalRequest);
-        }
-      } catch (refreshErr) {
-        // Ignored
+  requestInterceptorId = staffApi.interceptors.request.use(
+    async (config) => {
+      const cfg = config as RequestConfigWithRetry;
+      if (cfg._skipAuth || isAuthRoute(cfg.url)) {
+        return config;
       }
-      clearStaffToken();
-      window.location.href = "/staff/login";
+
+      const token = await getValidAccessToken();
+      if (token) {
+        attachBearerToken(config, token);
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  responseInterceptorId = staffApi.interceptors.response.use(
+    (response) => response.data,
+    async (error) => {
+      const originalRequest = error.config as RequestConfigWithRetry | undefined;
+
+      if (
+        error.response?.status === 401 &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !isAuthRoute(originalRequest.url)
+      ) {
+        originalRequest._retry = true;
+        try {
+          const newAccessToken = await refreshStaffToken();
+          if (!newAccessToken) {
+            throw new Error("Unable to refresh staff session");
+          }
+          attachBearerToken(originalRequest, newAccessToken);
+          return staffApi(originalRequest);
+        } catch (refreshError) {
+          authCallbacks?.logout();
+          window.location.href = "/staff/login";
+          return Promise.reject(refreshError);
+        }
+      }
+      if (error.response?.status === 401 && !isAuthRoute(originalRequest?.url)) {
+        authCallbacks?.logout();
+        window.location.href = "/staff/login";
+      }
+      return Promise.reject(error);
     }
-
-    // Fallback if not retried
-    if (error.response?.status === 401 && !isAuthRoute) {
-      clearStaffToken();
-      window.location.href = "/staff/login";
-    }
-
-    return Promise.reject(error);
-  }
-);
-
-export function setStaffToken(token: string): void {
-  localStorage.setItem(STAFF_TOKEN_KEY, token);
-}
-
-export function clearStaffToken(): void {
-  localStorage.removeItem(STAFF_TOKEN_KEY);
-}
-
-export function getStaffToken(): string | null {
-  return localStorage.getItem(STAFF_TOKEN_KEY);
-}
-
-export function isStaffLoggedIn(): boolean {
-  const token = getStaffToken();
-  if (!token) return false;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 > Date.now() && payload.role === "staff";
-  } catch {
-    return false;
-  }
-}
+  );
+};

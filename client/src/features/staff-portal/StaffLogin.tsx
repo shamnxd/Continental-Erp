@@ -4,11 +4,15 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
-import { staffApi, setStaffToken, isStaffLoggedIn } from "../../api/staffApi";
+import { staffApi } from "../../api/staffApi";
 import { AppRoute } from "../../constants/routes.enum";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { setCredentials } from "../../store/slices/staffAuthSlice";
 
 export function StaffLogin() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { staff } = useAppSelector((state) => state.staffAuth);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,10 +20,10 @@ export function StaffLogin() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isStaffLoggedIn()) {
+    if (staff) {
       navigate(AppRoute.STAFF_DASHBOARD, { replace: true });
     }
-  }, [navigate]);
+  }, [staff, navigate]);
 
   // Clear error when user types
   useEffect(() => {
@@ -31,7 +35,7 @@ export function StaffLogin() {
     setSubmitting(true);
     try {
       const res: any = await staffApi.post("/staff/auth/login", { email, password });
-      setStaffToken(res.accessToken);
+      dispatch(setCredentials({ staff: res.staff, accessToken: res.accessToken }));
       navigate(AppRoute.STAFF_DASHBOARD, { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.message || "Invalid email or password");

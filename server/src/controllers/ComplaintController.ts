@@ -5,6 +5,8 @@ import { IComplaint } from "../interfaces/models/IComplaint";
 import { CreateComplaintDto, UpdateComplaintDto } from "../dtos/complaint.dto";
 import { GetComplaintsQuery, PaginatedComplaints } from "../interfaces/repositories/IComplaintRepository";
 import { StatusCode } from "../constants/statusCodes";
+import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class ComplaintController {
@@ -21,10 +23,18 @@ export class ComplaintController {
     private _deleteComplaintUseCase?: IUseCase<string, boolean>
   ) {}
 
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = req.body as CreateComplaintDto;
       const complaint = await this._createComplaintUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Create Complaint",
+        "Complaints",
+        `Created complaint: ${complaint.complaintNo} - ${complaint.issue}`
+      );
+
       res.status(StatusCode.CREATED).json({
         success: true,
         data: complaint
@@ -67,7 +77,7 @@ export class ComplaintController {
     }
   };
 
-  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public update = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
       const dto = req.body as UpdateComplaintDto;
@@ -76,6 +86,14 @@ export class ComplaintController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Complaint not found" });
         return;
       }
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Update Complaint",
+        "Complaints",
+        `Updated complaint: ${complaint.complaintNo} - ${complaint.issue}`
+      );
+
       res.status(StatusCode.OK).json({
         success: true,
         data: complaint
@@ -85,14 +103,25 @@ export class ComplaintController {
     }
   };
 
-  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public delete = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
+      const complaint = await this._getComplaintByIdUseCase!.execute(id);
+      const complaintNo = complaint ? complaint.complaintNo : id;
+
       const success = await this._deleteComplaintUseCase!.execute(id);
       if (!success) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Complaint not found" });
         return;
       }
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Delete Complaint",
+        "Complaints",
+        `Deleted complaint: ${complaintNo}`
+      );
+
       res.status(StatusCode.OK).json({
         success: true,
         message: "Complaint deleted successfully"

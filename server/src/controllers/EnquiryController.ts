@@ -7,6 +7,7 @@ import { AddEnquiryRemarkDto, EditEnquiryRemarkDto } from "../dtos/enquiryRemark
 import { GetEnquiriesQuery, PaginatedEnquiries } from "../interfaces/repositories/IEnquiryRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
+import { AuditLogger } from "../utils/AuditLogger";
 import {
   AddEnquiryDrawingUseCase,
   AddEnquiryDrawingInput,
@@ -50,6 +51,14 @@ export class EnquiryController {
         data: req.body as CreateEnquiryDto,
         user: authReq.user?.name || "Admin",
       });
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Enquiry",
+        "Enquiries",
+        `Created enquiry: ${enquiry.enquiryNo} for client ${enquiry.clientName}`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
@@ -98,6 +107,14 @@ export class EnquiryController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Update Enquiry",
+        "Enquiries",
+        `Updated enquiry: ${enquiry.enquiryNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
@@ -127,6 +144,13 @@ export class EnquiryController {
         return;
       }
 
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Upload Enquiry Drawing",
+        "Enquiries",
+        `Uploaded drawing file '${file.originalname}' to enquiry: ${enquiry.enquiryNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
@@ -146,6 +170,14 @@ export class EnquiryController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry or remark not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Edit Enquiry Remark",
+        "Enquiries",
+        `Edited a remark on enquiry: ${enquiry.enquiryNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
@@ -164,6 +196,14 @@ export class EnquiryController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Add Enquiry Remark",
+        "Enquiries",
+        `Added a remark to enquiry: ${enquiry.enquiryNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
@@ -172,11 +212,24 @@ export class EnquiryController {
 
   public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const deleted = await this._deleteEnquiryUseCase!.execute(req.params.id);
+      const authReq = req as AuthenticatedRequest;
+      const id = req.params.id;
+      const enquiry = await this._getEnquiryByIdUseCase!.execute(id);
+      const enquiryNo = enquiry ? enquiry.enquiryNo : id;
+
+      const deleted = await this._deleteEnquiryUseCase!.execute(id);
       if (!deleted) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Delete Enquiry",
+        "Enquiries",
+        `Deleted enquiry: ${enquiryNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, message: "Enquiry deleted" });
     } catch (error) {
       next(error);

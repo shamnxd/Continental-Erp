@@ -5,6 +5,8 @@ import { ISMR } from "../interfaces/models/ISMR";
 import { CreateSMRDto, UpdateSMRDto } from "../dtos/smr.dto";
 import { SMRApprovalInput } from "../usecases/smrs/ApproveSMRUseCase";
 import { StatusCode } from "../constants/statusCodes";
+import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class SMRController {
@@ -21,10 +23,18 @@ export class SMRController {
     private _approveSMRUseCase?: IUseCase<SMRApprovalInput, ISMR | null>
   ) {}
 
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = req.body as CreateSMRDto;
       const smr = await this._createSMRUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Create SMR",
+        "Complaints",
+        `Created SMR report: ${smr.smrNo} for client ${smr.clientName}`
+      );
+
       res.status(StatusCode.CREATED).json({
         success: true,
         data: smr
@@ -64,7 +74,7 @@ export class SMRController {
     }
   };
 
-  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public update = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
       const dto = req.body as UpdateSMRDto;
@@ -73,6 +83,14 @@ export class SMRController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "SMR not found" });
         return;
       }
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Update SMR",
+        "Complaints",
+        `Updated SMR report: ${smr.smrNo}`
+      );
+
       res.status(StatusCode.OK).json({
         success: true,
         data: smr
@@ -82,7 +100,7 @@ export class SMRController {
     }
   };
 
-  public approve = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public approve = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
       const { clientRepName } = req.body;
@@ -104,6 +122,13 @@ export class SMRController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "SMR not found" });
         return;
       }
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Approve SMR",
+        "Complaints",
+        `Approved SMR report: ${smr.smrNo} (Signed by client rep: ${clientRepName})`
+      );
 
       res.status(StatusCode.OK).json({
         success: true,

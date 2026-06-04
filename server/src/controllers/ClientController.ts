@@ -5,6 +5,8 @@ import { IClient } from "../interfaces/models/IClient";
 import { CreateClientDto, UpdateClientDto } from "../dtos/client.dto";
 import { GetClientsQuery, PaginatedClients } from "../interfaces/repositories/IClientRepository";
 import { StatusCode } from "../constants/statusCodes";
+import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class ClientController {
@@ -21,10 +23,18 @@ export class ClientController {
     private _deleteClientUseCase?: IUseCase<string, boolean>
   ) {}
 
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto = req.body as CreateClientDto;
       const client = await this._createClientUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Create Client",
+        "Clients",
+        `Created client: ${client.companyName} (${client.contactPerson})`
+      );
+
       res.status(StatusCode.CREATED).json({
         success: true,
         data: client
@@ -68,11 +78,19 @@ export class ClientController {
     }
   };
 
-  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public update = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
       const dto = req.body as UpdateClientDto;
       const client = await this._updateClientUseCase!.execute({ id, data: dto });
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Update Client",
+        "Clients",
+        `Updated client: ${client.companyName} (${client.contactPerson})`
+      );
+
       res.status(StatusCode.OK).json({
         success: true,
         data: client
@@ -82,10 +100,21 @@ export class ClientController {
     }
   };
 
-  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public delete = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = req.params.id;
+      const client = await this._getClientByIdUseCase!.execute(id);
+      const clientInfo = client ? `${client.companyName} (${client.contactPerson})` : id;
+
       await this._deleteClientUseCase!.execute(id);
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Delete Client",
+        "Clients",
+        `Deleted client: ${clientInfo}`
+      );
+
       res.status(StatusCode.OK).json({
         success: true,
         message: "Client deleted successfully"

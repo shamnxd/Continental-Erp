@@ -16,6 +16,7 @@ import { enquiryRouter } from "./routes/enquiry.routes";
 import { quotationRouter } from "./routes/quotation.routes";
 import { financeRouter } from "./routes/finance.routes";
 import { adminRouter } from "./routes/admin.routes";
+import { auditLogRouter } from "./routes/auditLog.routes";
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/v1/enquiries", enquiryRouter);
 app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/admins", adminRouter);
+app.use("/api/v1/audit-logs", auditLogRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

@@ -16,6 +16,8 @@ import {
   RecordVendorBillPaymentDto,
 } from "../dtos/finance.dto";
 import { StatusCode } from "../constants/statusCodes";
+import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class FinanceController {
@@ -63,8 +65,17 @@ export class FinanceController {
 
   public createInvoice = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as CreateClientInvoiceDto;
       const invoice = await this._createInvoiceUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Invoice",
+        "Finance",
+        `Created client invoice: ${invoice.invoiceNo} for client ${invoice.clientName} (Amount: $${invoice.grandTotal})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: invoice });
     } catch (error) {
       next(error);
@@ -95,6 +106,7 @@ export class FinanceController {
 
   public recordInvoicePayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as RecordInvoicePaymentDto;
       const invoice = await this._recordInvoicePaymentUseCase!.execute({
         invoiceId: req.params.id,
@@ -104,6 +116,14 @@ export class FinanceController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Invoice not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Record Invoice Payment",
+        "Finance",
+        `Recorded payment of $${dto.amount} against client invoice: ${invoice.invoiceNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: invoice });
     } catch (error) {
       next(error);
@@ -112,6 +132,7 @@ export class FinanceController {
 
   public sendInvoiceEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const { recipientEmail, message } = req.body;
       const success = await this._sendInvoiceEmailUseCase!.execute({
         invoiceId: req.params.id,
@@ -119,6 +140,13 @@ export class FinanceController {
         message,
       });
       if (success) {
+        await AuditLogger.log(
+          authReq.user?.name || "Unknown Admin",
+          "Send Invoice Email",
+          "Finance",
+          `Emailed client invoice details to recipient: ${recipientEmail}`
+        );
+
         res.status(StatusCode.OK).json({
           success: true,
           message: "Invoice sent successfully",
@@ -138,8 +166,17 @@ export class FinanceController {
 
   public createBill = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as CreateVendorBillDto;
       const bill = await this._createBillUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Vendor Bill",
+        "Finance",
+        `Created vendor bill: ${bill.billNo} from vendor ${bill.vendor} (Amount: $${bill.total})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: bill });
     } catch (error) {
       next(error);
@@ -157,6 +194,7 @@ export class FinanceController {
 
   public recordBillPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as RecordVendorBillPaymentDto;
       const bill = await this._recordBillPaymentUseCase!.execute({
         billId: req.params.id,
@@ -166,6 +204,14 @@ export class FinanceController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Vendor bill not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Record Bill Payment",
+        "Finance",
+        `Recorded payment of $${dto.amount} against vendor bill: ${bill.billNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: bill });
     } catch (error) {
       next(error);
@@ -176,8 +222,17 @@ export class FinanceController {
 
   public createLedger = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as CreateLedgerEntryDto;
       const entry = await this._createLedgerUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Ledger Entry",
+        "Finance",
+        `Created ledger entry: ${entry.narration} (Debit: $${entry.debit}, Credit: $${entry.credit}, Ref: ${entry.refNo})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: entry });
     } catch (error) {
       next(error);
@@ -197,8 +252,17 @@ export class FinanceController {
 
   public createIncome = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as CreateIncomeEntryDto;
       const entry = await this._createIncomeUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Income Entry",
+        "Finance",
+        `Created income entry: ${entry.source} (Received: $${entry.actualReceived})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: entry });
     } catch (error) {
       next(error);
@@ -218,8 +282,17 @@ export class FinanceController {
 
   public createExpense = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const dto = req.body as CreateExpenseEntryDto;
       const entry = await this._createExpenseUseCase!.execute(dto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Expense Entry",
+        "Finance",
+        `Created expense entry: ${entry.name} (Amount: $${entry.actual}, Category: ${entry.category})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: entry });
     } catch (error) {
       next(error);

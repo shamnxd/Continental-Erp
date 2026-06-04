@@ -5,6 +5,7 @@ import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
 import { AppError } from "../errors/AppError";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class AdminController {
@@ -60,6 +61,13 @@ export class AdminController {
         role: "admin",
         permissions: permissions || { crm: true, operations: true, finance: true, administration: true }
       });
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Create Administrator",
+        "Administration",
+        `Created administrator account: ${newUser.name} (${newUser.email})`
+      );
 
       const { passwordHash: _, ...sanitized } = newUser;
       res.status(StatusCode.CREATED).json({ success: true, data: sanitized });
@@ -136,6 +144,13 @@ export class AdminController {
         throw new AppError("Failed to update user", StatusCode.INTERNAL_SERVER_ERROR);
       }
 
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Update Administrator",
+        "Administration",
+        `Updated administrator account: ${updatedUser.name} (${updatedUser.email})`
+      );
+
       const { passwordHash: _, ...sanitized } = updatedUser;
       res.status(StatusCode.OK).json({ success: true, data: sanitized });
     } catch (error) {
@@ -168,6 +183,13 @@ export class AdminController {
       if (!success) {
         throw new AppError("User could not be deleted", StatusCode.INTERNAL_SERVER_ERROR);
       }
+
+      await AuditLogger.log(
+        req.user?.name || "Unknown Admin",
+        "Delete Administrator",
+        "Administration",
+        `Deleted administrator account: ${userToDelete.name} (${userToDelete.email})`
+      );
 
       res.status(StatusCode.OK).json({ success: true, message: "Administrator deleted successfully" });
     } catch (error) {

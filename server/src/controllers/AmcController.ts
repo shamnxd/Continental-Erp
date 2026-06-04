@@ -12,6 +12,7 @@ import { IAmcVisit } from "../interfaces/models/IAmcVisit";
 import { ISMRRepository } from "../interfaces/repositories/ISMRRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class AmcController {
@@ -49,7 +50,16 @@ export class AmcController {
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const amc = await this._createAmcUseCase!.execute(req.body as CreateAmcDto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create AMC Contract",
+        "AMC",
+        `Created AMC contract: ${amc.amcNo} for client ${amc.clientName}`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: amc });
     } catch (error) {
       next(error);
@@ -87,6 +97,7 @@ export class AmcController {
 
   public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const amc = await this._updateAmcUseCase!.execute({
         id: req.params.id,
         data: req.body as UpdateAmcDto
@@ -95,6 +106,14 @@ export class AmcController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Update AMC Contract",
+        "AMC",
+        `Updated AMC contract: ${amc.amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: amc });
     } catch (error) {
       next(error);
@@ -112,10 +131,23 @@ export class AmcController {
 
   public scheduleVisit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
+      const amcId = req.params.id;
+      const amc = await this._getAmcByIdUseCase!.execute(amcId);
+      const amcNo = amc ? amc.amcNo : amcId;
+
       const visit = await this._scheduleAmcVisitUseCase!.execute({
-        amcId: req.params.id,
+        amcId,
         data: req.body as ScheduleAmcVisitDto
       });
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Schedule AMC Visit",
+        "AMC",
+        `Scheduled AMC visit on ${new Date(visit.scheduledDate).toLocaleDateString()} for contract: ${amcNo}`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: visit });
     } catch (error) {
       next(error);
@@ -124,8 +156,13 @@ export class AmcController {
 
   public updateVisit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
+      const amcId = req.params.id;
+      const amc = await this._getAmcByIdUseCase!.execute(amcId);
+      const amcNo = amc ? amc.amcNo : amcId;
+
       const visit = await this._updateAmcVisitUseCase!.execute({
-        amcId: req.params.id,
+        amcId,
         visitId: req.params.visitId,
         data: req.body as UpdateAmcVisitDto
       });
@@ -133,6 +170,14 @@ export class AmcController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Visit not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Update AMC Visit",
+        "AMC",
+        `Updated AMC visit status to ${visit.status} for contract: ${amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: visit });
     } catch (error) {
       next(error);
@@ -152,6 +197,14 @@ export class AmcController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract or remark not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Edit AMC Remark",
+        "AMC",
+        `Edited a remark on AMC contract: ${amc.amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: amc });
     } catch (error) {
       next(error);
@@ -170,6 +223,14 @@ export class AmcController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Add AMC Remark",
+        "AMC",
+        `Added a remark to AMC contract: ${amc.amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: amc });
     } catch (error) {
       next(error);
@@ -188,6 +249,15 @@ export class AmcController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });
         return;
       }
+
+      const latestPayment = req.body as RecordAmcPaymentDto;
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Record AMC Payment",
+        "AMC",
+        `Recorded payment of amount $${latestPayment.amount} (Type: ${latestPayment.type}, Note: ${latestPayment.note || "None"}) for AMC contract: ${amc.amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: amc });
     } catch (error) {
       next(error);
@@ -209,11 +279,24 @@ export class AmcController {
 
   public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const deleted = await this._deleteAmcUseCase!.execute(req.params.id);
+      const authReq = req as AuthenticatedRequest;
+      const id = req.params.id;
+      const amc = await this._getAmcByIdUseCase!.execute(id);
+      const amcNo = amc ? amc.amcNo : id;
+
+      const deleted = await this._deleteAmcUseCase!.execute(id);
       if (!deleted) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Delete AMC Contract",
+        "AMC",
+        `Deleted AMC contract: ${amcNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, message: "AMC contract deleted successfully" });
     } catch (error) {
       next(error);

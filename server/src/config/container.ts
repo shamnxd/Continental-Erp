@@ -4,6 +4,9 @@ import { IUserRepository } from "../interfaces/repositories/IUserRepository";
 import { UserRepository } from "../repositories/mongo/UserRepository";
 import { IClientRepository, GetClientsQuery, PaginatedClients } from "../interfaces/repositories/IClientRepository";
 import { ClientRepository } from "../repositories/mongo/ClientRepository";
+import { IAuditLogRepository } from "../interfaces/repositories/IAuditLogRepository";
+import { AuditLogRepository } from "../repositories/mongo/AuditLogRepository";
+
 
 // Complaints & SMR Repositories
 import { IComplaintRepository, GetComplaintsQuery, PaginatedComplaints } from "../interfaces/repositories/IComplaintRepository";
@@ -163,6 +166,7 @@ container.registerSingleton<IAmcRepository>("AmcRepository", AmcRepository);
 container.registerSingleton<IAmcVisitRepository>("AmcVisitRepository", AmcVisitRepository);
 container.registerSingleton<IEnquiryRepository>("EnquiryRepository", EnquiryRepository);
 container.registerSingleton<IQuotationRepository>("QuotationRepository", QuotationRepository);
+container.registerSingleton<IAuditLogRepository>("AuditLogRepository", AuditLogRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);

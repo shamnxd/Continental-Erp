@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { api } from "../../api";
+import { toast } from "sonner";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
 import {
@@ -21,8 +23,6 @@ interface AuditLogEntry {
 
 const PAGE_SIZE = 15;
 
-const initialLogs: AuditLogEntry[] = [];
-
 const moduleTone = (m: string): "pink" | "blue" | "amber" | "green" | "orange" | "muted" => {
   if (m === "AMC") return "pink";
   if (m === "Clients") return "blue";
@@ -33,29 +33,58 @@ const moduleTone = (m: string): "pink" | "blue" | "amber" | "green" | "orange" |
 };
 
 export function AuditLogs() {
-  const [logs] = useState<AuditLogEntry[]>(initialLogs);
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [counts, setCounts] = useState({
+    all: 0,
+    Clients: 0,
+    AMC: 0,
+    Complaints: 0,
+    Staff: 0,
+    Finance: 0,
+  });
 
-  const filtered = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    return logs
-      .filter((l) => moduleFilter === "all" || l.module === moduleFilter)
-      .filter(
-        (l) =>
-          !q ||
-          l.user.toLowerCase().includes(q) ||
-          l.action.toLowerCase().includes(q) ||
-          l.details.toLowerCase().includes(q)
-      )
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [logs, debouncedSearch, moduleFilter]);
+  const fetchLogs = async () => {
+    setIsLoading(true);
+    try {
+      const response: any = await api.get("/audit-logs", {
+        params: {
+          page: currentPage,
+          limit: PAGE_SIZE,
+          search: debouncedSearch,
+          module: moduleFilter,
+        },
+      });
+      if (response.success) {
+        setLogs(response.data);
+        setTotal(response.pagination.total);
+        setTotalPages(response.pagination.totalPages);
+        if (response.counts) {
+          setCounts(response.counts);
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to load audit logs");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  useEffect(() => {
+    fetchLogs();
+  }, [currentPage, debouncedSearch, moduleFilter]);
+
+  // Reset to page 1 on search or filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, moduleFilter]);
 
   const columns: Column<AuditLogEntry>[] = [
     {
@@ -105,22 +134,18 @@ export function AuditLogs() {
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
       filterOptions={[
-        { value: "all", label: "All Modules", count: logs.length, tone: "primary" },
-        { value: "Clients", label: "Clients", count: logs.filter((l) => l.module === "Clients").length, tone: "blue" },
-        { value: "AMC", label: "AMC", count: logs.filter((l) => l.module === "AMC").length, tone: "pink" },
-        {
-          value: "Complaints",
-          label: "Complaints",
-          count: logs.filter((l) => l.module === "Complaints").length,
-          tone: "amber",
-        },
-        { value: "Staff", label: "Staff", count: logs.filter((l) => l.module === "Staff").length, tone: "green" },
-        { value: "Finance", label: "Finance", count: logs.filter((l) => l.module === "Finance").length, tone: "orange" },
+        { value: "all", label: "All Modules", count: counts.all, tone: "primary" },
+        { value: "Clients", label: "Clients", count: counts.Clients, tone: "blue" },
+        { value: "AMC", label: "AMC", count: counts.AMC, tone: "pink" },
+        { value: "Complaints", label: "Complaints", count: counts.Complaints, tone: "amber" },
+        { value: "Staff", label: "Staff", count: counts.Staff, tone: "green" },
+        { value: "Finance", label: "Finance", count: counts.Finance, tone: "orange" },
       ]}
       filterValue={moduleFilter}
       onFilterChange={setModuleFilter}
       columns={columns}
-      data={pageItems}
+      data={logs}
+      isLoading={isLoading}
       emptyMessage="No audit log entries yet."
       currentPage={currentPage}
       totalPages={totalPages}

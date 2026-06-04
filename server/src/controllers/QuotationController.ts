@@ -7,6 +7,7 @@ import { AddQuotationRemarkDto, EditQuotationRemarkDto } from "../dtos/quotation
 import { GetQuotationsQuery, PaginatedQuotations } from "../interfaces/repositories/IQuotationRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class QuotationController {
@@ -35,7 +36,16 @@ export class QuotationController {
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const quotation = await this._createQuotationUseCase!.execute(req.body as CreateQuotationDto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Quotation",
+        "Clients",
+        `Created quotation: ${quotation.quotationNo} for client ${quotation.clientName}`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
@@ -74,6 +84,7 @@ export class QuotationController {
 
   public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const quotation = await this._updateQuotationUseCase!.execute({
         id: req.params.id,
         data: req.body as UpdateQuotationDto,
@@ -82,6 +93,14 @@ export class QuotationController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Update Quotation",
+        "Clients",
+        `Updated quotation: ${quotation.quotationNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
@@ -100,6 +119,14 @@ export class QuotationController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Add Quotation Remark",
+        "Clients",
+        `Added a remark to quotation: ${quotation.quotationNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
@@ -119,6 +146,14 @@ export class QuotationController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation or remark not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Edit Quotation Remark",
+        "Clients",
+        `Edited a remark on quotation: ${quotation.quotationNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
@@ -127,11 +162,24 @@ export class QuotationController {
 
   public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const deleted = await this._deleteQuotationUseCase!.execute(req.params.id);
+      const authReq = req as AuthenticatedRequest;
+      const id = req.params.id;
+      const quotation = await this._getQuotationByIdUseCase!.execute(id);
+      const quotationNo = quotation ? quotation.quotationNo : id;
+
+      const deleted = await this._deleteQuotationUseCase!.execute(id);
       if (!deleted) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Delete Quotation",
+        "Clients",
+        `Deleted quotation: ${quotationNo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, message: "Quotation deleted" });
     } catch (error) {
       next(error);

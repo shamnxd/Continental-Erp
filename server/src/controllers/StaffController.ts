@@ -5,6 +5,8 @@ import { IStaff, StaffWorkHistoryItem } from "../interfaces/models/IStaff";
 import { CreateStaffDto, UpdateStaffDto } from "../dtos/staff.dto";
 import { GetStaffQuery, PaginatedStaff } from "../interfaces/repositories/IStaffRepository";
 import { StatusCode } from "../constants/statusCodes";
+import { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { AuditLogger } from "../utils/AuditLogger";
 
 @autoInjectable()
 export class StaffController {
@@ -25,7 +27,16 @@ export class StaffController {
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const staff = await this._createStaffUseCase!.execute(req.body as CreateStaffDto);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Staff",
+        "Staff",
+        `Created staff member: ${staff.fullName} (${staff.staffNo})`
+      );
+
       res.status(StatusCode.CREATED).json({ success: true, data: staff });
     } catch (error) {
       next(error);
@@ -73,6 +84,7 @@ export class StaffController {
 
   public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const authReq = req as AuthenticatedRequest;
       const staff = await this._updateStaffUseCase!.execute({
         id: req.params.id,
         data: req.body as UpdateStaffDto
@@ -81,6 +93,14 @@ export class StaffController {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Staff not found" });
         return;
       }
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Update Staff",
+        "Staff",
+        `Updated staff member details: ${staff.fullName} (${staff.staffNo})`
+      );
+
       res.status(StatusCode.OK).json({ success: true, data: staff });
     } catch (error) {
       next(error);
@@ -89,7 +109,20 @@ export class StaffController {
 
   public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await this._deleteStaffUseCase!.execute(req.params.id);
+      const authReq = req as AuthenticatedRequest;
+      const id = req.params.id;
+      const staff = await this._getStaffByIdUseCase!.execute(id);
+      const staffInfo = staff ? `${staff.fullName} (${staff.staffNo})` : id;
+
+      await this._deleteStaffUseCase!.execute(id);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Delete Staff",
+        "Staff",
+        `Deleted staff member: ${staffInfo}`
+      );
+
       res.status(StatusCode.OK).json({ success: true, message: "Staff deleted successfully" });
     } catch (error) {
       next(error);

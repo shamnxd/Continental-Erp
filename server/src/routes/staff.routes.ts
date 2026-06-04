@@ -14,6 +14,7 @@ router.get("/", controller.getAll);
 router.get("/:id/work-history", controller.getWorkHistory);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateStaffSchema), controller.update);
+router.put("/:id/password", controller.changePassword);
 router.delete("/:id", controller.delete);
 
 export const staffRouter = router;

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Plus, Edit, Trash2, Eye, MapPin, Phone, Mail, MoreVertical, UserX, UserCheck } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, MapPin, Phone, Mail, MoreVertical, UserX, UserCheck, KeyRound } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,7 +21,7 @@ import {
 } from "../../components/ui/alert-dialog";
 import type { Staff as StaffRecord } from "../../interfaces/staff.interface";
 import { getStaffDisplayRole, getStaffStatusLabel } from "../../interfaces/staff.interface";
-import { getStaffApi, deleteStaffApi, updateStaffApi } from "../../api/staff.api";
+import { getStaffApi, deleteStaffApi, updateStaffApi, changeStaffPasswordApi } from "../../api/staff.api";
 import { StaffFormModal } from "../../components/StaffFormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -49,6 +50,9 @@ export function Staff() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editStaff, setEditStaff] = useState<StaffRecord | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [changePasswordStaff, setChangePasswordStaff] = useState<StaffRecord | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [stats, setStats] = useState({ total: 0, permanent: 0, temporary: 0 });
 
   const fetchStats = useCallback(async () => {
@@ -205,6 +209,17 @@ export function Staff() {
             <Trash2 className="mr-2 h-4 w-4 text-destructive" />
             Delete
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              setNewPassword("");
+              setChangePasswordStaff(s);
+            }}
+            className="cursor-pointer"
+          >
+            <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+            Change Password
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -307,6 +322,26 @@ export function Staff() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!changePasswordStaff?.id || !newPassword.trim()) return;
+    if (newPassword.trim().length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await changeStaffPasswordApi(changePasswordStaff.id, newPassword.trim());
+      toast.success(`Password updated for ${changePasswordStaff.fullName}`);
+      setChangePasswordStaff(null);
+      setNewPassword("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update password");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const filterChips = [
     { value: "all" as EmploymentFilter, label: "All Types", count: stats.total, tone: "primary" as const },
     { value: "Permanent" as EmploymentFilter, label: "Permanent", count: stats.permanent, tone: "pink" as const },
@@ -383,6 +418,42 @@ export function Staff() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Change Password Dialog */}
+      <AlertDialog
+        open={!!changePasswordStaff}
+        onOpenChange={(open) => { if (!open) { setChangePasswordStaff(null); setNewPassword(""); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set a new portal login password for <strong>{changePasswordStaff?.fullName}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Input
+              id="new-staff-password"
+              type="password"
+              placeholder="New password (min 6 characters)"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="h-10 border-slate-200"
+              onKeyDown={(e) => { if (e.key === "Enter") handleChangePassword(); }}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={changingPassword}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleChangePassword}
+              disabled={changingPassword || newPassword.trim().length < 6}
+              className="bg-pink-700 hover:bg-pink-800 text-white"
+            >
+              {changingPassword ? "Saving..." : "Save Password"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

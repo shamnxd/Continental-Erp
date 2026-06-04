@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import { inject, autoInjectable } from "tsyringe";
+import { inject, autoInjectable, container } from "tsyringe";
+import bcrypt from "bcryptjs";
 import { IUseCase } from "../interfaces/usecases/IUseCase";
 import { IStaff, StaffWorkHistoryItem } from "../interfaces/models/IStaff";
 import { CreateStaffDto, UpdateStaffDto } from "../dtos/staff.dto";
-import { GetStaffQuery, PaginatedStaff } from "../interfaces/repositories/IStaffRepository";
+import { GetStaffQuery, PaginatedStaff, IStaffRepository } from "../interfaces/repositories/IStaffRepository";
 import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
+import { AppError } from "../errors/AppError";
 
 @autoInjectable()
 export class StaffController {
@@ -124,6 +126,36 @@ export class StaffController {
       );
 
       res.status(StatusCode.OK).json({ success: true, message: "Staff deleted successfully" });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { id } = req.params;
+      const { password } = req.body;
+
+      if (!password || typeof password !== "string" || password.trim().length < 6) {
+        throw new AppError("Password must be at least 6 characters", StatusCode.BAD_REQUEST);
+      }
+
+      const staffRepo = container.resolve<IStaffRepository>("StaffRepository");
+      const staff = await staffRepo.findById(id);
+      if (!staff) throw new AppError("Staff not found", StatusCode.NOT_FOUND);
+
+      const passwordHash = await bcrypt.hash(password.trim(), 10);
+      await staffRepo.update(id, { passwordHash } as any);
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Change Staff Password",
+        "Staff",
+        `Password changed for staff: ${staff.fullName} (${staff.staffNo})`
+      );
+
+      res.status(StatusCode.OK).json({ success: true, message: "Password updated successfully" });
     } catch (error) {
       next(error);
     }

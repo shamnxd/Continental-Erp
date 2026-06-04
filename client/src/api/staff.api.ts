@@ -67,3 +67,10 @@ export async function updateStaffApi(id: string, data: Partial<Staff>): Promise<
 export async function deleteStaffApi(id: string): Promise<{ success: boolean; message: string }> {
   return await api.delete(`${ApiRoute.STAFF}/${id}`);
 }
+
+export async function changeStaffPasswordApi(
+  id: string,
+  password: string
+): Promise<{ success: boolean; message: string }> {
+  return await api.put(`${ApiRoute.STAFF}/${id}/password`, { password });
+}

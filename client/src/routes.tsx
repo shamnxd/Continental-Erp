@@ -52,6 +52,8 @@ import { StaffDashboard } from "./features/staff-portal/StaffDashboard";
 import { StaffTasks } from "./features/staff-portal/StaffTasks";
 import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
 import { StaffSchedules } from "./features/staff-portal/StaffSchedules";
+import { PublicComplaintRegister } from "./features/public-complaints/PublicComplaintRegister";
+import { ComplaintRequests } from "./features/complaints/ComplaintRequests";
 
 export const router = createBrowserRouter([
   {
@@ -119,7 +121,7 @@ export const router = createBrowserRouter([
       { path: AppRoute.SCHEDULES, element: <Schedules /> },
       { path: AppRoute.MINOR_JOBS, element: <MinorJobs /> },
       { path: AppRoute.PROJECTS, element: <Projects /> },
-      { path: AppRoute.CUSTOMER_COMPLAINTS, element: <CustomerComplaints /> },
+      { path: AppRoute.CUSTOMER_COMPLAINTS, element: <ComplaintRequests /> },
       { path: AppRoute.LEAVE_MANAGEMENT, element: <LeaveManagement /> },
       { path: AppRoute.AUDIT_LOGS, element: <AuditLogs /> },
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },
@@ -133,6 +135,10 @@ export const router = createBrowserRouter([
   {
     path: AppRoute.STAFF_LOGIN,
     element: <StaffLogin />,
+  },
+  {
+    path: AppRoute.PUBLIC_COMPLAINT_REGISTER,
+    element: <PublicComplaintRegister />,
   },
   {
     path: "/staff",

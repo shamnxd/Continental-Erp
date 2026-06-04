@@ -49,6 +49,7 @@ export enum AppRoute {
   AUDIT_LOGS = "/audit-logs",
   WARRANTY_MANAGEMENT = "/warranty-management",
   ADMIN_MANAGEMENT = "/admin-management",
+  PUBLIC_COMPLAINT_REGISTER = "/register-complaint",
   // Staff Portal
   STAFF_LOGIN = "/staff/login",
   STAFF_DASHBOARD = "/staff/dashboard",
@@ -85,5 +86,6 @@ export enum ApiRoute {
   STAFF_PORTAL_LEAVES = "/staff/portal/leaves",
   // Leaves (admin)
   LEAVES = "/leaves",
+  COMPLAINT_REQUESTS = "/complaint-requests",
 }
 

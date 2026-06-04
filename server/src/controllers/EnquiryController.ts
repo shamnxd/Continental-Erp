@@ -48,7 +48,7 @@ export class EnquiryController {
       const authReq = req as AuthenticatedRequest;
       const enquiry = await this._createEnquiryUseCase!.execute({
         data: req.body as CreateEnquiryDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       res.status(StatusCode.CREATED).json({ success: true, data: enquiry });
     } catch (error) {
@@ -92,7 +92,7 @@ export class EnquiryController {
       const enquiry = await this._updateEnquiryUseCase!.execute({
         id: req.params.id,
         data: req.body as UpdateEnquiryDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!enquiry) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry not found" });
@@ -119,7 +119,7 @@ export class EnquiryController {
       const enquiry = await this._addEnquiryDrawingUseCase!.execute({
         enquiryId,
         storedFile,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
 
       if (!enquiry) {
@@ -140,7 +140,7 @@ export class EnquiryController {
         enquiryId: req.params.id,
         remarkKey: req.params.remarkId,
         data: req.body as EditEnquiryRemarkDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!enquiry) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry or remark not found" });
@@ -158,7 +158,7 @@ export class EnquiryController {
       const enquiry = await this._addEnquiryRemarkUseCase!.execute({
         enquiryId: req.params.id,
         data: req.body as AddEnquiryRemarkDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!enquiry) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Enquiry not found" });

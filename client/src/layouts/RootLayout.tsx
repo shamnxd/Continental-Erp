@@ -47,56 +47,87 @@ import {
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { logoutUser } from "../store/slices/authSlice";
 
-const navigation: NavItem[] = [
-  { name: "Dashboard", href: AppRoute.DASHBOARD, icon: LayoutDashboard },
-  { name: "Kanban Board", href: AppRoute.KANBAN, icon: Trello },
-  { name: "Clients", href: AppRoute.CLIENTS, icon: Users },
-  { name: "Enquiries", href: AppRoute.ENQUIRIES, icon: FileText },
-  { name: "Quotations", href: AppRoute.QUOTATIONS, icon: FileSpreadsheet },
-  { name: "Complaints", href: AppRoute.COMPLAINTS, icon: AlertCircle },
-  { name: "AMC Contracts", href: AppRoute.AMC, icon: Calendar },
-  { name: "Schedules", href: AppRoute.SCHEDULES, icon: CalendarDays },
-  { name: "Minor Jobs", href: AppRoute.MINOR_JOBS, icon: Wrench },
-  { name: "Projects", href: AppRoute.PROJECTS, icon: FolderKanban },
-  { name: "Customer Complaints", href: AppRoute.CUSTOMER_COMPLAINTS, icon: MessageSquareWarning },
-  { name: "Leave Management", href: AppRoute.LEAVE_MANAGEMENT, icon: Palmtree },
-  { name: "Audit Logs", href: AppRoute.AUDIT_LOGS, icon: ScrollText },
-  { name: "Warranty Management", href: AppRoute.WARRANTY_MANAGEMENT, icon: ShieldCheck },
-  { name: "Staff", href: AppRoute.STAFF, icon: UserCog },
+type NavSection = {
+  title: string;
+  items: NavItem[];
+};
+
+const navigation: NavSection[] = [
   {
-    name: "Finance",
-    icon: Receipt,
-    submenu: [
-      { name: "Overview", href: AppRoute.FINANCE },
-      {
-        name: "Receivables",
-        children: [
-          { name: "Customer Invoices", href: AppRoute.FINANCE_RECEIVABLES_INVOICES },
-          { name: "Customer Payments", href: AppRoute.FINANCE_RECEIVABLES_PAYMENTS },
-          { name: "Outstanding Receivables", href: AppRoute.FINANCE_RECEIVABLES_OUTSTANDING },
-        ],
-      },
-      {
-        name: "Payables",
-        children: [
-          { name: "Vendor Bills", href: AppRoute.FINANCE_PAYABLES_BILLS },
-          { name: "Vendor Payments", href: AppRoute.FINANCE_PAYABLES_PAYMENTS },
-          { name: "Outstanding Payables", href: AppRoute.FINANCE_PAYABLES_OUTSTANDING },
-        ],
-      },
-      {
-        name: "Expenses",
-        children: [
-          { name: "Direct Expenses", href: AppRoute.FINANCE_EXPENSES_DIRECT },
-          { name: "Travel", href: AppRoute.FINANCE_EXPENSES_TRAVEL },
-          { name: "Fuel", href: AppRoute.FINANCE_EXPENSES_FUEL },
-          { name: "Misc Expenses", href: AppRoute.FINANCE_EXPENSES_MISC },
-        ],
-      },
-      { name: "Cash & Ledger", href: AppRoute.FINANCE_LEDGER },
+    title: "Core & Board",
+    items: [
+      { name: "Dashboard", href: AppRoute.DASHBOARD, icon: LayoutDashboard },
+      { name: "Kanban Board", href: AppRoute.KANBAN, icon: Trello },
     ],
   },
-  { name: "Reports", href: AppRoute.REPORTS, icon: BarChart3 },
+  {
+    title: "Sales & CRM",
+    items: [
+      { name: "Clients", href: AppRoute.CLIENTS, icon: Users },
+      { name: "Enquiries", href: AppRoute.ENQUIRIES, icon: FileText },
+      { name: "Quotations", href: AppRoute.QUOTATIONS, icon: FileSpreadsheet },
+    ],
+  },
+  {
+    title: "Operations & Services",
+    items: [
+      { name: "Complaints", href: AppRoute.COMPLAINTS, icon: AlertCircle },
+      { name: "Customer Complaints", href: AppRoute.CUSTOMER_COMPLAINTS, icon: MessageSquareWarning },
+      { name: "AMC Contracts", href: AppRoute.AMC, icon: Calendar },
+      { name: "Schedules", href: AppRoute.SCHEDULES, icon: CalendarDays },
+      { name: "Minor Jobs", href: AppRoute.MINOR_JOBS, icon: Wrench },
+      { name: "Projects", href: AppRoute.PROJECTS, icon: FolderKanban },
+      { name: "Warranty Management", href: AppRoute.WARRANTY_MANAGEMENT, icon: ShieldCheck },
+    ],
+  },
+  {
+    title: "Finance & Analytics",
+    items: [
+      {
+        name: "Finance",
+        icon: Receipt,
+        submenu: [
+          { name: "Overview", href: AppRoute.FINANCE },
+          {
+            name: "Receivables",
+            children: [
+              { name: "Customer Invoices", href: AppRoute.FINANCE_RECEIVABLES_INVOICES },
+              { name: "Customer Payments", href: AppRoute.FINANCE_RECEIVABLES_PAYMENTS },
+              { name: "Outstanding Receivables", href: AppRoute.FINANCE_RECEIVABLES_OUTSTANDING },
+            ],
+          },
+          {
+            name: "Payables",
+            children: [
+              { name: "Vendor Bills", href: AppRoute.FINANCE_PAYABLES_BILLS },
+              { name: "Vendor Payments", href: AppRoute.FINANCE_PAYABLES_PAYMENTS },
+              { name: "Outstanding Payables", href: AppRoute.FINANCE_PAYABLES_OUTSTANDING },
+            ],
+          },
+          {
+            name: "Expenses",
+            children: [
+              { name: "Direct Expenses", href: AppRoute.FINANCE_EXPENSES_DIRECT },
+              { name: "Travel", href: AppRoute.FINANCE_EXPENSES_TRAVEL },
+              { name: "Fuel", href: AppRoute.FINANCE_EXPENSES_FUEL },
+              { name: "Misc Expenses", href: AppRoute.FINANCE_EXPENSES_MISC },
+            ],
+          },
+          { name: "Cash & Ledger", href: AppRoute.FINANCE_LEDGER },
+        ],
+      },
+      { name: "Reports", href: AppRoute.REPORTS, icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Administration",
+    items: [
+      { name: "Staff", href: AppRoute.STAFF, icon: UserCog },
+      { name: "Leave Management", href: AppRoute.LEAVE_MANAGEMENT, icon: Palmtree },
+      { name: "Audit Logs", href: AppRoute.AUDIT_LOGS, icon: ScrollText },
+      { name: "Admin Management", href: AppRoute.ADMIN_MANAGEMENT, icon: ShieldCheck },
+    ],
+  },
 ];
 
 function isFinancePath(pathname: string) {
@@ -123,14 +154,16 @@ function getPageTitle(pathname: string): string {
   if (pathname === AppRoute.FINANCE_INVOICE_CREATE || pathname.endsWith("/receivables/invoices/new")) return "Create invoice";
   if (pathname === AppRoute.FINANCE_VENDOR_BILL_CREATE || pathname.endsWith("/payables/bills/new")) return "New vendor bill";
 
-  for (const item of navigation) {
-    if (item.submenu) {
-      const leaf = financeLeafActive(pathname, item.submenu);
-      if (leaf) return leaf.name;
-      if (isFinancePath(pathname)) return "Finance";
-    } else if (item.href) {
-      if (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))) {
-        return item.name;
+  for (const section of navigation) {
+    for (const item of section.items) {
+      if (item.submenu) {
+        const leaf = financeLeafActive(pathname, item.submenu);
+        if (leaf) return leaf.name;
+        if (isFinancePath(pathname)) return "Finance";
+      } else if (item.href) {
+        if (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))) {
+          return item.name;
+        }
       }
     }
   }
@@ -167,12 +200,34 @@ export function RootLayout() {
     { id: 3, title: "Complaint Assigned", message: "You have been assigned a new complaint", time: "3 hours ago", type: "complaint" },
   ];
 
+  const permissions = user?.permissions || {
+    crm: true,
+    operations: true,
+    finance: true,
+    administration: true
+  };
+
+  const filteredNavigation = navigation.filter((section) => {
+    if (section.title === "Sales & CRM") return permissions.crm;
+    if (section.title === "Operations & Services") return permissions.operations;
+    if (section.title === "Finance & Analytics") return permissions.finance;
+    if (section.title === "Administration") return permissions.administration;
+    return true;
+  });
+
   const searchResults = searchQuery 
-    ? navigation.flatMap(item => 
-        item.submenu 
-          ? item.submenu.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
-          : item.name.toLowerCase().includes(searchQuery.toLowerCase()) ? [item] : []
-      )
+    ? navigation.flatMap(section => {
+        if (section.title === "Sales & CRM" && !permissions.crm) return [];
+        if (section.title === "Operations & Services" && !permissions.operations) return [];
+        if (section.title === "Finance & Analytics" && !permissions.finance) return [];
+        if (section.title === "Administration" && !permissions.administration) return [];
+
+        return section.items.flatMap(item => 
+          item.submenu 
+            ? item.submenu.filter(sub => sub.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            : item.name.toLowerCase().includes(searchQuery.toLowerCase()) ? [item] : []
+        );
+      })
     : [];
 
   useEffect(() => {
@@ -233,135 +288,144 @@ export function RootLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1.5 px-4 py-6 overflow-y-auto">
-            {navigation.map((item) => {
-              if (item.submenu) {
-                const isAnySubmenuActive = item.submenu.some(
-                  (sub) =>
-                    (sub.href && isSubNavActive(location.pathname, sub.href)) ||
-                    sub.children?.some((c) => isSubNavActive(location.pathname, c.href)),
-                );
-                const isExpanded = expandedMenus[item.name] ?? false;
-                return (
-                  <div key={item.name}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedMenus((prev) => ({ ...prev, [item.name]: !prev[item.name] }))
-                      }
-                      className={`group flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isAnySubmenuActive
-                        ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <item.icon className={`h-5 w-5 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground group-hover:text-primary"}`} />
-                        {item.name}
-                      </div>
-                      {isExpanded ? (
-                        <ChevronDown className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
-                      ) : (
-                        <ChevronRight className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
-                      )}
-                    </button>
-                    {isExpanded && (
-                      <div className="ml-4 mt-1 space-y-1">
-                        {item.submenu.map((subitem) => {
-                          if (subitem.children) {
-                            const groupActive = subitem.children.some((c) =>
-                              isSubNavActive(location.pathname, c.href),
-                            );
-                            const groupExpanded = expandedMenus[subitem.name] ?? groupActive;
-                            return (
-                              <div key={subitem.name}>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setExpandedMenus((prev) => ({
-                                      ...prev,
-                                      [subitem.name]: !prev[subitem.name],
-                                    }))
-                                  }
-                                  className={`flex items-center justify-between w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    groupActive
-                                      ? "text-pink-700 dark:text-pink-400"
-                                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                                  }`}
-                                >
-                                  {subitem.name}
-                                  {groupExpanded ? (
-                                    <ChevronDown className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <ChevronRight className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
-                                {groupExpanded && (
-                                  <div className="ml-3 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2">
-                                    {subitem.children.map((child) => {
-                                      const isActive = isSubNavActive(location.pathname, child.href);
-                                      return (
-                                        <Link
-                                          key={child.href}
-                                          to={child.href}
-                                          className={`block px-3 py-2 rounded-md text-xs font-medium transition-all ${
-                                            isActive
-                                              ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
-                                              : "text-sidebar-foreground hover:bg-sidebar-accent"
-                                          }`}
-                                          onClick={() => setSidebarOpen(false)}
-                                        >
-                                          {child.name}
-                                        </Link>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-                          if (!subitem.href) return null;
-                          const isActive = isSubNavActive(location.pathname, subitem.href);
-                          return (
-                            <Link
-                              key={subitem.name}
-                              to={subitem.href}
-                              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                                isActive
-                                  ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
-                                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+          <nav className="flex-1 space-y-6 px-4 py-6 overflow-y-auto">
+            {filteredNavigation.map((section) => (
+              <div key={section.title} className="space-y-2">
+                <h3 className="px-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">
+                  {section.title}
+                </h3>
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    if (item.submenu) {
+                      const isAnySubmenuActive = item.submenu.some(
+                        (sub) =>
+                          (sub.href && isSubNavActive(location.pathname, sub.href)) ||
+                          sub.children?.some((c) => isSubNavActive(location.pathname, c.href)),
+                      );
+                      const isExpanded = expandedMenus[item.name] ?? false;
+                      return (
+                        <div key={item.name}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedMenus((prev) => ({ ...prev, [item.name]: !prev[item.name] }))
+                            }
+                            className={`group flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isAnySubmenuActive
+                              ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                               }`}
-                              onClick={() => setSidebarOpen(false)}
-                            >
-                              {subitem.name}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
+                          >
+                            <div className="flex items-center gap-3">
+                              <item.icon className={`h-5 w-5 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground group-hover:text-primary"}`} />
+                              {item.name}
+                            </div>
+                            {isExpanded ? (
+                              <ChevronDown className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
+                            ) : (
+                              <ChevronRight className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
+                            )}
+                          </button>
+                          {isExpanded && (
+                            <div className="ml-4 mt-1 space-y-1">
+                              {item.submenu.map((subitem) => {
+                                if (subitem.children) {
+                                  const groupActive = subitem.children.some((c) =>
+                                    isSubNavActive(location.pathname, c.href),
+                                  );
+                                  const groupExpanded = expandedMenus[subitem.name] ?? groupActive;
+                                  return (
+                                    <div key={subitem.name}>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setExpandedMenus((prev) => ({
+                                            ...prev,
+                                            [subitem.name]: !prev[subitem.name],
+                                          }))
+                                        }
+                                        className={`flex items-center justify-between w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                          groupActive
+                                            ? "text-pink-700 dark:text-pink-400"
+                                            : "text-sidebar-foreground hover:bg-sidebar-accent"
+                                        }`}
+                                      >
+                                        {subitem.name}
+                                        {groupExpanded ? (
+                                          <ChevronDown className="h-3.5 w-3.5" />
+                                        ) : (
+                                          <ChevronRight className="h-3.5 w-3.5" />
+                                        )}
+                                      </button>
+                                      {groupExpanded && (
+                                        <div className="ml-3 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2">
+                                          {subitem.children.map((child) => {
+                                            const isActive = isSubNavActive(location.pathname, child.href);
+                                            return (
+                                              <Link
+                                                key={child.href}
+                                                to={child.href}
+                                                className={`block px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                                                  isActive
+                                                    ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
+                                                    : "text-sidebar-foreground hover:bg-sidebar-accent"
+                                                }`}
+                                                onClick={() => setSidebarOpen(false)}
+                                              >
+                                                {child.name}
+                                              </Link>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                if (!subitem.href) return null;
+                                const isActive = isSubNavActive(location.pathname, subitem.href);
+                                return (
+                                  <Link
+                                    key={subitem.name}
+                                    to={subitem.href}
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                      isActive
+                                        ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
+                                        : "text-sidebar-foreground hover:bg-sidebar-accent"
+                                    }`}
+                                    onClick={() => setSidebarOpen(false)}
+                                  >
+                                    {subitem.name}
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
 
-              if (!item.href) return null;
+                    if (!item.href) return null;
 
-              const isActive =
-                location.pathname === item.href ||
-                (item.href !== "/" && location.pathname.startsWith(`${item.href}/`));
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                    ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    }`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "text-muted-foreground group-hover:text-primary"}`} />
-                  {item.name}
-                </Link>
-              );
-            })}
+                    const isActive =
+                      location.pathname === item.href ||
+                      (item.href !== "/" && location.pathname.startsWith(`${item.href}/`));
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                          ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          }`}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <item.icon className={`h-5 w-5 ${isActive ? "text-white" : "text-muted-foreground group-hover:text-primary"}`} />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
           <div className="border-t border-sidebar-border p-4">
@@ -523,14 +587,14 @@ export function RootLayout() {
                   >
                     <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm shrink-0">
                       <img
-                        src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(user.username || user.email)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                        alt={user.username}
+                        src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(user.name || user.email)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                        alt={user.name}
                         className="h-full w-full object-cover"
                       />
                     </div>
                     <div className="hidden sm:block text-left min-w-0 max-w-[140px] lg:max-w-[180px]">
                       <p className="text-sm font-semibold text-foreground truncate leading-tight">
-                        {user.username}
+                        {user.name}
                       </p>
                       <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
                     </div>
@@ -539,7 +603,7 @@ export function RootLayout() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <div className="px-3 py-2.5 border-b border-border">
-                    <p className="text-sm font-semibold text-foreground truncate">{user.username}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                   </div>
                   <DropdownMenuItem

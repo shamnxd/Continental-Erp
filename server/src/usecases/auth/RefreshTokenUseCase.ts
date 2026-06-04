@@ -34,7 +34,7 @@ export class RefreshTokenUseCase implements IUseCase<string, string> {
 
     // Generate a fresh new access token
     const newAccessToken = jwt.sign(
-      { id: user.id, username: user.username, email: user.email },
+      { id: user.id, name: user.name, email: user.email, role: user.role, permissions: user.permissions },
       env.JWT_ACCESS_SECRET,
       { expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions["expiresIn"] }
     );

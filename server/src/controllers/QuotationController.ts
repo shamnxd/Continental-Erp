@@ -94,7 +94,7 @@ export class QuotationController {
       const quotation = await this._addQuotationRemarkUseCase!.execute({
         quotationId: req.params.id,
         data: req.body as AddQuotationRemarkDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!quotation) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation not found" });
@@ -113,7 +113,7 @@ export class QuotationController {
         quotationId: req.params.id,
         remarkKey: req.params.remarkId,
         data: req.body as EditQuotationRemarkDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!quotation) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Quotation or remark not found" });

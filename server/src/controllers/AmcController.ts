@@ -146,7 +146,7 @@ export class AmcController {
         amcId: req.params.id,
         remarkKey: req.params.remarkId,
         data: req.body as EditEnquiryRemarkDto,
-        user: authReq.user?.username || "Admin",
+        user: authReq.user?.name || "Admin",
       });
       if (!amc) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract or remark not found" });
@@ -164,7 +164,7 @@ export class AmcController {
       const amc = await this._addAmcRemarkUseCase!.execute({
         amcId: req.params.id,
         data: req.body as AddAmcRemarkDto,
-        user: authReq.user?.username || "Admin"
+        user: authReq.user?.name || "Admin"
       });
       if (!amc) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });
@@ -182,7 +182,7 @@ export class AmcController {
       const amc = await this._recordAmcPaymentUseCase!.execute({
         amcId: req.params.id,
         data: req.body as RecordAmcPaymentDto,
-        user: authReq.user?.username || "Admin"
+        user: authReq.user?.name || "Admin"
       });
       if (!amc) {
         res.status(StatusCode.NOT_FOUND).json({ success: false, message: "AMC contract not found" });

@@ -48,6 +48,7 @@ export enum AppRoute {
   LEAVE_MANAGEMENT = "/leave-management",
   AUDIT_LOGS = "/audit-logs",
   WARRANTY_MANAGEMENT = "/warranty-management",
+  ADMIN_MANAGEMENT = "/admin-management",
 }
 
 export enum ApiRoute {

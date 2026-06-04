@@ -11,8 +11,15 @@ export type LoginRequestDto = z.infer<typeof LoginRequestSchema>;
 // Response DTO Interface
 export interface UserSessionDto {
   id: string;
-  username: string;
+  name: string;
   email: string;
+  role?: string;
+  permissions?: {
+    crm: boolean;
+    operations: boolean;
+    finance: boolean;
+    administration: boolean;
+  };
 }
 
 export interface LoginResponseDto {

@@ -1,5 +1,5 @@
 import { injectable } from "tsyringe";
-import { IEmailService } from "../../interfaces/services/IEmailService";
+import { IEmailService } from "../interfaces/services/IEmailService";
 
 @injectable()
 export class EmailService implements IEmailService {

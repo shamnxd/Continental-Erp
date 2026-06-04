@@ -8,10 +8,18 @@ export interface IUserDocument extends Document, Omit<IUser, "id"> {
 
 const userSchema = new Schema<IUserDocument>(
   {
-    username: { type: String, required: true, unique: true, trim: true },
+    name: { type: String, required: true, trim: true },
+    username: { type: String }, // Legacy username for backwards compatibility fallback
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
-    refreshToken: { type: String, default: null }
+    refreshToken: { type: String, default: null },
+    role: { type: String, default: "admin" },
+    permissions: {
+      crm: { type: Boolean, default: true },
+      operations: { type: Boolean, default: true },
+      finance: { type: Boolean, default: true },
+      administration: { type: Boolean, default: true }
+    }
   },
   { timestamps: true }
 );

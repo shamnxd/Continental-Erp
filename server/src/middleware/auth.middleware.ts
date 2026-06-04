@@ -6,8 +6,15 @@ import { env } from "../config/env";
 
 export interface TokenPayload {
   id: string;
-  username: string;
+  name: string;
   email: string;
+  role?: string;
+  permissions?: {
+    crm: boolean;
+    operations: boolean;
+    finance: boolean;
+    administration: boolean;
+  };
 }
 
 export interface AuthenticatedRequest extends Request {

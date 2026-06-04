@@ -44,6 +44,7 @@ import { Kanban } from "./features/kanban/Kanban";
 import { Login } from "./features/auth/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppRoute } from "./constants/routes.enum";
+import { AdminManagement } from "./features/admin/AdminManagement";
 
 export const router = createBrowserRouter([
   {
@@ -115,6 +116,7 @@ export const router = createBrowserRouter([
       { path: AppRoute.LEAVE_MANAGEMENT, element: <LeaveManagement /> },
       { path: AppRoute.AUDIT_LOGS, element: <AuditLogs /> },
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },
+      { path: AppRoute.ADMIN_MANAGEMENT, element: <AdminManagement /> },
     ],
   },
 ]);

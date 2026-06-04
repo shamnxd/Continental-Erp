@@ -103,6 +103,56 @@ import { AddQuotationRemarkUseCase } from "../usecases/quotations/AddQuotationRe
 import { EditQuotationRemarkUseCase } from "../usecases/quotations/EditQuotationRemarkUseCase";
 import { AddQuotationRemarkDto, EditQuotationRemarkDto } from "../dtos/quotationRemark.dto";
 
+// Finance Repositories
+import { IClientInvoiceRepository } from "../interfaces/repositories/IClientInvoiceRepository";
+import { ClientInvoiceRepository } from "../repositories/mongo/ClientInvoiceRepository";
+import { IVendorBillRepository } from "../interfaces/repositories/IVendorBillRepository";
+import { VendorBillRepository } from "../repositories/mongo/VendorBillRepository";
+import { ILedgerEntryRepository } from "../interfaces/repositories/ILedgerEntryRepository";
+import { LedgerEntryRepository } from "../repositories/mongo/LedgerEntryRepository";
+import { IIncomeEntryRepository } from "../interfaces/repositories/IIncomeEntryRepository";
+import { IncomeEntryRepository } from "../repositories/mongo/IncomeEntryRepository";
+import { IExpenseEntryRepository } from "../interfaces/repositories/IExpenseEntryRepository";
+import { ExpenseEntryRepository } from "../repositories/mongo/ExpenseEntryRepository";
+
+// Finance Model Interfaces
+import { IClientInvoice } from "../interfaces/models/IClientInvoice";
+import { IVendorBill } from "../interfaces/models/IVendorBill";
+import { ILedgerEntry } from "../interfaces/models/ILedgerEntry";
+import { IIncomeEntry } from "../interfaces/models/IIncomeEntry";
+import { IExpenseEntry } from "../interfaces/models/IExpenseEntry";
+
+// Finance DTO types
+import {
+  CreateClientInvoiceDto,
+  CreateVendorBillDto,
+  CreateLedgerEntryDto,
+  CreateIncomeEntryDto,
+  CreateExpenseEntryDto,
+  RecordInvoicePaymentDto,
+  RecordVendorBillPaymentDto,
+} from "../dtos/finance.dto";
+
+// Finance Use Cases
+import { CreateClientInvoiceUseCase } from "../usecases/finance/CreateClientInvoiceUseCase";
+import { GetClientInvoicesUseCase } from "../usecases/finance/GetClientInvoicesUseCase";
+import { GetClientInvoiceByIdUseCase } from "../usecases/finance/GetClientInvoiceByIdUseCase";
+import { CreateVendorBillUseCase } from "../usecases/finance/CreateVendorBillUseCase";
+import { GetVendorBillsUseCase } from "../usecases/finance/GetVendorBillsUseCase";
+import { CreateLedgerEntryUseCase } from "../usecases/finance/CreateLedgerEntryUseCase";
+import { GetLedgerEntriesUseCase } from "../usecases/finance/GetLedgerEntriesUseCase";
+import { CreateIncomeEntryUseCase } from "../usecases/finance/CreateIncomeEntryUseCase";
+import { GetIncomeEntriesUseCase } from "../usecases/finance/GetIncomeEntriesUseCase";
+import { CreateExpenseEntryUseCase } from "../usecases/finance/CreateExpenseEntryUseCase";
+import { GetExpenseEntriesUseCase } from "../usecases/finance/GetExpenseEntriesUseCase";
+import { RecordInvoicePaymentUseCase } from "../usecases/finance/RecordInvoicePaymentUseCase";
+import { RecordVendorBillPaymentUseCase } from "../usecases/finance/RecordVendorBillPaymentUseCase";
+import { SendInvoiceEmailUseCase } from "../usecases/finance/SendInvoiceEmailUseCase";
+
+// Services
+import { IEmailService } from "../interfaces/services/IEmailService";
+import { EmailService } from "../services/EmailService";
+
 // Register repositories
 container.registerSingleton<IUserRepository>("UserRepository", UserRepository);
 container.registerSingleton<IClientRepository>("ClientRepository", ClientRepository);
@@ -113,6 +163,13 @@ container.registerSingleton<IAmcRepository>("AmcRepository", AmcRepository);
 container.registerSingleton<IAmcVisitRepository>("AmcVisitRepository", AmcVisitRepository);
 container.registerSingleton<IEnquiryRepository>("EnquiryRepository", EnquiryRepository);
 container.registerSingleton<IQuotationRepository>("QuotationRepository", QuotationRepository);
+
+// Finance Repositories
+container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
+container.registerSingleton<IVendorBillRepository>("VendorBillRepository", VendorBillRepository);
+container.registerSingleton<ILedgerEntryRepository>("LedgerEntryRepository", LedgerEntryRepository);
+container.registerSingleton<IIncomeEntryRepository>("IncomeEntryRepository", IncomeEntryRepository);
+container.registerSingleton<IExpenseEntryRepository>("ExpenseEntryRepository", ExpenseEntryRepository);
 
 // Register use case abstractions
 container.registerSingleton<IUseCase<LoginRequestDto, LoginResponseDto>>("LoginUseCase", LoginUseCase);
@@ -209,3 +266,32 @@ container.registerSingleton<
   IUseCase<{ quotationId: string; remarkKey: string; data: EditQuotationRemarkDto; user: string }, IQuotation | null>
 >("EditQuotationRemarkUseCase", EditQuotationRemarkUseCase);
 
+// Finance Use Cases
+container.registerSingleton<IUseCase<CreateClientInvoiceDto, IClientInvoice>>("CreateClientInvoiceUseCase", CreateClientInvoiceUseCase);
+container.registerSingleton<IUseCase<void, IClientInvoice[]>>("GetClientInvoicesUseCase", GetClientInvoicesUseCase);
+container.registerSingleton<IUseCase<string, IClientInvoice | null>>("GetClientInvoiceByIdUseCase", GetClientInvoiceByIdUseCase);
+container.registerSingleton<
+  IUseCase<{ invoiceId: string; data: RecordInvoicePaymentDto }, IClientInvoice | null>
+>("RecordInvoicePaymentUseCase", RecordInvoicePaymentUseCase);
+container.registerSingleton<IUseCase<CreateVendorBillDto, IVendorBill>>("CreateVendorBillUseCase", CreateVendorBillUseCase);
+container.registerSingleton<IUseCase<void, IVendorBill[]>>("GetVendorBillsUseCase", GetVendorBillsUseCase);
+container.registerSingleton<
+  IUseCase<{ billId: string; data: RecordVendorBillPaymentDto }, IVendorBill | null>
+>("RecordVendorBillPaymentUseCase", RecordVendorBillPaymentUseCase);
+container.registerSingleton<IUseCase<CreateLedgerEntryDto, ILedgerEntry>>("CreateLedgerEntryUseCase", CreateLedgerEntryUseCase);
+container.registerSingleton<IUseCase<void, ILedgerEntry[]>>("GetLedgerEntriesUseCase", GetLedgerEntriesUseCase);
+container.registerSingleton<IUseCase<CreateIncomeEntryDto, IIncomeEntry>>("CreateIncomeEntryUseCase", CreateIncomeEntryUseCase);
+container.registerSingleton<IUseCase<void, IIncomeEntry[]>>("GetIncomeEntriesUseCase", GetIncomeEntriesUseCase);
+container.registerSingleton<IUseCase<CreateExpenseEntryDto, IExpenseEntry>>("CreateExpenseEntryUseCase", CreateExpenseEntryUseCase);
+container.registerSingleton<IUseCase<void, IExpenseEntry[]>>("GetExpenseEntriesUseCase", GetExpenseEntriesUseCase);
+
+// Services
+container.registerSingleton<IEmailService>("EmailService", EmailService);
+
+// Email Use Cases
+container.registerSingleton<
+  IUseCase<
+    { invoiceId: string; recipientEmail: string; message?: string },
+    boolean
+  >
+>("SendInvoiceEmailUseCase", SendInvoiceEmailUseCase);

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../../api";
 import { toast } from "sonner";
-import { ShieldAlert } from "lucide-react";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
 import {
@@ -133,29 +132,52 @@ export function AuditLogs() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6">
-        <div className="relative w-full max-w-lg p-8 rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-500/[0.04] to-transparent backdrop-blur-md shadow-2xl text-center">
-          <div className="absolute inset-0 bg-radial-gradient from-red-500/10 via-transparent to-transparent opacity-50 pointer-events-none rounded-2xl" />
-          <div className="relative z-10 flex flex-col items-center">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 mb-6 transform hover:scale-105 transition-transform duration-300">
-              <ShieldAlert className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-extrabold text-foreground tracking-tight mb-3">
-              Security Restriction
-            </h2>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-xs font-mono mb-6">
-              Status: 403 Forbidden
-            </div>
-            <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mb-8">
-              {error}
-            </p>
-            <div className="w-full h-px bg-border my-6" />
-            <button
-              onClick={() => window.history.back()}
-              className="px-6 py-2.5 rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-semibold transition-all shadow-sm active:scale-95 hover:shadow-md"
-            >
-              Go Back
-            </button>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6 text-center">
+        <div className="max-w-md w-full flex flex-col items-center">
+          <span className="text-pink-700 font-extrabold text-lg tracking-wider uppercase mb-1">
+            Access Denied
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-3">
+            Administration Permission Required
+          </h2>
+          <p className="text-slate-500 text-sm leading-relaxed max-w-sm mx-auto mb-8">
+            {error}
+          </p>
+
+          <button
+            onClick={() => window.history.back()}
+            className="px-6 py-3 rounded-lg bg-pink-700 hover:bg-pink-800 text-white text-sm font-semibold transition-all shadow-sm active:scale-95 mb-10"
+          >
+            Go Back
+          </button>
+
+          {/* Minimal lock/gate illustration matching the user's uploaded style */}
+          <div className="w-full max-w-[280px] opacity-90 mt-4 select-none">
+            <svg viewBox="0 0 200 120" className="w-full h-auto text-pink-700 fill-current">
+              {/* Ground line */}
+              <line x1="10" y1="110" x2="190" y2="110" stroke="currentColor" strokeWidth="1.5" />
+              
+              {/* Lock shape */}
+              <rect x="85" y="65" width="30" height="24" rx="4" className="text-pink-600/10 fill-current" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M92,65 L92,53 A8,8 0 0,1 108,53 L108,65" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="100" cy="74" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+              <line x1="100" y1="76" x2="100" y2="82" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+
+              {/* Barricade poles */}
+              <line x1="35" y1="110" x2="35" y2="80" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="55" y1="110" x2="55" y2="80" stroke="currentColor" strokeWidth="1.5" />
+              <rect x="30" y="80" width="30" height="8" rx="1" fill="currentColor" />
+              
+              {/* Character standing, looking at lock */}
+              <circle cx="145" cy="82" r="4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              <line x1="145" y1="86" x2="145" y2="102" stroke="currentColor" strokeWidth="1.5" />
+              {/* Arms */}
+              <path d="M140,92 L136,86" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+              <path d="M150,92 L154,88" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+              {/* Legs */}
+              <line x1="143" y1="102" x2="141" y2="110" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="147" y1="102" x2="149" y2="110" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
           </div>
         </div>
       </div>

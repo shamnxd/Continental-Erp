@@ -10,7 +10,9 @@ function AppContent() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(restoreSession());
+    if (!window.location.pathname.startsWith("/staff")) {
+      dispatch(restoreSession());
+    }
   }, [dispatch]);
 
   return <RouterProvider router={router} />;

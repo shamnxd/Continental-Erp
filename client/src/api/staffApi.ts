@@ -18,7 +18,10 @@ staffApi.interceptors.request.use((config) => {
 staffApi.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only auto-redirect on 401 for protected routes, NOT for the login endpoint itself
+    const url = error?.config?.url || "";
+    const isAuthRoute = url.includes("/staff/auth/");
+    if (error.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem(STAFF_TOKEN_KEY);
       window.location.href = "/staff/login";
     }

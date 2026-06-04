@@ -49,6 +49,9 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/smrs", smrRouter);
+// Staff portal routes must come BEFORE /api/v1/staff to avoid being caught by admin requireAuth
+app.use("/api/v1/staff/auth", staffAuthRouter);
+app.use("/api/v1/staff/portal", staffPortalRouter);
 app.use("/api/v1/staff", staffRouter);
 app.use("/api/v1/amc", amcRouter);
 app.use("/api/v1/enquiries", enquiryRouter);
@@ -56,8 +59,6 @@ app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/audit-logs", auditLogRouter);
-app.use("/api/v1/staff/auth", staffAuthRouter);
-app.use("/api/v1/staff/portal", staffPortalRouter);
 app.use("/api/v1/leaves", leaveRouter);
 
 // Centralized error handler (must be registered last)

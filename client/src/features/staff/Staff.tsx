@@ -428,7 +428,7 @@ export function Staff() {
         open={!!changePasswordStaff}
         onOpenChange={(open) => { if (!open) { setChangePasswordStaff(null); setNewPassword(""); } }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Change Password</AlertDialogTitle>
             <AlertDialogDescription>

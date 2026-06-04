@@ -7,14 +7,7 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronDown,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
 import { staffApi, clearStaffToken, isStaffLoggedIn } from "../../api/staffApi";
 import { AppRoute } from "../../constants/routes.enum";
 
@@ -65,7 +58,6 @@ export function StaffLayout() {
     });
   }, [navigate]);
 
-  // Close sidebar on route change (mobile)
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
@@ -105,8 +97,8 @@ export function StaffLayout() {
                 />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">Staff Portal</h1>
-                <p className="text-xs text-muted-foreground">Continental</p>
+                <h1 className="text-lg font-bold text-foreground">Continental</h1>
+                <p className="text-xs text-muted-foreground">Staff Portal</p>
               </div>
             </div>
             <button
@@ -118,53 +110,43 @@ export function StaffLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-4 py-6 overflow-y-auto">
-            {navigation.map((item) => {
-              const isActive =
-                location.pathname === item.href ||
-                location.pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  }`}
-                >
-                  <item.icon
-                    className={`h-5 w-5 ${
-                      isActive
-                        ? "text-white"
-                        : "text-muted-foreground group-hover:text-primary"
-                    }`}
-                  />
-                  {item.name}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 space-y-6 px-4 py-6 overflow-y-auto">
+            <div className="space-y-2">
+              <h3 className="px-4 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-wider">
+                Staff Menu
+              </h3>
+              <div className="space-y-1">
+                {navigation.map((item) => {
+                  const isActive =
+                    location.pathname === item.href ||
+                    location.pathname.startsWith(`${item.href}/`);
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        isActive
+                          ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      }`}
+                    >
+                      <item.icon
+                        className={`h-5 w-5 ${
+                          isActive
+                            ? "text-white"
+                            : "text-muted-foreground group-hover:text-primary"
+                        }`}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           </nav>
 
-          {/* Profile & Logout */}
-          <div className="border-t border-sidebar-border p-4 space-y-3">
-            {staff && (
-              <div className="flex items-center gap-3 px-4 py-2 border border-sidebar-border/50 rounded-xl bg-sidebar-accent/30">
-                <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm shrink-0">
-                  <img
-                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(staff.fullName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                    alt={staff.fullName}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight">
-                    {staff.fullName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground truncate">{staff.staffNo}</p>
-                </div>
-              </div>
-            )}
+          {/* Logout */}
+          <div className="border-t border-sidebar-border p-4">
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 w-full px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors dark:hover:bg-red-950/40 dark:hover:text-red-400"
@@ -178,27 +160,36 @@ export function StaffLayout() {
 
       {/* Main content — offset for fixed sidebar on desktop */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-64">
-        {/* Top bar (Mobile only) */}
-        <header className="lg:hidden h-16 bg-card border-b border-border flex items-center justify-between px-6 shadow-sm shrink-0">
+        {/* Top bar (Minimal Header) */}
+        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 lg:px-8 shadow-sm shrink-0">
           <div className="flex items-center gap-4 flex-1">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-2 hover:bg-muted rounded-xl transition-colors"
+              className="lg:hidden p-2 hover:bg-muted rounded-xl transition-colors"
             >
               <Menu className="h-5 w-5 text-foreground" />
             </button>
-            <h2 className="text-lg font-bold text-foreground">
+            <h2 className="text-xl font-bold text-foreground">
               {getPageTitle(location.pathname)}
             </h2>
           </div>
 
+          {/* User profile dropdown like admin */}
           {staff && (
-            <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm">
-              <img
-                src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(staff.fullName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                alt={staff.fullName}
-                className="h-full w-full object-cover"
-              />
+            <div className="flex items-center gap-2.5 pl-3 border-l border-border py-1.5 pr-2">
+              <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm shrink-0">
+                <img
+                  src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(staff.fullName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                  alt={staff.fullName}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div className="hidden sm:block text-left min-w-0 max-w-[140px] lg:max-w-[180px]">
+                <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                  {staff.fullName}
+                </p>
+                <p className="text-[11px] text-muted-foreground truncate">{staff.email}</p>
+              </div>
             </div>
           )}
         </header>

@@ -97,8 +97,8 @@ export function StaffLeaves() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">Leave Requests</h1>
-          <p className="text-sm text-muted-foreground mt-1">View and manage your leave applications.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Leave Requests</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">View and manage your leave applications.</p>
         </div>
         <button
           id="staff-request-leave-btn"

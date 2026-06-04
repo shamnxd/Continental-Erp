@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { staffApi } from "../../api/staffApi";
+import { FilterStatChips } from "../../components/FilterStatChips";
 import { 
   CheckSquare, 
   MapPin, 
@@ -58,8 +59,10 @@ const PriorityBadge = ({ priority }: { priority: string }) => {
   );
 };
 
+type TaskTab = "complaints" | "amc_visits";
+
 export function StaffTasks() {
-  const [activeTab, setActiveTab] = useState<"complaints" | "amc_visits">("complaints");
+  const [activeTab, setActiveTab] = useState<TaskTab>("complaints");
   const [complaints, setComplaints] = useState<Task[]>([]);
   const [amcVisits, setAmcVisits] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,33 +85,26 @@ export function StaffTasks() {
     return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
+  const filterChips = [
+    { value: "complaints" as TaskTab, label: "Complaints", count: complaints.length, tone: "pink" as const },
+    { value: "amc_visits" as TaskTab, label: "AMC Visits", count: amcVisits.length, tone: "primary" as const }
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">My Tasks</h1>
-        <p className="text-sm text-muted-foreground mt-1">All tasks assigned to you.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">My Tasks</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">All tasks assigned to you.</p>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex bg-muted/80 p-1 rounded-xl w-full sm:w-fit border border-border/50">
-        {([
-          { key: "complaints", label: `Complaints (${complaints.length})` },
-          { key: "amc_visits", label: `AMC Visits (${amcVisits.length})` },
-        ] as const).map((tab) => (
-          <button
-            key={tab.key}
-            id={`staff-tasks-tab-${tab.key}`}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 sm:flex-initial text-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ${
-              activeTab === tab.key 
-                ? "bg-card text-primary shadow-sm" 
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Admin Style Pills Tabs */}
+      <FilterStatChips
+        options={filterChips}
+        value={activeTab}
+        onChange={(val) => setActiveTab(val)}
+      />
 
       {loading && (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -125,7 +121,7 @@ export function StaffTasks() {
       )}
 
       {!loading && !error && currentList.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 px-4 bg-card border border-border/50 rounded-2xl text-center">
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-card border border-border/50 rounded-xl text-center">
           <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4 text-muted-foreground">
             <CheckSquare className="h-7 w-7" />
           </div>

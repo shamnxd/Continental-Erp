@@ -43,6 +43,7 @@ type NavItem = {
 const navigation: NavItem[] = [
   { name: "Dashboard", href: AppRoute.STAFF_DASHBOARD, icon: LayoutDashboard },
   { name: "My Tasks", href: AppRoute.STAFF_TASKS, icon: CheckSquare },
+  { name: "Schedules", href: "/staff/schedules", icon: Calendar },
   { name: "Leave Requests", href: AppRoute.STAFF_LEAVES, icon: CalendarDays },
 ];
 

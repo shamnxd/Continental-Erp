@@ -9,7 +9,8 @@ import {
   Clock, 
   AlertCircle,
   Loader2,
-  FileText
+  FileText,
+  X
 } from "lucide-react";
 
 interface Task {
@@ -67,6 +68,7 @@ export function StaffTasks() {
   const [amcVisits, setAmcVisits] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     staffApi.get("/staff/portal/tasks")
@@ -137,11 +139,12 @@ export function StaffTasks() {
           {currentList.map((task) => (
             <div
               key={task.id}
-              className="bg-card hover:bg-muted/20 border border-border p-3.5 rounded-xl shadow-sm hover:shadow transition-all space-y-3"
+              onClick={() => setSelectedTask(task)}
+              className="bg-card hover:bg-muted/30 border border-border p-3.5 rounded-xl shadow-sm hover:shadow transition-all space-y-3 cursor-pointer group"
             >
               <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-base font-bold text-foreground leading-snug break-words">{task.title}</h3>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors leading-snug break-words">{task.title}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5 font-mono">{task.reference}</p>
                 </div>
                 <div className="flex gap-2 items-center flex-wrap shrink-0">
@@ -175,6 +178,92 @@ export function StaffTasks() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Task Details Dialog Modal */}
+      {selectedTask && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg shadow-lg p-6 relative animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-start mb-5 gap-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-pink-700/10 text-pink-700 dark:bg-pink-700/25 dark:text-pink-400">
+                  {selectedTask.type === "complaint" ? "Complaint" : "AMC Visit"}
+                </span>
+                <h2 className="text-lg font-bold text-foreground mt-2">{selectedTask.title}</h2>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5">{selectedTask.reference}</p>
+              </div>
+              <button
+                onClick={() => setSelectedTask(null)}
+                className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-xl border border-border/50">
+                <div>
+                  <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Status</label>
+                  <StatusBadge status={selectedTask.status} />
+                </div>
+                {selectedTask.priority && (
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Priority</label>
+                    <PriorityBadge priority={selectedTask.priority} />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <User className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground block">Client</label>
+                    <p className="text-sm font-semibold text-foreground">{selectedTask.client}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground block">Location</label>
+                    <p className="text-sm font-medium text-foreground">{selectedTask.location || "—"}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground block">Target Date</label>
+                    <p className="text-sm font-medium text-foreground">{formatDate(selectedTask.date)}</p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedTask.notes && (
+                <div className="border-t border-border pt-4">
+                  <div className="bg-muted/40 border border-border/40 rounded-xl p-3.5 flex items-start gap-2.5">
+                    <FileText className="h-5 w-5 text-muted-foreground/75 shrink-0 mt-0.5" />
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Instructions / Notes</label>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{selectedTask.notes}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-5 border-t border-border mt-5">
+              <button
+                type="button"
+                onClick={() => setSelectedTask(null)}
+                className="px-5 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground text-xs font-semibold transition-colors"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

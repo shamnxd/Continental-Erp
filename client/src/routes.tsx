@@ -140,6 +140,7 @@ export const router = createBrowserRouter([
       { path: "dashboard", element: <StaffDashboard /> },
       { path: "tasks", element: <StaffTasks /> },
       { path: "leaves", element: <StaffLeaves /> },
+      { path: "schedules", element: <Schedules /> },
     ],
   },
 ]);

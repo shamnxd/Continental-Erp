@@ -7,7 +7,16 @@ import {
   Menu,
   X,
   LogOut,
+  ChevronDown,
+  Sun,
+  Moon,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
 import { staffApi, clearStaffToken, isStaffLoggedIn } from "../../api/staffApi";
 import { AppRoute } from "../../constants/routes.enum";
 
@@ -44,6 +53,14 @@ export function StaffLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [staff, setStaff] = useState<StaffProfile | null>(null);
+  
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("theme");
+      return saved === "dark";
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (!isStaffLoggedIn()) {
@@ -61,6 +78,16 @@ export function StaffLayout() {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [darkMode]);
 
   const handleLogout = async () => {
     try { await staffApi.post("/staff/auth/logout"); } catch {}
@@ -160,7 +187,7 @@ export function StaffLayout() {
 
       {/* Main content — offset for fixed sidebar on desktop */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-64">
-        {/* Top bar (Minimal Header) */}
+        {/* Top bar (Header matching admin header) */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 lg:px-8 shadow-sm shrink-0">
           <div className="flex items-center gap-4 flex-1">
             <button
@@ -174,24 +201,64 @@ export function StaffLayout() {
             </h2>
           </div>
 
-          {/* User profile dropdown like admin */}
-          {staff && (
-            <div className="flex items-center gap-2.5 pl-3 border-l border-border py-1.5 pr-2">
-              <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm shrink-0">
-                <img
-                  src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(staff.fullName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                  alt={staff.fullName}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="hidden sm:block text-left min-w-0 max-w-[140px] lg:max-w-[180px]">
-                <p className="text-sm font-semibold text-foreground truncate leading-tight">
-                  {staff.fullName}
-                </p>
-                <p className="text-[11px] text-muted-foreground truncate">{staff.email}</p>
-              </div>
-            </div>
-          )}
+          <div className="flex items-center gap-2 relative">
+            {/* Dark Mode toggle */}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2.5 hover:bg-muted rounded-xl transition-colors relative group"
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {darkMode ? (
+                <Sun className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+              ) : (
+                <Moon className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
+              )}
+            </button>
+
+            {/* Profile dropdown dropdown matching admin */}
+            {staff && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="ml-1 flex items-center gap-2.5 pl-3 border-l border-border hover:bg-muted/50 rounded-xl py-1.5 pr-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  >
+                    <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-primary/20 shadow-sm shrink-0">
+                      <img
+                        src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(staff.fullName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                        alt={staff.fullName}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="hidden sm:block text-left min-w-0 max-w-[140px] lg:max-w-[180px]">
+                      <p className="text-sm font-semibold text-foreground truncate leading-tight">
+                        {staff.fullName}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">{staff.email}</p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 hidden sm:block" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2.5 border-b border-border">
+                    <p className="text-sm font-semibold text-foreground truncate">{staff.fullName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{staff.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{staff.staffNo}</p>
+                  </div>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      handleLogout();
+                    }}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </header>
 
         {/* Page content */}

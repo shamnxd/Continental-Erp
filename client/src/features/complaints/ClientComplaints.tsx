@@ -355,16 +355,7 @@ export function ClientComplaints() {
             rowKey={(c) => c.id || (c as any)._id || c.complaintNo}
             rowNumberStart={startItem || 1}
             onRowClick={(c) => navigate(`/complaints/${c.id || (c as any)._id}`)}
-            emptyMessage={
-              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-                <p className="text-sm">No complaints found</p>
-                {activeFilter !== "all" && (
-                  <button onClick={() => setActiveFilter("all")} className="mt-2 text-xs text-primary hover:underline">
-                    Clear filter
-                  </button>
-                )}
-              </div>
-            }
+            emptyMessage="No complaints found for this client"
           />
         </div>
 

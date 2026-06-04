@@ -7,6 +7,35 @@ export const staffApi = axios.create({
   withCredentials: true,
 });
 
+let refreshInFlight: Promise<string | null> | null = null;
+
+async function refreshStaffToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/v1/staff/auth/refresh",
+        {},
+        { withCredentials: true }
+      );
+      const token = response.data?.accessToken;
+      if (token) {
+        setStaffToken(token);
+        return token;
+      }
+      throw new Error("No token returned");
+    } catch {
+      clearStaffToken();
+      return null;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
+}
+
 staffApi.interceptors.request.use((config) => {
   const token = localStorage.getItem(STAFF_TOKEN_KEY);
   if (token) {
@@ -17,14 +46,37 @@ staffApi.interceptors.request.use((config) => {
 
 staffApi.interceptors.response.use(
   (response) => response.data,
-  (error) => {
-    // Only auto-redirect on 401 for protected routes, NOT for the login endpoint itself
-    const url = error?.config?.url || "";
+  async (error) => {
+    const originalRequest = error.config;
+    const url = originalRequest?.url || "";
     const isAuthRoute = url.includes("/staff/auth/");
-    if (error.response?.status === 401 && !isAuthRoute) {
-      localStorage.removeItem(STAFF_TOKEN_KEY);
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthRoute
+    ) {
+      originalRequest._retry = true;
+      try {
+        const newAccessToken = await refreshStaffToken();
+        if (newAccessToken) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return staffApi(originalRequest);
+        }
+      } catch (refreshErr) {
+        // Ignored
+      }
+      clearStaffToken();
       window.location.href = "/staff/login";
     }
+
+    // Fallback if not retried
+    if (error.response?.status === 401 && !isAuthRoute) {
+      clearStaffToken();
+      window.location.href = "/staff/login";
+    }
+
     return Promise.reject(error);
   }
 );

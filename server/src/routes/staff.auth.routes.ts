@@ -5,6 +5,7 @@ const router = Router();
 const controller = new StaffAuthController();
 
 router.post("/login", controller.login);
+router.post("/refresh", controller.refresh);
 router.post("/logout", controller.logout);
 
 export const staffAuthRouter = router;

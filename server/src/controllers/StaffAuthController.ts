@@ -77,6 +77,53 @@ export class StaffAuthController {
     }
   };
 
+  public refresh = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const refreshToken = req.cookies?.[env.COOKIE_NAME_REFRESH + "_staff"] as string | undefined;
+      if (!refreshToken) {
+        throw new AppError("No refresh token session found", StatusCode.UNAUTHORIZED);
+      }
+
+      let userId: string;
+      try {
+        const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { id: string };
+        userId = decoded.id;
+      } catch (err) {
+        throw new AppError("Invalid or expired refresh token", StatusCode.UNAUTHORIZED);
+      }
+
+      const staffRepo = container.resolve<IStaffRepository>("StaffRepository");
+      const staff = await staffRepo.findById(userId);
+
+      if (!staff || staff.refreshToken !== refreshToken) {
+        throw new AppError("Invalid refresh token session", StatusCode.UNAUTHORIZED);
+      }
+
+      if (!staff.isActive) {
+        throw new AppError("Account is inactive", StatusCode.FORBIDDEN);
+      }
+
+      const payload = {
+        id: staff.id!,
+        staffNo: staff.staffNo,
+        fullName: staff.fullName,
+        email: staff.email,
+        role: "staff" as const,
+      };
+
+      const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
+        expiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+      });
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        accessToken,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const authHeader = req.headers.authorization;

@@ -327,75 +327,7 @@ export function StaffDashboard() {
         </div>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Assigned Complaints Chart */}
-        <div className="bg-card rounded-xl shadow-sm border border-border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">Complaints Status</h3>
-            <AlertCircle className="h-4 w-4 text-rose-600" />
-          </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie
-                key="complaint-pie"
-                data={complaintChartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={false}
-                outerRadius={55}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {complaintChartData.map((entry, index) => (
-                  <Cell key={`cell-${entry.name}-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {complaintChartData.map((item, idx) => (
-              <div key={idx} className="text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs text-muted-foreground">{item.name}</span>
-                </div>
-                <p className="text-sm font-semibold text-foreground">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* AMC Visits Status */}
-        <div className="bg-card rounded-xl shadow-sm border border-border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-foreground">AMC Visits Summary</h3>
-            <Calendar className="h-4 w-4 text-blue-600" />
-          </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <BarChart data={visitChartData}>
-              <CartesianGrid key="amc-grid" strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis key="amc-xaxis" dataKey="name" stroke="var(--muted-foreground)" tick={{ fontSize: 10 }} />
-              <YAxis key="amc-yaxis" stroke="var(--muted-foreground)" tick={{ fontSize: 10 }} hide />
-              <Tooltip />
-              <Bar key="scheduled-bar" dataKey="count" fill="#db2777" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-[#db2777]" />
-                <span className="text-xs text-muted-foreground">Total Count</span>
-              </div>
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              {completedVisits} Completed / {scheduledVisits} Scheduled
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* Quick Actions Panel */}
       <div className="bg-card border border-border rounded-xl p-5 shadow-sm">

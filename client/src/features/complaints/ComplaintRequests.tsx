@@ -199,7 +199,7 @@ export function ComplaintRequests() {
   return (
     <>
       <ManagementListPage
-        title="Unverified Complaint Requests"
+        title="Customer Complaint Requests"
         subtitle="Review and convert incoming customer submitted complaints"
         searchPlaceholder="Search requests..."
         searchValue={searchQuery}

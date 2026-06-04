@@ -130,7 +130,7 @@ export function StaffLeaves() {
       {!loading && leaves.length > 0 && (
         <div className="grid grid-cols-1 gap-4">
           {leaves.map((leave) => (
-            <div key={leave.id} className="bg-card hover:bg-card/90 border border-border p-5 rounded-2xl shadow-sm hover:shadow transition-all duration-150 space-y-4">
+            <div key={leave.id} className="bg-card hover:bg-muted/20 border border-border p-3.5 rounded-xl shadow-sm hover:shadow transition-all space-y-3">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div>
                   <h3 className="text-base font-bold text-foreground leading-snug">{leave.leaveType} Leave</h3>
@@ -171,7 +171,7 @@ export function StaffLeaves() {
       {/* Request Leave Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
+          <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-lg p-6 relative animate-in fade-in zoom-in duration-200">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-bold text-foreground">Request Leave</h2>
               <button

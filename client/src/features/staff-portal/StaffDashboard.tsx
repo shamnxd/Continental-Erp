@@ -73,84 +73,102 @@ export function StaffDashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
-          {greeting()}, {profile?.fullName?.split(" ")[0]}! 👋
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5">
-          Here is what is going on with your work today.
-        </p>
+    <div className="space-y-4">
+      {/* Welcome Header Banner */}
+      <div className="bg-gradient-to-r from-pink-700 via-pink-600 to-pink-600 rounded-2xl shadow-lg p-4 text-white">
+        <div>
+          <h3 className="text-base font-semibold mb-1">
+            {greeting()}, {profile?.fullName?.split(" ")[0]}! 👋
+          </h3>
+          <p className="text-pink-100 text-[10px] font-medium uppercase tracking-wider">
+            Here's what's going on with your work today.
+          </p>
+        </div>
       </div>
 
       {/* Stats Grid */}
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 */}
           <button
             onClick={() => navigate(AppRoute.STAFF_TASKS)}
-            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+            className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
-            <div className="h-12 w-12 rounded-xl bg-pink-500/10 text-pink-700 dark:bg-pink-500/20 dark:text-pink-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-pink-500/20">
-              <CheckSquare className="h-6 w-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Total Assigned Tasks</p>
+                <p className="text-2xl font-bold text-foreground leading-tight">{stats.totalTasks}</p>
+              </div>
+              <div className="bg-pink-700 p-3 rounded-xl shadow-sm shrink-0">
+                <CheckSquare className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.totalTasks}</span>
-            <span className="text-sm font-medium text-muted-foreground mt-2">Total Assigned Tasks</span>
           </button>
 
           {/* Card 2 */}
           <button
             onClick={() => navigate(AppRoute.STAFF_TASKS)}
-            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+            className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
-            <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-amber-500/20">
-              <AlertCircle className="h-6 w-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Pending Complaints</p>
+                <p className="text-2xl font-bold text-foreground leading-tight">{stats.pendingComplaints}</p>
+              </div>
+              <div className="bg-amber-500 p-3 rounded-xl shadow-sm shrink-0">
+                <AlertCircle className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.pendingComplaints}</span>
-            <span className="text-sm font-medium text-muted-foreground mt-2">Pending Complaints</span>
           </button>
 
           {/* Card 3 */}
           <button
             onClick={() => navigate(AppRoute.STAFF_TASKS)}
-            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+            className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-blue-500/20">
-              <Calendar className="h-6 w-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Upcoming AMC Visits</p>
+                <p className="text-2xl font-bold text-foreground leading-tight">{stats.upcomingVisits}</p>
+              </div>
+              <div className="bg-pink-600 p-3 rounded-xl shadow-sm shrink-0">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.upcomingVisits}</span>
-            <span className="text-sm font-medium text-muted-foreground mt-2">Upcoming AMC Visits</span>
           </button>
 
           {/* Card 4 */}
           <button
             onClick={() => navigate(AppRoute.STAFF_LEAVES)}
-            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+            className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
-            <div className="h-12 w-12 rounded-xl bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-violet-500/20">
-              <CalendarDays className="h-6 w-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Pending Leaves</p>
+                <p className="text-2xl font-bold text-foreground leading-tight">{stats.pendingLeaves}</p>
+              </div>
+              <div className="bg-rose-500 p-3 rounded-xl shadow-sm shrink-0">
+                <CalendarDays className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.pendingLeaves}</span>
-            <span className="text-sm font-medium text-muted-foreground mt-2">Pending Leaves</span>
           </button>
         </div>
       )}
 
       {/* Quick Actions & Shortcut */}
-      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-        <h2 className="text-base font-bold text-foreground mb-4">Quick Actions</h2>
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+        <h2 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h2>
+        <div className="flex flex-col sm:flex-row gap-2.5">
           <button
             onClick={() => navigate(AppRoute.STAFF_LEAVES)}
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-xs transition-all shadow-sm w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Request Leave
           </button>
           <button
             onClick={() => navigate(AppRoute.STAFF_TASKS)}
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm transition-all border border-border/80 w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs transition-all border border-border w-full sm:w-auto"
           >
             View My Tasks
             <ArrowRight className="h-4 w-4" />

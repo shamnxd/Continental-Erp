@@ -204,7 +204,7 @@ export function StaffLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-background p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto bg-background p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

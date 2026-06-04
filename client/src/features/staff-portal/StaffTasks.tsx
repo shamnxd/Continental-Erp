@@ -141,7 +141,7 @@ export function StaffTasks() {
           {currentList.map((task) => (
             <div
               key={task.id}
-              className="bg-card hover:bg-card/90 border border-border p-5 rounded-2xl shadow-sm hover:shadow transition-all duration-150 space-y-4"
+              className="bg-card hover:bg-muted/20 border border-border p-3.5 rounded-xl shadow-sm hover:shadow transition-all space-y-3"
             >
               <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div className="min-w-0">

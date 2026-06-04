@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2 } from "lucide-react";
+import { Inbox, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,7 +12,10 @@ import {
 export interface Column<T> {
   header: React.ReactNode;
   accessor?: keyof T | ((row: T) => React.ReactNode);
+  /** Alias for function accessor (used by some list pages) */
+  render?: (row: T) => React.ReactNode;
   className?: string;
+  key?: string;
 }
 
 interface ReusableTableProps<T> {
@@ -34,6 +37,28 @@ function defaultRowKey<T>(row: T, index: number): string | number {
   return index;
 }
 
+function getCellContent<T>(column: Column<T>, row: T): React.ReactNode {
+  if (typeof column.accessor === "function") {
+    return column.accessor(row);
+  }
+  if (column.render) {
+    return column.render(row);
+  }
+  if (column.accessor) {
+    return row[column.accessor] as React.ReactNode;
+  }
+  return "";
+}
+
+export function TableEmptyState({ message }: { message: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-12 px-4 text-center">
+      <Inbox className="h-9 w-9 text-muted-foreground/60" strokeWidth={1.5} />
+      <p className="text-sm text-muted-foreground max-w-md">{message}</p>
+    </div>
+  );
+}
+
 const rowNumberHeadClass = "w-12 sm:w-14 text-center text-xs font-bold text-muted-foreground";
 const rowNumberCellClass = "w-12 sm:w-14 text-center text-sm text-muted-foreground tabular-nums";
 
@@ -48,17 +73,18 @@ export function ReusableTable<T>({
   showRowNumber = true,
 }: ReusableTableProps<T>) {
   const colCount = columns.length + (showRowNumber ? 1 : 0);
+  const isEmpty = !isLoading && data.length === 0;
+  const emptyContent =
+    typeof emptyMessage === "string" ? <TableEmptyState message={emptyMessage} /> : emptyMessage;
 
   return (
     <div className="relative w-full overflow-x-auto">
       <Table className="w-full min-w-max table-auto">
         <TableHeader className="bg-muted/50 border-b border-border">
           <TableRow>
-            {showRowNumber && (
-              <TableHead className={rowNumberHeadClass}>No.</TableHead>
-            )}
+            {showRowNumber && <TableHead className={rowNumberHeadClass}>No.</TableHead>}
             {columns.map((column, idx) => (
-              <TableHead key={idx} className={column.className}>
+              <TableHead key={column.key ?? idx} className={column.className}>
                 {column.header}
               </TableHead>
             ))}
@@ -74,10 +100,10 @@ export function ReusableTable<T>({
                 </div>
               </TableCell>
             </TableRow>
-          ) : data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colCount} className="h-32 text-center align-middle text-muted-foreground">
-                {emptyMessage}
+          ) : isEmpty ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={colCount} className="p-0 align-middle border-0">
+                {emptyContent}
               </TableCell>
             </TableRow>
           ) : (
@@ -99,25 +125,13 @@ export function ReusableTable<T>({
                 className={`hover:bg-muted/30 transition-colors ${onRowClick ? "cursor-pointer" : ""}`}
               >
                 {showRowNumber && (
-                  <TableCell className={rowNumberCellClass}>
-                    {rowNumberStart + index}
-                  </TableCell>
+                  <TableCell className={rowNumberCellClass}>{rowNumberStart + index}</TableCell>
                 )}
-                {columns.map((column, idx) => {
-                  let cellContent: React.ReactNode = "";
-                  if (column.accessor) {
-                    if (typeof column.accessor === "function") {
-                      cellContent = column.accessor(row);
-                    } else {
-                      cellContent = row[column.accessor] as React.ReactNode;
-                    }
-                  }
-                  return (
-                    <TableCell key={idx} className={column.className}>
-                      {cellContent}
-                    </TableCell>
-                  );
-                })}
+                {columns.map((column, idx) => (
+                  <TableCell key={column.key ?? idx} className={column.className}>
+                    {getCellContent(column, row)}
+                  </TableCell>
+                ))}
               </TableRow>
             ))
           )}

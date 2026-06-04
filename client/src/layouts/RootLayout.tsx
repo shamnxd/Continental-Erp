@@ -20,7 +20,24 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  CalendarDays,
+  Wrench,
+  FolderKanban,
+  MessageSquareWarning,
+  Palmtree,
+  ScrollText,
+  ShieldCheck,
 } from "lucide-react";
+import { AppRoute } from "../constants/routes.enum";
+
+type NavLeaf = { name: string; href: string };
+type NavSubItem = { name: string; href?: string; children?: NavLeaf[] };
+type NavItem = {
+  name: string;
+  href?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  submenu?: NavSubItem[];
+};
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,24 +47,107 @@ import {
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { logoutUser } from "../store/slices/authSlice";
 
-const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Kanban Board", href: "/kanban", icon: Trello },
-  { name: "Clients", href: "/clients", icon: Users },
-  { name: "Enquiries", href: "/enquiries", icon: FileText },
-  { name: "Quotations", href: "/quotations", icon: FileSpreadsheet },
-  { name: "Complaints", href: "/complaints", icon: AlertCircle },
-  { name: "AMC", href: "/amc", icon: Calendar },
-  { name: "Staff", href: "/staff", icon: UserCog },
-  { name: "Invoices", href: "/invoices", icon: Receipt },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
+const navigation: NavItem[] = [
+  { name: "Dashboard", href: AppRoute.DASHBOARD, icon: LayoutDashboard },
+  { name: "Kanban Board", href: AppRoute.KANBAN, icon: Trello },
+  { name: "Clients", href: AppRoute.CLIENTS, icon: Users },
+  { name: "Enquiries", href: AppRoute.ENQUIRIES, icon: FileText },
+  { name: "Quotations", href: AppRoute.QUOTATIONS, icon: FileSpreadsheet },
+  { name: "Complaints", href: AppRoute.COMPLAINTS, icon: AlertCircle },
+  { name: "AMC Contracts", href: AppRoute.AMC, icon: Calendar },
+  { name: "Schedules", href: AppRoute.SCHEDULES, icon: CalendarDays },
+  { name: "Minor Jobs", href: AppRoute.MINOR_JOBS, icon: Wrench },
+  { name: "Projects", href: AppRoute.PROJECTS, icon: FolderKanban },
+  { name: "Customer Complaints", href: AppRoute.CUSTOMER_COMPLAINTS, icon: MessageSquareWarning },
+  { name: "Leave Management", href: AppRoute.LEAVE_MANAGEMENT, icon: Palmtree },
+  { name: "Audit Logs", href: AppRoute.AUDIT_LOGS, icon: ScrollText },
+  { name: "Warranty Management", href: AppRoute.WARRANTY_MANAGEMENT, icon: ShieldCheck },
+  { name: "Staff", href: AppRoute.STAFF, icon: UserCog },
+  {
+    name: "Finance",
+    icon: Receipt,
+    submenu: [
+      { name: "Overview", href: AppRoute.FINANCE },
+      {
+        name: "Receivables",
+        children: [
+          { name: "Customer Invoices", href: AppRoute.FINANCE_RECEIVABLES_INVOICES },
+          { name: "Customer Payments", href: AppRoute.FINANCE_RECEIVABLES_PAYMENTS },
+          { name: "Outstanding Receivables", href: AppRoute.FINANCE_RECEIVABLES_OUTSTANDING },
+        ],
+      },
+      {
+        name: "Payables",
+        children: [
+          { name: "Vendor Bills", href: AppRoute.FINANCE_PAYABLES_BILLS },
+          { name: "Vendor Payments", href: AppRoute.FINANCE_PAYABLES_PAYMENTS },
+          { name: "Outstanding Payables", href: AppRoute.FINANCE_PAYABLES_OUTSTANDING },
+        ],
+      },
+      {
+        name: "Expenses",
+        children: [
+          { name: "Direct Expenses", href: AppRoute.FINANCE_EXPENSES_DIRECT },
+          { name: "Travel", href: AppRoute.FINANCE_EXPENSES_TRAVEL },
+          { name: "Fuel", href: AppRoute.FINANCE_EXPENSES_FUEL },
+          { name: "Misc Expenses", href: AppRoute.FINANCE_EXPENSES_MISC },
+        ],
+      },
+      { name: "Cash & Ledger", href: AppRoute.FINANCE_LEDGER },
+    ],
+  },
+  { name: "Reports", href: AppRoute.REPORTS, icon: BarChart3 },
 ];
+
+function isFinancePath(pathname: string) {
+  return pathname === AppRoute.FINANCE || pathname.startsWith(`${AppRoute.FINANCE}/`);
+}
+
+function isSubNavActive(pathname: string, href: string) {
+  if (href === AppRoute.FINANCE) return pathname === AppRoute.FINANCE;
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function financeLeafActive(pathname: string, submenu: NavSubItem[]): NavLeaf | undefined {
+  for (const sub of submenu) {
+    if (sub.href && isSubNavActive(pathname, sub.href)) return { name: sub.name, href: sub.href };
+    if (sub.children) {
+      const leaf = sub.children.find((c) => isSubNavActive(pathname, c.href));
+      if (leaf) return leaf;
+    }
+  }
+  return undefined;
+}
+
+function getPageTitle(pathname: string): string {
+  if (pathname === AppRoute.FINANCE_INVOICE_CREATE || pathname.endsWith("/receivables/invoices/new")) return "Create invoice";
+  if (pathname === AppRoute.FINANCE_VENDOR_BILL_CREATE || pathname.endsWith("/payables/bills/new")) return "New vendor bill";
+
+  for (const item of navigation) {
+    if (item.submenu) {
+      const leaf = financeLeafActive(pathname, item.submenu);
+      if (leaf) return leaf.name;
+      if (isFinancePath(pathname)) return "Finance";
+    } else if (item.href) {
+      if (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))) {
+        return item.name;
+      }
+    }
+  }
+  if (pathname === AppRoute.DASHBOARD) return "Dashboard";
+  return "Dashboard";
+}
 
 export function RootLayout() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [amcExpanded, setAmcExpanded] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    Finance: false,
+    Receivables: false,
+    Payables: false,
+    Expenses: false,
+  });
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("theme");
@@ -76,6 +176,17 @@ export function RootLayout() {
     : [];
 
   useEffect(() => {
+    if (!isFinancePath(location.pathname)) return;
+    setExpandedMenus((prev) => ({
+      ...prev,
+      Finance: true,
+      Receivables: location.pathname.includes("/receivables") ? true : prev.Receivables,
+      Payables: location.pathname.includes("/payables") ? true : prev.Payables,
+      Expenses: location.pathname.includes("/expenses") ? true : prev.Expenses,
+    }));
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("theme", "dark");
@@ -97,8 +208,9 @@ export function RootLayout() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-sidebar shadow-xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
@@ -125,12 +237,18 @@ export function RootLayout() {
             {navigation.map((item) => {
               if (item.submenu) {
                 const isAnySubmenuActive = item.submenu.some(
-                  (sub) => location.pathname === sub.href || location.pathname.startsWith(sub.href)
+                  (sub) =>
+                    (sub.href && isSubNavActive(location.pathname, sub.href)) ||
+                    sub.children?.some((c) => isSubNavActive(location.pathname, c.href)),
                 );
+                const isExpanded = expandedMenus[item.name] ?? false;
                 return (
                   <div key={item.name}>
                     <button
-                      onClick={() => setAmcExpanded(!amcExpanded)}
+                      type="button"
+                      onClick={() =>
+                        setExpandedMenus((prev) => ({ ...prev, [item.name]: !prev[item.name] }))
+                      }
                       className={`group flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isAnySubmenuActive
                         ? "bg-gradient-to-r from-pink-700 to-pink-600 text-white shadow-md shadow-pink-700/30"
                         : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -140,24 +258,78 @@ export function RootLayout() {
                         <item.icon className={`h-5 w-5 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground group-hover:text-primary"}`} />
                         {item.name}
                       </div>
-                      {amcExpanded ? (
+                      {isExpanded ? (
                         <ChevronDown className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
                       ) : (
                         <ChevronRight className={`h-4 w-4 ${isAnySubmenuActive ? "text-white" : "text-muted-foreground"}`} />
                       )}
                     </button>
-                    {amcExpanded && (
+                    {isExpanded && (
                       <div className="ml-4 mt-1 space-y-1">
                         {item.submenu.map((subitem) => {
-                          const isActive = location.pathname === subitem.href;
+                          if (subitem.children) {
+                            const groupActive = subitem.children.some((c) =>
+                              isSubNavActive(location.pathname, c.href),
+                            );
+                            const groupExpanded = expandedMenus[subitem.name] ?? groupActive;
+                            return (
+                              <div key={subitem.name}>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedMenus((prev) => ({
+                                      ...prev,
+                                      [subitem.name]: !prev[subitem.name],
+                                    }))
+                                  }
+                                  className={`flex items-center justify-between w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    groupActive
+                                      ? "text-pink-700 dark:text-pink-400"
+                                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                                  }`}
+                                >
+                                  {subitem.name}
+                                  {groupExpanded ? (
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <ChevronRight className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                                {groupExpanded && (
+                                  <div className="ml-3 mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2">
+                                    {subitem.children.map((child) => {
+                                      const isActive = isSubNavActive(location.pathname, child.href);
+                                      return (
+                                        <Link
+                                          key={child.href}
+                                          to={child.href}
+                                          className={`block px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                                            isActive
+                                              ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
+                                              : "text-sidebar-foreground hover:bg-sidebar-accent"
+                                          }`}
+                                          onClick={() => setSidebarOpen(false)}
+                                        >
+                                          {child.name}
+                                        </Link>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+                          if (!subitem.href) return null;
+                          const isActive = isSubNavActive(location.pathname, subitem.href);
                           return (
                             <Link
                               key={subitem.name}
                               to={subitem.href}
-                              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${isActive
-                                ? "bg-pink-700/20 text-pink-700"
-                                : "text-sidebar-foreground hover:bg-sidebar-accent"
-                                }`}
+                              className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                                isActive
+                                  ? "bg-pink-700/20 text-pink-700 dark:text-pink-400"
+                                  : "text-sidebar-foreground hover:bg-sidebar-accent"
+                              }`}
                               onClick={() => setSidebarOpen(false)}
                             >
                               {subitem.name}
@@ -170,9 +342,11 @@ export function RootLayout() {
                 );
               }
 
+              if (!item.href) return null;
+
               const isActive =
                 location.pathname === item.href ||
-                (item.href !== "/" && location.pathname.startsWith(item.href));
+                (item.href !== "/" && location.pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.name}
@@ -202,8 +376,8 @@ export function RootLayout() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Main content — offset for fixed sidebar on desktop */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-64">
         {/* Top bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 lg:px-8 shadow-sm">
           <div className="flex items-center gap-4 flex-1">
@@ -215,11 +389,7 @@ export function RootLayout() {
             </button>
             <div>
               <h2 className="text-xl font-bold text-foreground">
-                {navigation.find(
-                  (item) =>
-                    item.href === location.pathname ||
-                    (item.href && item.href !== "/" && location.pathname.startsWith(item.href))
-                )?.name || "Dashboard"}
+                {getPageTitle(location.pathname)}
               </h2>
             </div>
           </div>

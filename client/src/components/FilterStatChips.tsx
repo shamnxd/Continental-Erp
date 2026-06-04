@@ -1,6 +1,14 @@
 import { cn } from "../lib/utils";
 
-export type FilterChipTone = "primary" | "pink" | "green" | "amber" | "blue" | "red" | "orange";
+export type FilterChipTone =
+  | "primary"
+  | "pink"
+  | "green"
+  | "amber"
+  | "blue"
+  | "red"
+  | "orange"
+  | "muted";
 
 export type FilterStatChipOption<T extends string> = {
   value: T;
@@ -48,6 +56,11 @@ const TONE_STYLES: Record<
     countOnPrimary: "bg-orange-500/20 text-orange-800",
     activeChip: "bg-orange-500/10 text-foreground border-orange-500/25 ring-1 ring-orange-500/20 shadow-sm",
   },
+  muted: {
+    count: "bg-muted text-muted-foreground",
+    countOnPrimary: "bg-white/25 text-primary-foreground",
+    activeChip: "bg-muted text-foreground border-border ring-1 ring-border shadow-sm",
+  },
 };
 
 interface FilterStatChipsProps<T extends string> {
@@ -65,10 +78,10 @@ export function FilterStatChips<T extends string>({
 }: FilterStatChipsProps<T>) {
   return (
     <div className={cn("flex flex-wrap gap-2.5", className)}>
-      {options.map((opt) => {
+      {options.filter(Boolean).map((opt) => {
         const isActive = value === opt.value;
         const tone = opt.tone ?? "primary";
-        const styles = TONE_STYLES[tone];
+        const styles = TONE_STYLES[tone] ?? TONE_STYLES.primary;
 
         return (
           <button

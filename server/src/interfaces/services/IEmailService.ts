@@ -6,4 +6,11 @@ export interface IEmailService {
     invoiceData: string; // HTML content
     message?: string;
   }): Promise<boolean>;
+
+  sendStaffWelcomeEmail(params: {
+    recipientEmail: string;
+    staffName: string;
+    staffNo: string;
+    password: string;
+  }): Promise<boolean>;
 }

@@ -25,6 +25,8 @@ export class StaffRepository extends BaseRepository<IStaffDocument, IStaff> impl
       status: doc.status,
       notes: doc.notes,
       isActive: doc.isActive,
+      passwordHash: (doc as any).passwordHash,
+      refreshToken: (doc as any).refreshToken,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };
@@ -90,5 +92,14 @@ export class StaffRepository extends BaseRepository<IStaffDocument, IStaff> impl
     if (!ids.length) return [];
     const docs = await this.model.find({ _id: { $in: ids } }).exec();
     return docs.map((doc) => this.toDomain(doc));
+  }
+
+  public async findByEmail(email: string): Promise<IStaff | null> {
+    const doc = await this.model.findOne({ email: email.toLowerCase().trim() }).exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
+  public async updateRefreshToken(id: string, token: string | null): Promise<void> {
+    await this.model.findByIdAndUpdate(id, { refreshToken: token }).exec();
   }
 }

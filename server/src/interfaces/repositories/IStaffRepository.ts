@@ -21,4 +21,6 @@ export interface PaginatedStaff {
 export interface IStaffRepository extends IBaseRepository<IStaff> {
   findPaginated(query: GetStaffQuery): Promise<PaginatedStaff>;
   findByIds(ids: string[]): Promise<IStaff[]>;
+  findByEmail(email: string): Promise<IStaff | null>;
+  updateRefreshToken(id: string, token: string | null): Promise<void>;
 }

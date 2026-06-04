@@ -17,6 +17,9 @@ import { quotationRouter } from "./routes/quotation.routes";
 import { financeRouter } from "./routes/finance.routes";
 import { adminRouter } from "./routes/admin.routes";
 import { auditLogRouter } from "./routes/auditLog.routes";
+import { staffAuthRouter } from "./routes/staff.auth.routes";
+import { staffPortalRouter } from "./routes/staff.portal.routes";
+import { leaveRouter } from "./routes/leave.routes";
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
@@ -53,6 +56,9 @@ app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/audit-logs", auditLogRouter);
+app.use("/api/v1/staff/auth", staffAuthRouter);
+app.use("/api/v1/staff/portal", staffPortalRouter);
+app.use("/api/v1/leaves", leaveRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

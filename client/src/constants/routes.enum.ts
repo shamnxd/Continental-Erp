@@ -49,6 +49,11 @@ export enum AppRoute {
   AUDIT_LOGS = "/audit-logs",
   WARRANTY_MANAGEMENT = "/warranty-management",
   ADMIN_MANAGEMENT = "/admin-management",
+  // Staff Portal
+  STAFF_LOGIN = "/staff/login",
+  STAFF_DASHBOARD = "/staff/dashboard",
+  STAFF_TASKS = "/staff/tasks",
+  STAFF_LEAVES = "/staff/leaves",
 }
 
 export enum ApiRoute {
@@ -72,5 +77,13 @@ export enum ApiRoute {
   FINANCE_LEDGER = "/finance/ledger",
   FINANCE_INCOME = "/finance/income",
   FINANCE_EXPENSES = "/finance/expenses",
+  // Staff Portal
+  STAFF_AUTH_LOGIN = "/staff/auth/login",
+  STAFF_AUTH_LOGOUT = "/staff/auth/logout",
+  STAFF_PORTAL_ME = "/staff/portal/me",
+  STAFF_PORTAL_TASKS = "/staff/portal/tasks",
+  STAFF_PORTAL_LEAVES = "/staff/portal/leaves",
+  // Leaves (admin)
+  LEAVES = "/leaves",
 }
 

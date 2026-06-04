@@ -29,7 +29,9 @@ const staffSchema = new Schema<IStaffDocument>(
       default: "Available"
     },
     notes: { type: String, trim: true, default: "" },
-    isActive: { type: Boolean, required: true, default: true }
+    isActive: { type: Boolean, required: true, default: true },
+    passwordHash: { type: String, default: null },
+    refreshToken: { type: String, default: null }
   },
   { timestamps: true }
 );

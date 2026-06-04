@@ -15,6 +15,8 @@ export interface IStaff {
   status: StaffStatus;
   notes?: string;
   isActive: boolean;
+  passwordHash?: string;
+  refreshToken?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

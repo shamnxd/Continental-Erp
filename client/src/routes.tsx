@@ -46,6 +46,11 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppRoute } from "./constants/routes.enum";
 import { AdminManagement } from "./features/admin/AdminManagement";
 import { NotFound } from "./components/NotFound";
+import { StaffLogin } from "./features/staff-portal/StaffLogin";
+import { StaffLayout } from "./features/staff-portal/StaffLayout";
+import { StaffDashboard } from "./features/staff-portal/StaffDashboard";
+import { StaffTasks } from "./features/staff-portal/StaffTasks";
+import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
 
 export const router = createBrowserRouter([
   {
@@ -123,5 +128,18 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <NotFound />,
+  },
+  {
+    path: AppRoute.STAFF_LOGIN,
+    element: <StaffLogin />,
+  },
+  {
+    path: "/staff",
+    element: <StaffLayout />,
+    children: [
+      { path: "dashboard", element: <StaffDashboard /> },
+      { path: "tasks", element: <StaffTasks /> },
+      { path: "leaves", element: <StaffLeaves /> },
+    ],
   },
 ]);

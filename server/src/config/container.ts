@@ -6,6 +6,8 @@ import { IClientRepository, GetClientsQuery, PaginatedClients } from "../interfa
 import { ClientRepository } from "../repositories/mongo/ClientRepository";
 import { IAuditLogRepository } from "../interfaces/repositories/IAuditLogRepository";
 import { AuditLogRepository } from "../repositories/mongo/AuditLogRepository";
+import { ILeaveRequestRepository } from "../interfaces/repositories/ILeaveRequestRepository";
+import { LeaveRequestRepository } from "../repositories/mongo/LeaveRequestRepository";
 
 
 // Complaints & SMR Repositories
@@ -288,6 +290,9 @@ container.registerSingleton<IUseCase<CreateIncomeEntryDto, IIncomeEntry>>("Creat
 container.registerSingleton<IUseCase<void, IIncomeEntry[]>>("GetIncomeEntriesUseCase", GetIncomeEntriesUseCase);
 container.registerSingleton<IUseCase<CreateExpenseEntryDto, IExpenseEntry>>("CreateExpenseEntryUseCase", CreateExpenseEntryUseCase);
 container.registerSingleton<IUseCase<void, IExpenseEntry[]>>("GetExpenseEntriesUseCase", GetExpenseEntriesUseCase);
+
+// Repositories
+container.registerSingleton<ILeaveRequestRepository>("LeaveRequestRepository", LeaveRequestRepository);
 
 // Services
 container.registerSingleton<IEmailService>("EmailService", EmailService);

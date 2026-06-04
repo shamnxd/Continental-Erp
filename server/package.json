@@ -1,5 +1,5 @@
 {
-  "name": "continental-service-server",
+  "name": "@shamnxd/continental-erp",
   "version": "1.0.0",
   "description": "SOLID Repository-Pattern backend for Continental Service Management",
   "main": "dist/index.js",

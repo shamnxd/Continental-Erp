@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, User, Briefcase,
@@ -24,7 +24,8 @@ import {
   AlertDialogAction,
 } from "../../components/ui/alert-dialog";
 import { Staff, StaffWorkHistoryItem, getStaffDisplayRole } from "../../interfaces/staff.interface";
-import { getStaffByIdApi, getStaffWorkHistoryApi, deleteStaffApi, changeStaffPasswordApi } from "../../api/staff.api";
+import { getStaffByIdApi, getStaffWorkHistoryApi, deleteStaffApi, changeStaffPasswordApi, getStaffSchedulesApi } from "../../api/staff.api";
+import { getLeavesApi } from "../../api/leave.api";
 import { StaffFormModal } from "../../components/StaffFormModal";
 import { toast } from "sonner";
 
@@ -42,16 +43,31 @@ export function StaffDetail() {
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
+  // Schedules & Leaves state
+  const [schedules, setSchedules] = useState<{ complaints: any[]; amcVisits: any[] }>({ complaints: [], amcVisits: [] });
+  const [leaves, setLeaves] = useState<any[]>([]);
+
+  // Leaves Date Filter
+  const [leaveFilterType, setLeaveFilterType] = useState<"all" | "monthly" | "yearly" | "range">("all");
+  const [leaveMonth, setLeaveMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [leaveYear, setLeaveYear] = useState(new Date().getFullYear());
+  const [leaveDateFrom, setLeaveDateFrom] = useState("");
+  const [leaveDateTo, setLeaveDateTo] = useState("");
+
   const loadData = async () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const [staffRes, historyRes] = await Promise.all([
+      const [staffRes, historyRes, schedulesRes, leavesRes] = await Promise.all([
         getStaffByIdApi(id),
         getStaffWorkHistoryApi(id),
+        getStaffSchedulesApi(id),
+        getLeavesApi({ staffId: id, page: 1, limit: 100 })
       ]);
       if (staffRes.success) setStaff(staffRes.data);
       if (historyRes.success) setWorkHistory(historyRes.data);
+      if (schedulesRes.success) setSchedules(schedulesRes.data);
+      if (leavesRes.success) setLeaves(leavesRes.data || []);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load staff details");
@@ -63,6 +79,77 @@ export function StaffDetail() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  const filteredLeaves = useMemo(() => {
+    return leaves.filter((leave) => {
+      const fromDate = new Date(leave.fromDate);
+      if (leaveFilterType === "monthly") {
+        return fromDate.getMonth() + 1 === leaveMonth && fromDate.getFullYear() === leaveYear;
+      }
+      if (leaveFilterType === "yearly") {
+        return fromDate.getFullYear() === leaveYear;
+      }
+      if (leaveFilterType === "range") {
+        if (!leaveDateFrom && !leaveDateTo) return true;
+        const start = leaveDateFrom ? new Date(leaveDateFrom) : new Date(0);
+        const end = leaveDateTo ? new Date(leaveDateTo) : new Date(8640000000000000);
+        return fromDate >= start && fromDate <= end;
+      }
+      return true;
+    });
+  }, [leaves, leaveFilterType, leaveMonth, leaveYear, leaveDateFrom, leaveDateTo]);
+
+  const leaveStats = useMemo(() => {
+    const approved = filteredLeaves.filter((l) => l.status === "Approved");
+    const pending = filteredLeaves.filter((l) => l.status === "Pending");
+    const rejected = filteredLeaves.filter((l) => l.status === "Rejected");
+    const totalDays = approved.reduce((sum, l) => sum + (l.days || 0), 0);
+    return {
+      total: filteredLeaves.length,
+      approved: approved.length,
+      pending: pending.length,
+      rejected: rejected.length,
+      totalDays,
+    };
+  }, [filteredLeaves]);
+
+  const combinedSchedules = useMemo(() => {
+    const list: any[] = [];
+    schedules.complaints.forEach((c) => {
+      list.push({
+        id: c.id,
+        title: c.title,
+        type: "complaint",
+        date: c.date,
+        status: c.status,
+        client: c.client,
+        location: c.location,
+        reference: c.reference,
+        priority: c.priority,
+      });
+    });
+    schedules.amcVisits.forEach((v) => {
+      list.push({
+        id: v.id,
+        title: v.title,
+        type: "amc_visit",
+        date: v.date,
+        status: v.status,
+        client: v.client,
+        location: v.location,
+        reference: v.reference,
+        notes: v.notes,
+      });
+    });
+    return list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [schedules]);
+
+  const scheduleStats = useMemo(() => {
+    const total = combinedSchedules.length;
+    const completed = combinedSchedules.filter((s) => ["Resolved", "Completed"].includes(s.status)).length;
+    const pending = total - completed;
+    return { total, completed, pending };
+  }, [combinedSchedules]);
 
   const handleDelete = async () => {
     if (!id) return;
@@ -206,6 +293,8 @@ export function StaffDetail() {
               {[
                 { value: "details", label: "Details" },
                 { value: "history", label: `Work History (${workHistory.length})` },
+                { value: "schedules", label: `Schedules (${combinedSchedules.length})` },
+                { value: "leaves", label: `Leaves (${filteredLeaves.length})` },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -306,6 +395,206 @@ export function StaffDetail() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {new Date(item.date).toLocaleDateString()} · {item.location}
                     </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="schedules" className="m-0 space-y-4">
+          {/* Schedules Stat Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+              <span className="text-xs text-muted-foreground block font-bold uppercase tracking-wider">Total Schedules</span>
+              <span className="text-2xl font-bold mt-1 block">{scheduleStats.total}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+              <span className="text-xs text-muted-foreground block font-bold uppercase tracking-wider text-amber-600">Pending Works</span>
+              <span className="text-2xl font-bold mt-1 block text-amber-600">{scheduleStats.pending}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+              <span className="text-xs text-muted-foreground block font-bold uppercase tracking-wider text-green-600">Completed Works</span>
+              <span className="text-2xl font-bold mt-1 block text-green-600">{scheduleStats.completed}</span>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-6">
+            {combinedSchedules.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                <Calendar className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm font-semibold">No schedules assigned to this staff member</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {combinedSchedules.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border border-border rounded-xl p-4 hover:bg-muted/20 cursor-pointer transition-colors"
+                    onClick={() => {
+                      if (item.type === "complaint") navigate(`/complaints/${item.id}`);
+                    }}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            item.type === "complaint" ? "bg-amber-100 text-amber-800" : "bg-pink-100 text-pink-800"
+                          }`}>
+                            {item.type === "complaint" ? "Complaint" : "AMC Visit"}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">{item.reference}</span>
+                        </div>
+                        <h4 className="font-bold text-foreground mt-2">{item.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-0.5">Client: {item.client}</p>
+                      </div>
+                      <div>
+                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mt-3 pt-2 border-t border-border/50">
+                      <span>Date: <strong className="text-foreground">{new Date(item.date).toLocaleDateString()}</strong></span>
+                      <span>Location: <strong className="text-foreground">{item.location || "—"}</strong></span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="leaves" className="m-0 space-y-4">
+          {/* Date range filter toolbar */}
+          <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider shrink-0">Filter Range:</label>
+              <select
+                value={leaveFilterType}
+                onChange={(e) => setLeaveFilterType(e.target.value as any)}
+                className="px-3 py-1.5 border border-border bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+              >
+                <option value="all">All Leaves</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+                <option value="range">Custom Range</option>
+              </select>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {leaveFilterType === "monthly" && (
+                <>
+                  <select
+                    value={leaveMonth}
+                    onChange={(e) => setLeaveMonth(Number(e.target.value))}
+                    className="px-3 py-1.5 border border-border bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(0, i).toLocaleString("en-US", { month: "long" })}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={leaveYear}
+                    onChange={(e) => setLeaveYear(Number(e.target.value))}
+                    className="px-3 py-1.5 border border-border bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                  >
+                    {[2024, 2025, 2026, 2027].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              {leaveFilterType === "yearly" && (
+                <select
+                  value={leaveYear}
+                  onChange={(e) => setLeaveYear(Number(e.target.value))}
+                  className="px-3 py-1.5 border border-border bg-background rounded-lg text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                >
+                  {[2024, 2025, 2026, 2027].map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              )}
+
+              {leaveFilterType === "range" && (
+                <div className="flex items-center gap-2 text-xs">
+                  <input
+                    type="date"
+                    value={leaveDateFrom}
+                    onChange={(e) => setLeaveDateFrom(e.target.value)}
+                    className="px-3 py-1.5 border border-border bg-background rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <input
+                    type="date"
+                    value={leaveDateTo}
+                    onChange={(e) => setLeaveDateTo(e.target.value)}
+                    className="px-3 py-1.5 border border-border bg-background rounded-lg focus:ring-2 focus:ring-primary/20 outline-none"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Leaves Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-card border border-border rounded-xl p-3.5 shadow-sm text-center">
+              <span className="text-[10px] text-muted-foreground block font-bold uppercase tracking-wider">Total Requests</span>
+              <span className="text-xl font-bold mt-0.5 block">{leaveStats.total}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-3.5 shadow-sm text-center">
+              <span className="text-[10px] text-green-600 block font-bold uppercase tracking-wider">Approved</span>
+              <span className="text-xl font-bold mt-0.5 block text-green-600">{leaveStats.approved}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-3.5 shadow-sm text-center">
+              <span className="text-[10px] text-amber-600 block font-bold uppercase tracking-wider">Pending</span>
+              <span className="text-xl font-bold mt-0.5 block text-amber-600">{leaveStats.pending}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-3.5 shadow-sm text-center">
+              <span className="text-[10px] text-red-500 block font-bold uppercase tracking-wider">Rejected</span>
+              <span className="text-xl font-bold mt-0.5 block text-red-500">{leaveStats.rejected}</span>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-3.5 shadow-sm text-center col-span-2 sm:col-span-1">
+              <span className="text-[10px] text-pink-700 block font-bold uppercase tracking-wider">Total Leave Days</span>
+              <span className="text-xl font-bold mt-0.5 block text-pink-700">{leaveStats.totalDays} Days</span>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-6">
+            {filteredLeaves.length === 0 ? (
+              <div className="py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                <Calendar className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm font-semibold">No leave requests matching filter range</p>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {filteredLeaves.map((leave) => (
+                  <div key={leave.id} className="border border-border rounded-xl p-4 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-foreground text-sm">{leave.leaveType} Leave</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">Submitted: {new Date(leave.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div>
+                        <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColor(leave.status)}`}>
+                          {leave.status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-2 border-t border-border/40">
+                      <span>Period: <strong className="text-foreground">{new Date(leave.fromDate).toLocaleDateString()} – {new Date(leave.toDate).toLocaleDateString()}</strong></span>
+                      <span>Duration: <strong className="text-foreground">{leave.days} day{leave.days !== 1 ? "s" : ""}</strong></span>
+                      {leave.reason && <span className="italic">Reason: "{leave.reason}"</span>}
+                    </div>
+                    {leave.adminNote && (
+                      <div className="text-xs p-2.5 bg-muted/30 border border-border/60 rounded-lg text-muted-foreground">
+                        <strong className="text-foreground font-semibold">Admin Note:</strong> "{leave.adminNote}"
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

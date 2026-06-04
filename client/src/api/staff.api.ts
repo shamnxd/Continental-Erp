@@ -74,3 +74,9 @@ export async function changeStaffPasswordApi(
 ): Promise<{ success: boolean; message: string }> {
   return await api.put(`${ApiRoute.STAFF}/${id}/password`, { password });
 }
+
+export async function getStaffSchedulesApi(
+  id: string
+): Promise<{ success: boolean; data: { complaints: any[]; amcVisits: any[] } }> {
+  return await api.get(`${ApiRoute.STAFF}/${id}/schedules`);
+}

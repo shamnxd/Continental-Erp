@@ -290,6 +290,20 @@ export function Staff() {
       className: "px-4 py-4 w-[120px]",
     },
     {
+      header: "Pending Works",
+      accessor: (s: StaffRecord) => {
+        const count = (s as any).pendingWorksCount ?? 0;
+        return count > 0 ? (
+          <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/10 text-amber-600">
+            {count}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-sm">0</span>
+        );
+      },
+      className: "px-4 py-4 w-[120px]",
+    },
+    {
       header: "Status",
       accessor: (s: StaffRecord) => {
         const label = getStaffStatusLabel(s);

@@ -12,6 +12,7 @@ router.use(requireAuth);
 router.post("/", validateDto(CreateStaffSchema), controller.create);
 router.get("/", controller.getAll);
 router.get("/:id/work-history", controller.getWorkHistory);
+router.get("/:id/schedules", controller.getSchedules);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateStaffSchema), controller.update);
 router.put("/:id/password", controller.changePassword);

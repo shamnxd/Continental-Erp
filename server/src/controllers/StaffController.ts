@@ -9,6 +9,9 @@ import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
 import { AppError } from "../errors/AppError";
+import mongoose from "mongoose";
+import { ComplaintModel } from "../models/Complaint";
+import { AmcVisitModel } from "../models/AmcVisit";
 
 @autoInjectable()
 export class StaffController {
@@ -56,7 +59,21 @@ export class StaffController {
         activeOnly: req.query.activeOnly !== "false"
       };
       const result = await this._getStaffUseCase!.execute(query);
-      res.status(StatusCode.OK).json({ success: true, ...result });
+      const dataWithCounts = await Promise.all(
+        result.data.map(async (staff) => {
+          if (!staff.id) return { ...staff, pendingWorksCount: 0 };
+          const objectId = new mongoose.Types.ObjectId(staff.id);
+          const [complaintsCount, amcVisitsCount] = await Promise.all([
+            ComplaintModel.countDocuments({ assignedStaffIds: staff.id, status: { $ne: "Resolved" } }),
+            AmcVisitModel.countDocuments({ assignedStaffIds: objectId, status: { $in: ["Scheduled", "Assigned", "Pending"] } })
+          ]);
+          return {
+            ...staff,
+            pendingWorksCount: complaintsCount + amcVisitsCount
+          };
+        })
+      );
+      res.status(StatusCode.OK).json({ success: true, ...result, data: dataWithCounts });
     } catch (error) {
       next(error);
     }
@@ -156,6 +173,54 @@ export class StaffController {
       );
 
       res.status(StatusCode.OK).json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getSchedules = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const staffId = req.params.id;
+      const objectId = new mongoose.Types.ObjectId(staffId);
+
+      const [complaints, amcVisits] = await Promise.all([
+        ComplaintModel.find({ assignedStaffIds: staffId })
+          .sort({ createdAt: -1 })
+          .select("complaintNo clientName issue status priority createdAt location")
+          .lean(),
+        AmcVisitModel.find({ assignedStaffIds: objectId })
+          .sort({ scheduledDate: 1 })
+          .populate({ path: "amcId", select: "contractNo clientName siteAddress" })
+          .select("scheduledDate status notes amcId")
+          .lean(),
+      ]);
+
+      const data = {
+        complaints: complaints.map((c: any) => ({
+          id: c._id.toString(),
+          type: "complaint",
+          title: c.issue,
+          reference: c.complaintNo,
+          client: c.clientName,
+          status: c.status,
+          priority: c.priority,
+          date: c.createdAt,
+          location: c.location,
+        })),
+        amcVisits: amcVisits.map((v: any) => ({
+          id: v._id.toString(),
+          type: "amc_visit",
+          title: "AMC Service Visit",
+          reference: (v.amcId as any)?.contractNo || "—",
+          client: (v.amcId as any)?.clientName || "—",
+          status: v.status,
+          date: v.scheduledDate,
+          location: (v.amcId as any)?.siteAddress || "—",
+          notes: v.notes,
+        })),
+      };
+
+      res.status(StatusCode.OK).json({ success: true, data });
     } catch (error) {
       next(error);
     }

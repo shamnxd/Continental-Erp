@@ -2,6 +2,15 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { staffApi } from "../../api/staffApi";
 import { AppRoute } from "../../constants/routes.enum";
+import { 
+  CheckSquare, 
+  AlertCircle, 
+  Calendar, 
+  CalendarDays, 
+  Plus, 
+  ArrowRight,
+  Loader2
+} from "lucide-react";
 
 interface DashboardStats {
   totalTasks: number;
@@ -52,179 +61,99 @@ export function StaffDashboard() {
     return "Good Evening";
   };
 
-  const statCards = stats ? [
-    {
-      label: "Total Assigned Tasks",
-      value: stats.totalTasks,
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-        </svg>
-      ),
-      color: "#be185d",
-      bg: "#fce7f3",
-      onClick: () => navigate(AppRoute.STAFF_TASKS),
-    },
-    {
-      label: "Pending Complaints",
-      value: stats.pendingComplaints,
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      ),
-      color: "#f59e0b",
-      bg: "#fffbeb",
-      onClick: () => navigate(AppRoute.STAFF_TASKS),
-    },
-    {
-      label: "Upcoming AMC Visits",
-      value: stats.upcomingVisits,
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-      ),
-      color: "#3b82f6",
-      bg: "#eff6ff",
-      onClick: () => navigate(AppRoute.STAFF_TASKS),
-    },
-    {
-      label: "Pending Leave Requests",
-      value: stats.pendingLeaves,
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-        </svg>
-      ),
-      color: "#8b5cf6",
-      bg: "#f5f3ff",
-      onClick: () => navigate(AppRoute.STAFF_LEAVES),
-    },
-  ] : [];
-
   if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af" }}>
-        <div style={{ textAlign: "center" }}>
-          <svg style={{ animation: "spin 0.8s linear infinite", marginBottom: "8px" }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#be185d" strokeWidth="2.5">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </svg>
-          <p style={{ fontSize: "14px" }}>Loading...</p>
+      <div className="flex items-center justify-center h-full min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading dashboard...</p>
         </div>
-        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto", width: "100%" }}>
+    <div className="w-full max-w-[92%] lg:max-w-[85%] mx-auto space-y-8 py-2">
       {/* Welcome Header */}
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "#1f2937" }}>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">
           {greeting()}, {profile?.fullName?.split(" ")[0]}! 👋
         </h1>
-        <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#9ca3af" }}>
-          Here's what's going on with your work today.
+        <p className="text-sm text-muted-foreground mt-1.5">
+          Here is what is going on with your work today.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-        gap: "16px",
-        marginBottom: "32px",
-      }}>
-        {statCards.map((card, i) => (
+      {stats && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          {/* Card 1 */}
           <button
-            key={i}
-            onClick={card.onClick}
-            style={{
-              background: "#ffffff",
-              borderRadius: "16px",
-              padding: "20px",
-              border: "1px solid #f3e8ee",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              cursor: "pointer",
-              textAlign: "left",
-              transition: "transform 0.15s, box-shadow 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "none";
-              e.currentTarget.style.boxShadow = "0 1px 6px rgba(0,0,0,0.04)";
-            }}
+            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
           >
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "12px",
-              background: card.bg,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: card.color,
-              marginBottom: "12px",
-            }}>
-              {card.icon}
+            <div className="h-12 w-12 rounded-xl bg-pink-500/10 text-pink-700 dark:bg-pink-500/20 dark:text-pink-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-pink-500/20">
+              <CheckSquare className="h-6 w-6" />
             </div>
-            <p style={{ margin: "0 0 4px", fontSize: "28px", fontWeight: 700, color: "#1f2937" }}>{card.value}</p>
-            <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af", lineHeight: 1.4 }}>{card.label}</p>
+            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.totalTasks}</span>
+            <span className="text-sm font-medium text-muted-foreground mt-2">Total Assigned Tasks</span>
           </button>
-        ))}
-      </div>
 
-      {/* Quick Actions */}
-      <div style={{ background: "#ffffff", borderRadius: "16px", padding: "20px", border: "1px solid #f3e8ee" }}>
-        <h2 style={{ margin: "0 0 16px", fontSize: "15px", fontWeight: 600, color: "#1f2937" }}>Quick Actions</h2>
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          {/* Card 2 */}
+          <button
+            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+          >
+            <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-amber-500/20">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.pendingComplaints}</span>
+            <span className="text-sm font-medium text-muted-foreground mt-2">Pending Complaints</span>
+          </button>
+
+          {/* Card 3 */}
+          <button
+            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
+          >
+            <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-blue-500/20">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.upcomingVisits}</span>
+            <span className="text-sm font-medium text-muted-foreground mt-2">Upcoming AMC Visits</span>
+          </button>
+
+          {/* Card 4 */}
           <button
             onClick={() => navigate(AppRoute.STAFF_LEAVES)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "10px",
-              border: "1px solid #f3e8ee",
-              background: "linear-gradient(135deg, #be185d 0%, #9d174d 100%)",
-              color: "white",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "opacity 0.15s",
-            }}
+            className="flex flex-col text-left bg-card hover:bg-muted/30 border border-border p-5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 outline-none group hover:-translate-y-0.5"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
+            <div className="h-12 w-12 rounded-xl bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400 flex items-center justify-center mb-4 transition-colors group-hover:bg-violet-500/20">
+              <CalendarDays className="h-6 w-6" />
+            </div>
+            <span className="text-3xl font-bold text-foreground leading-none tracking-tight">{stats.pendingLeaves}</span>
+            <span className="text-sm font-medium text-muted-foreground mt-2">Pending Leaves</span>
+          </button>
+        </div>
+      )}
+
+      {/* Quick Actions & Shortcut */}
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+        <h2 className="text-base font-bold text-foreground mb-4">Quick Actions</h2>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => navigate(AppRoute.STAFF_LEAVES)}
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
             Request Leave
           </button>
           <button
             onClick={() => navigate(AppRoute.STAFF_TASKS)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "10px",
-              border: "1px solid #f3e8ee",
-              background: "#ffffff",
-              color: "#374151",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "background 0.15s",
-            }}
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-sm transition-all border border-border/80 w-full sm:w-auto"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11l3 3L22 4"/>
-            </svg>
             View My Tasks
+            <ArrowRight className="h-4 w-4" />
           </button>
         </div>
       </div>

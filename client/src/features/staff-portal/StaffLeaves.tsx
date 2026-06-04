@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react";
 import { staffApi } from "../../api/staffApi";
+import { 
+  CalendarDays, 
+  Plus, 
+  X, 
+  Calendar, 
+  FileText,
+  AlertCircle,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Clock
+} from "lucide-react";
 
 interface LeaveRequest {
   id: string;
@@ -16,25 +28,16 @@ interface LeaveRequest {
 const LEAVE_TYPES = ["Annual", "Sick", "Emergency", "Unpaid", "Other"];
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, { bg: string; color: string; dot: string }> = {
-    Pending: { bg: "#fef9c3", color: "#ca8a04", dot: "#ca8a04" },
-    Approved: { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a" },
-    Rejected: { bg: "#fee2e2", color: "#dc2626", dot: "#dc2626" },
+  const map: Record<string, { bg: string; text: string; icon: React.ComponentType<{ className?: string }> }> = {
+    Pending: { bg: "bg-yellow-500/10 dark:bg-yellow-500/20", text: "text-yellow-700 dark:text-yellow-400", icon: Clock },
+    Approved: { bg: "bg-green-500/10 dark:bg-green-500/20", text: "text-green-700 dark:text-green-400", icon: CheckCircle2 },
+    Rejected: { bg: "bg-red-500/10 dark:bg-red-500/20", text: "text-red-700 dark:text-red-400", icon: XCircle },
   };
-  const s = map[status] || { bg: "#f3f4f6", color: "#6b7280", dot: "#6b7280" };
+  const s = map[status] || { bg: "bg-muted", text: "text-muted-foreground", icon: Clock };
+  const Icon = s.icon;
   return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: "5px",
-      fontSize: "12px",
-      fontWeight: 600,
-      padding: "4px 12px",
-      borderRadius: "20px",
-      background: s.bg,
-      color: s.color,
-    }}>
-      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${s.bg} ${s.text}`}>
+      <Icon className="h-3.5 w-3.5" />
       {status}
     </span>
   );
@@ -90,110 +93,74 @@ export function StaffLeaves() {
     d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto", width: "100%" }}>
+    <div className="w-full max-w-[92%] lg:max-w-[85%] mx-auto space-y-6 py-2">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", gap: "12px", flexWrap: "wrap" }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "#1f2937" }}>Leave Requests</h1>
-          <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#9ca3af" }}>View and manage your leave applications.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">Leave Requests</h1>
+          <p className="text-sm text-muted-foreground mt-1">View and manage your leave applications.</p>
         </div>
         <button
           id="staff-request-leave-btn"
           onClick={() => setShowModal(true)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "10px 20px",
-            borderRadius: "10px",
-            border: "none",
-            background: "linear-gradient(135deg, #be185d 0%, #9d174d 100%)",
-            color: "white",
-            fontSize: "14px",
-            fontWeight: 600,
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(190,24,93,0.3)",
-            transition: "transform 0.15s, box-shadow 0.15s",
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
+          className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98] w-full sm:w-auto"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
+          <Plus className="h-4 w-4" />
           Request Leave
         </button>
       </div>
 
       {loading && (
-        <div style={{ textAlign: "center", padding: "60px", color: "#9ca3af" }}>
-          <svg style={{ animation: "spin 0.8s linear infinite" }} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#be185d" strokeWidth="2.5">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </svg>
-          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p className="text-sm">Loading leave requests...</p>
         </div>
       )}
 
       {!loading && leaves.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px", color: "#9ca3af" }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" style={{ marginBottom: "12px" }}>
-            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          <p style={{ fontSize: "15px", fontWeight: 500, color: "#374151", margin: "0 0 4px" }}>No leave requests</p>
-          <p style={{ fontSize: "13px", margin: 0 }}>You haven't submitted any leave requests yet.</p>
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-card border border-border/50 rounded-2xl text-center">
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4 text-muted-foreground">
+            <CalendarDays className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-bold text-foreground mb-1">No leave requests</h3>
+          <p className="text-sm text-muted-foreground">You haven't submitted any leave requests yet.</p>
         </div>
       )}
 
       {!loading && leaves.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div className="grid grid-cols-1 gap-4">
           {leaves.map((leave) => (
-            <div key={leave.id} style={{
-              background: "#ffffff",
-              borderRadius: "14px",
-              padding: "18px 20px",
-              border: "1px solid #f3e8ee",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+            <div key={leave.id} className="bg-card hover:bg-card/90 border border-border p-5 rounded-2xl shadow-sm hover:shadow transition-all duration-150 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                 <div>
-                  <p style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: 600, color: "#1f2937" }}>{leave.leaveType} Leave</p>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af" }}>Submitted {formatDate(leave.createdAt)}</p>
+                  <h3 className="text-base font-bold text-foreground leading-snug">{leave.leaveType} Leave</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Submitted {formatDate(leave.createdAt)}</p>
                 </div>
-                <StatusBadge status={leave.status} />
+                <div className="shrink-0">
+                  <StatusBadge status={leave.status} />
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginBottom: leave.adminNote ? "8px" : 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{formatDate(leave.fromDate)} – {formatDate(leave.toDate)}</span>
+
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1 border-t border-border/50 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground/75" />
+                  <span className="text-foreground/80 font-medium">{formatDate(leave.fromDate)} – {formatDate(leave.toDate)}</span>
                 </div>
-                <span style={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  padding: "2px 10px",
-                  borderRadius: "20px",
-                  background: "#f3f4f6",
-                  color: "#374151",
-                }}>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground">
                   {leave.days} day{leave.days !== 1 ? "s" : ""}
                 </span>
                 {leave.reason && (
-                  <span style={{ fontSize: "12px", color: "#6b7280", fontStyle: "italic" }}>"{leave.reason}"</span>
+                  <span className="text-muted-foreground text-xs italic">"{leave.reason}"</span>
                 )}
               </div>
+
               {leave.adminNote && (
-                <div style={{
-                  marginTop: "8px",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  background: leave.status === "Approved" ? "#f0fdf4" : "#fef2f2",
-                  border: `1px solid ${leave.status === "Approved" ? "#bbf7d0" : "#fecaca"}`,
-                  fontSize: "12px",
-                  color: leave.status === "Approved" ? "#16a34a" : "#dc2626",
-                }}>
-                  <strong>Admin note:</strong> {leave.adminNote}
+                <div className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
+                  leave.status === "Approved" 
+                    ? "bg-green-500/5 border-green-500/20 text-green-800 dark:text-green-400" 
+                    : "bg-red-500/5 border-red-500/20 text-red-800 dark:text-red-400"
+                }`}>
+                  <strong className="font-semibold">Admin Note:</strong> {leave.adminNote}
                 </div>
               )}
             </div>
@@ -203,172 +170,91 @@ export function StaffLeaves() {
 
       {/* Request Leave Modal */}
       {showModal && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          backdropFilter: "blur(4px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 100,
-          padding: "20px",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            borderRadius: "20px",
-            padding: "28px",
-            width: "100%",
-            maxWidth: "460px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#1f2937" }}>Request Leave</h2>
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-bold text-foreground">Request Leave</h2>
               <button
                 onClick={() => setShowModal(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: "4px" }}
+                className="p-1 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             {submitError && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "8px", padding: "10px 14px", color: "#ef4444", fontSize: "13px", marginBottom: "16px" }}>
-                {submitError}
+              <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-3 rounded-xl flex items-center gap-2 mb-4 text-xs">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span className="font-medium">{submitError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>Leave Type</label>
+                <label className="text-xs font-semibold text-foreground/80 block mb-1.5">Leave Type</label>
                 <select
                   value={form.leaveType}
                   onChange={(e) => setForm({ ...form, leaveType: e.target.value })}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid #f3e8ee",
-                    background: "#fdf4f8",
-                    fontSize: "14px",
-                    color: "#1f2937",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                 >
                   {LEAVE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>From Date</label>
+                  <label className="text-xs font-semibold text-foreground/80 block mb-1.5">From Date</label>
                   <input
                     type="date"
                     value={form.fromDate}
                     min={new Date().toISOString().split("T")[0]}
                     onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "10px",
-                      border: "1px solid #f3e8ee",
-                      background: "#fdf4f8",
-                      fontSize: "14px",
-                      color: "#1f2937",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>To Date</label>
+                  <label className="text-xs font-semibold text-foreground/80 block mb-1.5">To Date</label>
                   <input
                     type="date"
                     value={form.toDate}
                     min={form.fromDate || new Date().toISOString().split("T")[0]}
                     onChange={(e) => setForm({ ...form, toDate: e.target.value })}
                     required
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "10px",
-                      border: "1px solid #f3e8ee",
-                      background: "#fdf4f8",
-                      fontSize: "14px",
-                      color: "#1f2937",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
+                    className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                   />
                 </div>
               </div>
 
               {form.fromDate && form.toDate && (
-                <div style={{ background: "#fce7f3", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#9d174d", fontWeight: 500 }}>
+                <div className="bg-primary/10 border border-primary/10 rounded-xl p-3 text-xs text-primary font-semibold">
                   📅 Duration: {calcDays()} day{calcDays() !== 1 ? "s" : ""}
                 </div>
               )}
 
               <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#374151", display: "block", marginBottom: "6px" }}>Reason (optional)</label>
+                <label className="text-xs font-semibold text-foreground/80 block mb-1.5">Reason (optional)</label>
                 <textarea
                   value={form.reason}
                   onChange={(e) => setForm({ ...form, reason: e.target.value })}
                   placeholder="Brief reason for leave..."
                   rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid #f3e8ee",
-                    background: "#fdf4f8",
-                    fontSize: "14px",
-                    color: "#1f2937",
-                    outline: "none",
-                    resize: "vertical",
-                    fontFamily: "inherit",
-                    boxSizing: "border-box",
-                  }}
+                  className="w-full px-3.5 py-2 rounded-xl border border-border bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none font-sans"
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: "11px",
-                    borderRadius: "10px",
-                    border: "1px solid #f3e8ee",
-                    background: "#ffffff",
-                    color: "#6b7280",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-border hover:bg-muted text-muted-foreground text-sm font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    flex: 1,
-                    padding: "11px",
-                    borderRadius: "10px",
-                    border: "none",
-                    background: "linear-gradient(135deg, #be185d 0%, #9d174d 100%)",
-                    color: "white",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: submitting ? "not-allowed" : "pointer",
-                    opacity: submitting ? 0.7 : 1,
-                  }}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-75 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm"
                 >
                   {submitting ? "Submitting..." : "Submit Request"}
                 </button>

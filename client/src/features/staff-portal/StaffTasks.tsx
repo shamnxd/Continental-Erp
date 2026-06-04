@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
 import { staffApi } from "../../api/staffApi";
+import { 
+  CheckSquare, 
+  MapPin, 
+  User, 
+  Calendar, 
+  Clock, 
+  AlertCircle,
+  Loader2,
+  FileText
+} from "lucide-react";
 
 interface Task {
   id: string;
@@ -15,47 +25,36 @@ interface Task {
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, { bg: string; color: string }> = {
-    Pending: { bg: "#fef9c3", color: "#ca8a04" },
-    "In Progress": { bg: "#dbeafe", color: "#2563eb" },
-    Resolved: { bg: "#dcfce7", color: "#16a34a" },
-    Scheduled: { bg: "#ede9fe", color: "#7c3aed" },
-    Completed: { bg: "#dcfce7", color: "#16a34a" },
-    Cancelled: { bg: "#fee2e2", color: "#dc2626" },
-    Assigned: { bg: "#dbeafe", color: "#2563eb" },
-    Open: { bg: "#fef9c3", color: "#ca8a04" },
+  const map: Record<string, { bg: string; text: string }> = {
+    Pending: { bg: "bg-yellow-500/10 dark:bg-yellow-500/20", text: "text-yellow-700 dark:text-yellow-400" },
+    "In Progress": { bg: "bg-blue-500/10 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-400" },
+    Resolved: { bg: "bg-green-500/10 dark:bg-green-500/20", text: "text-green-700 dark:text-green-400" },
+    Scheduled: { bg: "bg-purple-500/10 dark:bg-purple-500/20", text: "text-purple-700 dark:text-purple-400" },
+    Completed: { bg: "bg-green-500/10 dark:bg-green-500/20", text: "text-green-700 dark:text-green-400" },
+    Cancelled: { bg: "bg-red-500/10 dark:bg-red-500/20", text: "text-red-700 dark:text-red-400" },
+    Assigned: { bg: "bg-blue-500/10 dark:bg-blue-500/20", text: "text-blue-700 dark:text-blue-400" },
+    Open: { bg: "bg-yellow-500/10 dark:bg-yellow-500/20", text: "text-yellow-700 dark:text-yellow-400" },
   };
-  const style = map[status] || { bg: "#f3f4f6", color: "#6b7280" };
+  const style = map[status] || { bg: "bg-muted", text: "text-muted-foreground" };
   return (
-    <span style={{
-      fontSize: "11px",
-      fontWeight: 600,
-      padding: "3px 10px",
-      borderRadius: "20px",
-      background: style.bg,
-      color: style.color,
-      whiteSpace: "nowrap",
-    }}>{status}</span>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${style.bg} ${style.text}`}>
+      {status}
+    </span>
   );
 };
 
 const PriorityBadge = ({ priority }: { priority: string }) => {
-  const map: Record<string, { bg: string; color: string }> = {
-    Critical: { bg: "#fee2e2", color: "#dc2626" },
-    High: { bg: "#ffedd5", color: "#ea580c" },
-    Medium: { bg: "#fef9c3", color: "#ca8a04" },
-    Low: { bg: "#dcfce7", color: "#16a34a" },
+  const map: Record<string, { bg: string; text: string }> = {
+    Critical: { bg: "bg-red-500/10 dark:bg-red-500/20", text: "text-red-700 dark:text-red-400" },
+    High: { bg: "bg-orange-500/10 dark:bg-orange-500/20", text: "text-orange-700 dark:text-orange-400" },
+    Medium: { bg: "bg-yellow-500/10 dark:bg-yellow-500/20", text: "text-yellow-700 dark:text-yellow-400" },
+    Low: { bg: "bg-green-500/10 dark:bg-green-500/20", text: "text-green-700 dark:text-green-400" },
   };
-  const style = map[priority] || { bg: "#f3f4f6", color: "#6b7280" };
+  const style = map[priority] || { bg: "bg-muted", text: "text-muted-foreground" };
   return (
-    <span style={{
-      fontSize: "11px",
-      fontWeight: 600,
-      padding: "3px 10px",
-      borderRadius: "20px",
-      background: style.bg,
-      color: style.color,
-    }}>{priority}</span>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${style.bg} ${style.text}`}>
+      {priority}
+    </span>
   );
 };
 
@@ -84,22 +83,14 @@ export function StaffTasks() {
   };
 
   return (
-    <div style={{ padding: "28px 32px", maxWidth: "900px", margin: "0 auto", width: "100%" }}>
-      <div style={{ marginBottom: "24px" }}>
-        <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "#1f2937" }}>My Tasks</h1>
-        <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#9ca3af" }}>All tasks assigned to you.</p>
+    <div className="w-full max-w-[92%] lg:max-w-[85%] mx-auto space-y-6 py-2">
+      <div>
+        <h1 className="text-2xl md:text-3xl font-extrabold text-foreground tracking-tight">My Tasks</h1>
+        <p className="text-sm text-muted-foreground mt-1">All tasks assigned to you.</p>
       </div>
 
       {/* Tabs */}
-      <div style={{
-        display: "flex",
-        gap: "4px",
-        background: "#f3f4f6",
-        borderRadius: "12px",
-        padding: "4px",
-        marginBottom: "20px",
-        width: "fit-content",
-      }}>
+      <div className="flex bg-muted/80 p-1 rounded-xl w-full sm:w-fit border border-border/50">
         {([
           { key: "complaints", label: `Complaints (${complaints.length})` },
           { key: "amc_visits", label: `AMC Visits (${amcVisits.length})` },
@@ -108,18 +99,11 @@ export function StaffTasks() {
             key={tab.key}
             id={`staff-tasks-tab-${tab.key}`}
             onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: "8px 18px",
-              borderRadius: "8px",
-              border: "none",
-              background: activeTab === tab.key ? "#ffffff" : "transparent",
-              color: activeTab === tab.key ? "#be185d" : "#6b7280",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: activeTab === tab.key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
-              transition: "all 0.15s",
-            }}
+            className={`flex-1 sm:flex-initial text-center px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 ${
+              activeTab === tab.key 
+                ? "bg-card text-primary shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
             {tab.label}
           </button>
@@ -127,77 +111,71 @@ export function StaffTasks() {
       </div>
 
       {loading && (
-        <div style={{ textAlign: "center", padding: "60px", color: "#9ca3af" }}>
-          <svg style={{ animation: "spin 0.8s linear infinite" }} width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#be185d" strokeWidth="2.5">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </svg>
-          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p className="text-sm">Loading tasks...</p>
         </div>
       )}
 
       {error && (
-        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "12px", padding: "16px", color: "#ef4444" }}>
-          {error}
+        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-center gap-3">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <span className="text-sm font-medium">{error}</span>
         </div>
       )}
 
       {!loading && !error && currentList.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px", color: "#9ca3af" }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" style={{ marginBottom: "12px" }}>
-            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-          <p style={{ fontSize: "15px", fontWeight: 500, color: "#374151", margin: "0 0 4px" }}>No tasks assigned</p>
-          <p style={{ fontSize: "13px", margin: 0 }}>You have no {activeTab === "complaints" ? "complaints" : "AMC visits"} assigned.</p>
+        <div className="flex flex-col items-center justify-center py-16 px-4 bg-card border border-border/50 rounded-2xl text-center">
+          <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center mb-4 text-muted-foreground">
+            <CheckSquare className="h-7 w-7" />
+          </div>
+          <h3 className="text-base font-bold text-foreground mb-1">No tasks assigned</h3>
+          <p className="text-sm text-muted-foreground">
+            You have no {activeTab === "complaints" ? "complaints" : "AMC visits"} assigned.
+          </p>
         </div>
       )}
 
       {!loading && !error && currentList.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div className="grid grid-cols-1 gap-4">
           {currentList.map((task) => (
             <div
               key={task.id}
-              style={{
-                background: "#ffffff",
-                borderRadius: "14px",
-                padding: "18px 20px",
-                border: "1px solid #f3e8ee",
-                boxShadow: "0 1px 6px rgba(0,0,0,0.04)",
-              }}
+              className="bg-card hover:bg-card/90 border border-border p-5 rounded-2xl shadow-sm hover:shadow transition-all duration-150 space-y-4"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
-                <div>
-                  <p style={{ margin: "0 0 2px", fontSize: "15px", fontWeight: 600, color: "#1f2937" }}>{task.title}</p>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af" }}>{task.reference}</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-foreground leading-snug break-words">{task.title}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 font-mono">{task.reference}</p>
                 </div>
-                <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                <div className="flex gap-2 items-center flex-wrap shrink-0">
                   <StatusBadge status={task.status} />
                   {task.priority && <PriorityBadge priority={task.priority} />}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{task.client}</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-border/50">
+                <div className="flex items-center gap-2.5 text-muted-foreground min-w-0">
+                  <User className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                  <span className="text-sm truncate text-foreground/80 font-medium">{task.client}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                  </svg>
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{task.location || "—"}</span>
+                <div className="flex items-center gap-2.5 text-muted-foreground min-w-0">
+                  <MapPin className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                  <span className="text-sm truncate text-foreground/80 font-medium">{task.location || "—"}</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  <span style={{ fontSize: "12px", color: "#6b7280" }}>{formatDate(task.date)}</span>
+                <div className="flex items-center gap-2.5 text-muted-foreground min-w-0">
+                  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                  <span className="text-sm truncate text-foreground/80 font-medium">{formatDate(task.date)}</span>
                 </div>
               </div>
+
               {task.notes && (
-                <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#9ca3af", fontStyle: "italic" }}>
-                  Note: {task.notes}
-                </p>
+                <div className="bg-muted/40 border border-border/40 rounded-xl p-3 flex items-start gap-2.5">
+                  <FileText className="h-4 w-4 text-muted-foreground/70 mt-0.5 shrink-0" />
+                  <p className="text-xs text-muted-foreground leading-normal">
+                    <strong className="text-foreground/80 font-semibold">Notes:</strong> {task.notes}
+                  </p>
+                </div>
               )}
             </div>
           ))}

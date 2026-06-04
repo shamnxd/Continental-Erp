@@ -18,7 +18,7 @@ export function PublicComplaintRegister() {
     description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedRef, setSubmittedRef] = useState<string | null>(null);
 
   const handleNext = () => {
     if (!form.clientName.trim() || !form.contactPerson.trim() || !form.phone.trim() || !form.location.trim()) {
@@ -47,8 +47,10 @@ export function PublicComplaintRegister() {
         description: form.description,
       });
 
-      if (response.success) {
-        setIsSubmitted(true);
+      if (response.success && response.data) {
+        const docId = response.data.id || (response.data as any)._id || "";
+        const refCode = `REF-${String(docId).slice(-6).toUpperCase()}`;
+        setSubmittedRef(refCode);
         toast.success("Complaint registered successfully!");
       }
     } catch (err: any) {
@@ -89,7 +91,7 @@ export function PublicComplaintRegister() {
 
         {/* Right Side: Form or Success Card */}
         <div className="md:col-span-7">
-          {isSubmitted ? (
+          {submittedRef ? (
             <div className="space-y-6 animate-in fade-in zoom-in duration-200">
               <div className="h-14 w-14 bg-green-50 rounded-full flex items-center justify-center text-green-600">
                 <CheckCircle2 className="h-9 w-9" />
@@ -101,6 +103,10 @@ export function PublicComplaintRegister() {
                 </p>
               </div>
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-100/50 text-left text-xs text-slate-500 space-y-2">
+                <div className="border-b border-slate-200/50 pb-2 mb-2 flex justify-between items-center text-slate-700">
+                  <span className="font-semibold text-sm">Reference Number:</span>
+                  <span className="font-mono font-extrabold text-pink-700 bg-pink-50 px-2 py-0.5 rounded text-sm">{submittedRef}</span>
+                </div>
                 <p><strong>Company:</strong> {form.clientName}</p>
                 <p><strong>Contact:</strong> {form.contactPerson}</p>
                 <p><strong>Issue:</strong> {form.issue}</p>
@@ -117,7 +123,7 @@ export function PublicComplaintRegister() {
                     description: "",
                   });
                   setStep(1);
-                  setIsSubmitted(false);
+                  setSubmittedRef(null);
                 }}
                 className="w-full h-10 bg-gradient-to-r from-pink-700 to-pink-600 hover:from-pink-600 hover:to-pink-500 text-white font-semibold rounded-lg transition-all active:scale-[0.98]"
               >

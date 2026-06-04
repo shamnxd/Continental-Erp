@@ -48,6 +48,7 @@ app.get("/health", (req, res) => {
 // Modular Routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/clients", clientRouter);
+app.use("/api/v1/complaint-requests", complaintRequestRouter);
 app.use("/api/v1/complaints", complaintRouter);
 app.use("/api/v1/smrs", smrRouter);
 // Staff portal routes must come BEFORE /api/v1/staff to avoid being caught by admin requireAuth
@@ -61,7 +62,6 @@ app.use("/api/v1/finance", financeRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/audit-logs", auditLogRouter);
 app.use("/api/v1/leaves", leaveRouter);
-app.use("/api/v1/complaint-requests", complaintRequestRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

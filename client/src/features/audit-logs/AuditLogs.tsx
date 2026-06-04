@@ -133,14 +133,31 @@ export function AuditLogs() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto my-16 bg-card border border-border rounded-xl shadow-sm">
-        <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 text-red-500 mb-5 animate-pulse">
-          <ShieldAlert className="w-7 h-7" />
+      <div className="flex flex-col items-center justify-center min-h-[70vh] p-6">
+        <div className="relative w-full max-w-lg p-8 rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-500/[0.04] to-transparent backdrop-blur-md shadow-2xl text-center">
+          <div className="absolute inset-0 bg-radial-gradient from-red-500/10 via-transparent to-transparent opacity-50 pointer-events-none rounded-2xl" />
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30 mb-6 transform hover:scale-105 transition-transform duration-300">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-extrabold text-foreground tracking-tight mb-3">
+              Security Restriction
+            </h2>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-xs font-mono mb-6">
+              Status: 403 Forbidden
+            </div>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mb-8">
+              {error}
+            </p>
+            <div className="w-full h-px bg-border my-6" />
+            <button
+              onClick={() => window.history.back()}
+              className="px-6 py-2.5 rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-semibold transition-all shadow-sm active:scale-95 hover:shadow-md"
+            >
+              Go Back
+            </button>
+          </div>
         </div>
-        <h3 className="text-xl font-bold text-foreground mb-2">Access Denied</h3>
-        <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-          {error}
-        </p>
       </div>
     );
   }

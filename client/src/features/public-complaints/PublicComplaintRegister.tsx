@@ -68,7 +68,7 @@ export function PublicComplaintRegister() {
           <img
             src="/clogo.png"
             alt="Continental Logo"
-            className="h-16 w-16 object-contain mb-2 animate-pulse"
+            className="h-16 w-16 object-contain mb-2"
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">

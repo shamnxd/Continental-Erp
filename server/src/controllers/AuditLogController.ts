@@ -19,7 +19,7 @@ export class AuditLogController {
         throw new AppError("Access denied: Administration permission required", StatusCode.FORBIDDEN);
       }
 
-      const { search, module, page, limit } = req.query;
+      const { search, module, user, page, limit } = req.query;
 
       const parsedPage = page ? parseInt(page as string, 10) : 1;
       const parsedLimit = limit ? parseInt(limit as string, 10) : 15;
@@ -27,6 +27,7 @@ export class AuditLogController {
       const result = await this._auditLogRepository!.findPaginated({
         search: search as string,
         module: module as string,
+        user: user as string,
         page: parsedPage,
         limit: parsedLimit,
       });

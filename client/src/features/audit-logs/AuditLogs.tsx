@@ -9,8 +9,15 @@ import {
   tableCellClass,
 } from "../../components/tableCells";
 import { useDebounce } from "../../hooks/useDebounce";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 
-type ModuleFilter = "all" | "Clients" | "AMC" | "Complaints" | "Staff" | "Finance";
+type ModuleFilter = "all" | "Clients" | "AMC" | "Complaints" | "Staff" | "Finance" | "Administration";
 
 interface AuditLogEntry {
   id: string;
@@ -23,12 +30,13 @@ interface AuditLogEntry {
 
 const PAGE_SIZE = 15;
 
-const moduleTone = (m: string): "pink" | "blue" | "amber" | "green" | "orange" | "muted" => {
+const moduleTone = (m: string): "pink" | "blue" | "amber" | "green" | "orange" | "red" | "muted" => {
   if (m === "AMC") return "pink";
   if (m === "Clients") return "blue";
   if (m === "Complaints") return "amber";
   if (m === "Staff") return "green";
   if (m === "Finance") return "orange";
+  if (m === "Administration" || m === "Auth") return "red";
   return "muted";
 };
 
@@ -37,6 +45,8 @@ export function AuditLogs() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
+  const [selectedAdmin, setSelectedAdmin] = useState<string>("all");
+  const [admins, setAdmins] = useState<{ id: string; name: string }[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -49,6 +59,7 @@ export function AuditLogs() {
     Complaints: 0,
     Staff: 0,
     Finance: 0,
+    Administration: 0,
   });
 
   const fetchLogs = async () => {
@@ -61,6 +72,7 @@ export function AuditLogs() {
           limit: PAGE_SIZE,
           search: debouncedSearch,
           module: moduleFilter,
+          user: selectedAdmin,
         },
       });
       if (response.success) {
@@ -82,13 +94,27 @@ export function AuditLogs() {
   };
 
   useEffect(() => {
+    const fetchAdmins = async () => {
+      try {
+        const response: any = await api.get("/admins");
+        if (response.success) {
+          setAdmins(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to load admins", err);
+      }
+    };
+    fetchAdmins();
+  }, []);
+
+  useEffect(() => {
     fetchLogs();
-  }, [currentPage, debouncedSearch, moduleFilter]);
+  }, [currentPage, debouncedSearch, moduleFilter, selectedAdmin]);
 
   // Reset to page 1 on search or filter change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, moduleFilter]);
+  }, [debouncedSearch, moduleFilter, selectedAdmin]);
 
   const columns: Column<AuditLogEntry>[] = [
     {
@@ -198,9 +224,25 @@ export function AuditLogs() {
         { value: "Complaints", label: "Complaints", count: counts.Complaints, tone: "amber" },
         { value: "Staff", label: "Staff", count: counts.Staff, tone: "green" },
         { value: "Finance", label: "Finance", count: counts.Finance, tone: "orange" },
+        { value: "Administration", label: "Administration", count: counts.Administration, tone: "red" },
       ]}
       filterValue={moduleFilter}
       onFilterChange={setModuleFilter}
+      extraFilters={
+        <Select value={selectedAdmin} onValueChange={setSelectedAdmin}>
+          <SelectTrigger className="w-full sm:w-[220px] h-11 border-border">
+            <SelectValue placeholder="Filter by Admin" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Administrators</SelectItem>
+            {admins.map((admin) => (
+              <SelectItem key={admin.id} value={admin.name}>
+                {admin.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
       columns={columns}
       data={logs}
       isLoading={isLoading}

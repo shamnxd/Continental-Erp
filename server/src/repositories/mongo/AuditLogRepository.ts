@@ -22,15 +22,24 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
   }
 
   public async findPaginated(query: GetAuditLogsQuery): Promise<PaginatedAuditLogs> {
-    const { search, module, page = 1, limit = 15 } = query;
+    const { search, module, user, page = 1, limit = 15 } = query;
 
     const mongoFilter: Record<string, any> = {};
 
     if (module && module !== "all") {
-      mongoFilter.module = module;
+      if (module === "Administration") {
+        mongoFilter.module = { $in: ["Administration", "Auth"] };
+      } else {
+        mongoFilter.module = module;
+      }
     }
 
     const countFilter: Record<string, any> = {};
+
+    if (user && user !== "all") {
+      mongoFilter.user = user;
+      countFilter.user = user;
+    }
 
     if (search && search.trim()) {
       const regex = new RegExp(search.trim(), "i");
@@ -45,7 +54,17 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
 
     const skip = (page - 1) * limit;
 
-    const [docs, total, totalAll, clientsCount, amcCount, complaintsCount, staffCount, financeCount] = await Promise.all([
+    const [
+      docs,
+      total,
+      totalAll,
+      clientsCount,
+      amcCount,
+      complaintsCount,
+      staffCount,
+      financeCount,
+      administrationCount,
+    ] = await Promise.all([
       this.model.find(mongoFilter).sort({ timestamp: -1 }).skip(skip).limit(limit).exec(),
       this.model.countDocuments(mongoFilter).exec(),
       this.model.countDocuments(countFilter).exec(),
@@ -54,6 +73,7 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
       this.model.countDocuments({ ...countFilter, module: "Complaints" }).exec(),
       this.model.countDocuments({ ...countFilter, module: "Staff" }).exec(),
       this.model.countDocuments({ ...countFilter, module: "Finance" }).exec(),
+      this.model.countDocuments({ ...countFilter, module: { $in: ["Administration", "Auth"] } }).exec(),
     ]);
 
     return {
@@ -69,6 +89,7 @@ export class AuditLogRepository extends BaseRepository<IAuditLogDocument, IAudit
         Complaints: complaintsCount,
         Staff: staffCount,
         Finance: financeCount,
+        Administration: administrationCount,
       },
     };
   }

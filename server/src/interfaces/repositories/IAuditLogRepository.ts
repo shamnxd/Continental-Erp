@@ -4,6 +4,7 @@ import { IAuditLog } from "../models/IAuditLog";
 export interface GetAuditLogsQuery {
   search?: string;
   module?: string;
+  user?: string;
   page?: number;
   limit?: number;
 }
@@ -21,6 +22,7 @@ export interface PaginatedAuditLogs {
     Complaints: number;
     Staff: number;
     Finance: number;
+    Administration: number;
   };
 }
 

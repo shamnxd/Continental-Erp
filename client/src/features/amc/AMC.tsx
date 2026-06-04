@@ -333,7 +333,7 @@ export function AMC() {
   return (
     <>
       <ManagementListPage
-        title="AMC Management"
+        title="AMC Contracts"
         subtitle="Manage annual maintenance contracts"
         headerAction={
           <Button

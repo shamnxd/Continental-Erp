@@ -108,6 +108,7 @@ export const setupInterceptors = (store: StoreLike, callbacks: AuthCallbacks) =>
       }
 
       const token = await getValidAccessToken();
+      console.log(`[Axios Request] URL: ${config.url}, Token resolved: ${token ? "Yes" : "No"}`);
       if (token) {
         attachBearerToken(config, token);
       }

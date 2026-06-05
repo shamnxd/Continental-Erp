@@ -1,3 +1,5 @@
+import { IRemark } from "./IComplaint";
+
 export interface IComplaintRequest {
   id?: string;
   clientName: string;
@@ -9,6 +11,7 @@ export interface IComplaintRequest {
   description: string;
   status: "Pending" | "Converted" | "Rejected";
   convertedComplaintId?: string;
+  remarks?: IRemark[];
   createdAt?: Date;
   updatedAt?: Date;
 }

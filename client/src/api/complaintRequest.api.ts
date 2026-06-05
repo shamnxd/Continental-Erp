@@ -12,6 +12,7 @@ export interface ComplaintRequest {
   description: string;
   status: "Pending" | "Converted" | "Rejected";
   convertedComplaintId?: string;
+  remarks?: { user: string; date: string; text: string; id?: string }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -43,7 +44,9 @@ export async function submitPublicComplaintApi(data: {
   issue: string;
   description: string;
 }): Promise<{ success: boolean; message: string; data: ComplaintRequest }> {
-  return await api.post(`${ApiRoute.COMPLAINT_REQUESTS}/public`, data);
+  return await api.post(`${ApiRoute.COMPLAINT_REQUESTS}/public`, data, {
+    _skipAuth: true,
+  } as any);
 }
 
 export async function getComplaintRequestsApi(query?: GetComplaintRequestsQuery): Promise<GetComplaintRequestsResponse> {
@@ -72,4 +75,12 @@ export async function convertComplaintRequestApi(
   }
 ): Promise<{ success: boolean; data: { request: ComplaintRequest; complaint: any } }> {
   return await api.put(`${ApiRoute.COMPLAINT_REQUESTS}/${id}/convert`, data);
+}
+
+export async function getComplaintRequestByIdApi(id: string): Promise<{ success: boolean; data: ComplaintRequest }> {
+  return await api.get(`${ApiRoute.COMPLAINT_REQUESTS}/${id}`);
+}
+
+export async function addComplaintRequestRemarkApi(id: string, text: string): Promise<{ success: boolean; data: ComplaintRequest }> {
+  return await api.put(`${ApiRoute.COMPLAINT_REQUESTS}/${id}/remarks`, { text });
 }

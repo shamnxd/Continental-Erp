@@ -6,6 +6,12 @@ export interface IComplaintRequestDocument extends Document, Omit<IComplaintRequ
   updatedAt: Date;
 }
 
+const remarkSchema = new Schema({
+  user: { type: String, required: true },
+  date: { type: Date, required: true, default: Date.now },
+  text: { type: String, required: true },
+});
+
 const complaintRequestSchema = new Schema<IComplaintRequestDocument>(
   {
     clientName: { type: String, required: true, trim: true },
@@ -21,7 +27,8 @@ const complaintRequestSchema = new Schema<IComplaintRequestDocument>(
       required: true,
       default: "Pending"
     },
-    convertedComplaintId: { type: String, default: null }
+    convertedComplaintId: { type: String, default: null },
+    remarks: { type: [remarkSchema], default: [] }
   },
   { timestamps: true }
 );

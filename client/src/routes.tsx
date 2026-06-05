@@ -54,6 +54,7 @@ import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
 import { StaffSchedules } from "./features/staff-portal/StaffSchedules";
 import { PublicComplaintRegister } from "./features/public-complaints/PublicComplaintRegister";
 import { ComplaintRequests } from "./features/complaints/ComplaintRequests";
+import { ComplaintRequestDetail } from "./features/complaints/ComplaintRequestDetail";
 
 export const router = createBrowserRouter([
   {
@@ -122,6 +123,7 @@ export const router = createBrowserRouter([
       { path: AppRoute.MINOR_JOBS, element: <MinorJobs /> },
       { path: AppRoute.PROJECTS, element: <Projects /> },
       { path: AppRoute.CUSTOMER_COMPLAINTS, element: <ComplaintRequests /> },
+      { path: `${AppRoute.CUSTOMER_COMPLAINTS}/:id`, element: <ComplaintRequestDetail /> },
       { path: AppRoute.LEAVE_MANAGEMENT, element: <LeaveManagement /> },
       { path: AppRoute.AUDIT_LOGS, element: <AuditLogs /> },
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },

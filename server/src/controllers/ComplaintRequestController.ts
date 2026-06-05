@@ -198,4 +198,58 @@ export class ComplaintRequestController {
       next(error);
     }
   };
+
+  /** GET /api/v1/complaint-requests/:id */
+  public getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const doc = await ComplaintRequestModel.findById(id).exec();
+      if (!doc) {
+        throw new AppError("Complaint request not found", StatusCode.NOT_FOUND);
+      }
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: doc
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /** PUT /api/v1/complaint-requests/:id/remarks */
+  public addRemark = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const { text } = req.body;
+      if (!text || !text.trim()) {
+        throw new AppError("Remark text is required", StatusCode.BAD_REQUEST);
+      }
+
+      const doc = await ComplaintRequestModel.findById(id);
+      if (!doc) {
+        throw new AppError("Complaint request not found", StatusCode.NOT_FOUND);
+      }
+
+      const userName = (req as any).user?.name || "System User";
+      const newRemark = {
+        user: userName,
+        date: new Date(),
+        text: text.trim()
+      };
+
+      if (!doc.remarks) {
+        doc.remarks = [];
+      }
+      doc.remarks.push(newRemark as any);
+      await doc.save();
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        message: "Remark added successfully",
+        data: doc
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

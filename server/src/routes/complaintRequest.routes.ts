@@ -11,7 +11,9 @@ router.post("/public", controller.submitPublicComplaint);
 // Admin-only protected routes
 router.use(requireAuth);
 router.get("/", controller.getAll);
+router.get("/:id", controller.getById);
 router.put("/:id/reject", controller.reject);
 router.put("/:id/convert", controller.convert);
+router.put("/:id/remarks", controller.addRemark);
 
 export const complaintRequestRouter = router;

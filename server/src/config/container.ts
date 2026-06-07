@@ -95,6 +95,16 @@ import { EditAmcRemarkUseCase } from "../usecases/amc/EditAmcRemarkUseCase";
 import { AddEnquiryDrawingUseCase, AddEnquiryDrawingInput } from "../usecases/enquiries/AddEnquiryDrawingUseCase";
 import { AddEnquiryRemarkDto, EditEnquiryRemarkDto } from "../dtos/enquiryRemark.dto";
 
+// Costing Imports
+import { ICostingRepository } from "../interfaces/repositories/ICostingRepository";
+import { CostingRepository } from "../repositories/mongo/CostingRepository";
+import { CreateCostingUseCase } from "../usecases/costings/CreateCostingUseCase";
+import { GetCostingsByEnquiryIdUseCase } from "../usecases/costings/GetCostingsByEnquiryIdUseCase";
+import { CreateCostingRevisionUseCase } from "../usecases/costings/CreateCostingRevisionUseCase";
+import { UpdateCostingUseCase } from "../usecases/costings/UpdateCostingUseCase";
+import { CreateCostingDto, UpdateCostingDto } from "../dtos/costing.dto";
+import { ICosting } from "../interfaces/models/ICosting";
+
 import { IQuotationRepository, GetQuotationsQuery, PaginatedQuotations } from "../interfaces/repositories/IQuotationRepository";
 import { QuotationRepository } from "../repositories/mongo/QuotationRepository";
 import { IQuotation } from "../interfaces/models/IQuotation";
@@ -169,6 +179,7 @@ container.registerSingleton<IAmcVisitRepository>("AmcVisitRepository", AmcVisitR
 container.registerSingleton<IEnquiryRepository>("EnquiryRepository", EnquiryRepository);
 container.registerSingleton<IQuotationRepository>("QuotationRepository", QuotationRepository);
 container.registerSingleton<IAuditLogRepository>("AuditLogRepository", AuditLogRepository);
+container.registerSingleton<ICostingRepository>("CostingRepository", CostingRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
@@ -251,6 +262,24 @@ container.registerSingleton<
 container.registerSingleton<
   IUseCase<{ amcId: string; remarkKey: string; data: EditEnquiryRemarkDto; user: string }, IAmc | null>
 >("EditAmcRemarkUseCase", EditAmcRemarkUseCase);
+
+// Costing UseCases
+container.registerSingleton<IUseCase<{ data: CreateCostingDto }, ICosting>>(
+  "CreateCostingUseCase",
+  CreateCostingUseCase
+);
+container.registerSingleton<IUseCase<string, ICosting[]>>(
+  "GetCostingsByEnquiryIdUseCase",
+  GetCostingsByEnquiryIdUseCase
+);
+container.registerSingleton<IUseCase<{ id: string; preparedBy: string }, ICosting>>(
+  "CreateCostingRevisionUseCase",
+  CreateCostingRevisionUseCase
+);
+container.registerSingleton<IUseCase<{ id: string; data: UpdateCostingDto }, ICosting | null>>(
+  "UpdateCostingUseCase",
+  UpdateCostingUseCase
+);
 
 container.registerSingleton<IUseCase<CreateQuotationDto, IQuotation>>(
   "CreateQuotationUseCase",

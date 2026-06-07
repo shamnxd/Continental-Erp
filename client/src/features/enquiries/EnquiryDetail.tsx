@@ -53,6 +53,7 @@ import { Client } from "../../interfaces/client.interface";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { EnquiryFormModal } from "../../components/EnquiryFormModal";
 import { RemarksPanel } from "../../components/RemarksPanel";
+import { CostingTab } from "./costing/CostingTab";
 import { toast } from "sonner";
 
 const ENQUIRY_STATUSES: EnquiryStatus[] = [
@@ -494,6 +495,12 @@ export function EnquiryDetail() {
                     >
                       Remarks ({remarks.length})
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="costing"
+                      className="flex-none w-auto shrink-0 h-full rounded-md !border-b-2 border-0 border-transparent data-[state=active]:border-pink-600 data-[state=active]:text-pink-700 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none px-4 text-sm font-bold transition-all"
+                    >
+                      Costing Sheet
+                    </TabsTrigger>
                   </TabsList>
                 </div>
               </div>
@@ -722,6 +729,10 @@ export function EnquiryDetail() {
                   emptyMessage="No remarks recorded yet."
                   placeholder="Add follow-up notes or site visit observations..."
                 />
+              </TabsContent>
+
+              <TabsContent value="costing" className="m-0">
+                <CostingTab enquiry={enquiry} />
               </TabsContent>
             </Tabs>
           </div>

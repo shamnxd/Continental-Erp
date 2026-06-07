@@ -87,5 +87,6 @@ export enum ApiRoute {
   // Leaves (admin)
   LEAVES = "/leaves",
   COMPLAINT_REQUESTS = "/complaint-requests",
+  COSTINGS = "/costings",
 }
 

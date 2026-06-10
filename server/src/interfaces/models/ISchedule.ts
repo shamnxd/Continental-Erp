@@ -20,6 +20,7 @@ export interface ISchedule {
   assignedTo: string[];
   notes?: string;
   smrId?: string | null;
+  completedAt?: Date | string | null;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

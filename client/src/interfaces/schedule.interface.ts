@@ -20,6 +20,7 @@ export interface Schedule {
   assignedTo: string[];
   notes?: string;
   smrId?: string | null;
+  completedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

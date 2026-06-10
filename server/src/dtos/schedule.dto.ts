@@ -32,6 +32,12 @@ export const CreateScheduleSchema = z.object({
     .default([]),
   notes: z.string().optional().default(""),
   smrId: z.string().nullable().optional(),
+  completedAt: z
+    .string()
+    .transform((val) => (val ? new Date(val) : null))
+    .or(z.date())
+    .nullable()
+    .optional(),
 });
 
 export type CreateScheduleDto = z.infer<typeof CreateScheduleSchema>;

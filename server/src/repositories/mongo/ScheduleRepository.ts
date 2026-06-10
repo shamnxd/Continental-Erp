@@ -34,6 +34,7 @@ export class ScheduleRepository
       assignedTo: doc.assignedTo || [],
       notes: doc.notes || "",
       smrId: doc.smrId?.toString() || null,
+      completedAt: doc.completedAt || null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

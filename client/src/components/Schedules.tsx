@@ -8,6 +8,7 @@ import {
   Loader2,
   AlertCircle,
   FileText,
+  Check,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -40,6 +41,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 interface SchedulesProps {
   entityId: string;
@@ -70,6 +77,12 @@ export function Schedules({
   const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Completion states
+  const [completeScheduleId, setCompleteScheduleId] = useState<string | null>(null);
+  const [completionTimeInput, setCompletionTimeInput] = useState("");
+  const [completionNotesInput, setCompletionNotesInput] = useState("");
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Form fields
   const [dateInput, setDateInput] = useState("");
@@ -207,6 +220,41 @@ export function Schedules({
     }
   };
 
+  const handleCompleteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!completeScheduleId) return;
+
+    setIsCompleting(true);
+    const targetSchedule = schedules.find((s) => s.id === completeScheduleId);
+    const originalNotes = targetSchedule?.notes || "";
+    
+    const updatedNotes = completionNotesInput.trim()
+      ? originalNotes
+        ? `${originalNotes}\n\n[Completion Notes - ${new Date(completionTimeInput).toLocaleString("en-IN")}]: ${completionNotesInput}`
+        : `[Completion Notes - ${new Date(completionTimeInput).toLocaleString("en-IN")}]: ${completionNotesInput}`
+      : originalNotes;
+
+    try {
+      const res = await updateScheduleApi(completeScheduleId, {
+        status: "Completed",
+        completedAt: new Date(completionTimeInput).toISOString(),
+        notes: updatedNotes,
+      });
+
+      if (res.success) {
+        toast.success("Schedule marked as completed successfully");
+        setCompleteScheduleId(null);
+        loadSchedules();
+        onSuccess?.();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to complete schedule");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const getStatusColorClass = (status: string) => {
     const enquiryColors: Record<string, string> = {
       "Site Visit Scheduled": "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -302,6 +350,18 @@ export function Schedules({
                             <span>Assigned to: <strong>{sch.assignedTo.join(", ")}</strong></span>
                           </div>
                         )}
+                        {sch.status === "Completed" && sch.completedAt && (
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-200/50 w-fit">
+                            <Check className="h-3 w-3 text-green-600" />
+                            <span>Completed on: <strong>{new Date(sch.completedAt).toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}</strong></span>
+                          </div>
+                        )}
                         {entityType === "amc" ? (
                           <div className="mt-1">
                             <Link
@@ -339,6 +399,26 @@ export function Schedules({
 
                       {!isClosed && !sch.smrId && (
                         <div className="flex items-center gap-1">
+                          {sch.status !== "Completed" && sch.status !== "Cancelled" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-green-600 hover:bg-green-50"
+                              onClick={() => {
+                                if (sch.id) {
+                                  setCompleteScheduleId(sch.id);
+                                  const now = new Date();
+                                  const offset = now.getTimezoneOffset();
+                                  const localNow = new Date(now.getTime() - offset * 60 * 1000);
+                                  setCompletionTimeInput(localNow.toISOString().slice(0, 16));
+                                  setCompletionNotesInput("");
+                                }
+                              }}
+                              title="Mark Completed"
+                            >
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -556,6 +636,63 @@ export function Schedules({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={completeScheduleId !== null} onOpenChange={(open) => !open && setCompleteScheduleId(null)}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-foreground">Mark Schedule as Completed</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCompleteSubmit} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="completionTime" className="text-xs font-semibold text-foreground">
+                Completion Date & Time *
+              </Label>
+              <Input
+                id="completionTime"
+                type="datetime-local"
+                value={completionTimeInput}
+                onChange={(e) => setCompletionTimeInput(e.target.value)}
+                className="h-9 text-xs"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="completionNotes" className="text-xs font-semibold text-foreground">
+                Completion Notes / Remarks (Optional)
+              </Label>
+              <Textarea
+                id="completionNotes"
+                placeholder="Details of service performed, outcomes, etc..."
+                value={completionNotesInput}
+                onChange={(e) => setCompletionNotesInput(e.target.value)}
+                className="text-xs min-h-[80px]"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCompleteScheduleId(null)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isCompleting}
+                className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs font-semibold"
+              >
+                {isCompleting ? "Saving..." : "Complete Schedule"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

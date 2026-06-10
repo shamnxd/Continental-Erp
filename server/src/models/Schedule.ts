@@ -44,6 +44,7 @@ const scheduleSchema = new Schema<IScheduleDocument>(
     assignedTo: { type: [String], default: [] },
     notes: { type: String, trim: true, default: "" },
     smrId: { type: Schema.Types.ObjectId, ref: "SMR", default: null },
+    completedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

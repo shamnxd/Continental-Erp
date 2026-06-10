@@ -8,6 +8,7 @@ import { IAmcRepository } from "../../interfaces/repositories/IAmcRepository";
 import { IStaffRepository } from "../../interfaces/repositories/IStaffRepository";
 import { CreateScheduleDto } from "../../dtos/schedule.dto";
 import { ISchedule } from "../../interfaces/models/ISchedule";
+import { appendEnquiryActivity } from "../../utils/enquiryActivity";
 
 @injectable()
 export class CreateScheduleUseCase
@@ -45,12 +46,12 @@ export class CreateScheduleUseCase
     });
 
     // Auto-sync parent entity
-    await this.syncParentEntity(schedule);
+    await this.syncParentEntity(schedule, user);
 
     return schedule;
   }
 
-  private async syncParentEntity(schedule: ISchedule): Promise<void> {
+  private async syncParentEntity(schedule: ISchedule, user: string): Promise<void> {
     const { entityType, entityId, scheduledDate, status, assignedStaffIds, assignedTo, scheduleType } = schedule;
 
     if (entityType === "enquiry") {
@@ -63,11 +64,16 @@ export class CreateScheduleUseCase
           newStatus = "Follow-up Required";
         }
 
+        const formattedDate = new Date(scheduledDate).toLocaleDateString("en-GB");
+        const activityMsg = `Schedule created: ${scheduleType} on ${formattedDate}`;
+        const activityLog = appendEnquiryActivity(enquiry.activityLog, "updated", activityMsg, user);
+
         await this._enquiryRepository.update(entityId, {
           followUpDate: new Date(scheduledDate),
           status: newStatus,
           assignedTo: assignedTo[0] || "",
           assignedStaffId: assignedStaffIds[0] || "",
+          activityLog,
         });
       }
     } else if (entityType === "complaint") {

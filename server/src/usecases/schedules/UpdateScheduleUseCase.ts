@@ -8,6 +8,7 @@ import { IAmcRepository } from "../../interfaces/repositories/IAmcRepository";
 import { IStaffRepository } from "../../interfaces/repositories/IStaffRepository";
 import { UpdateScheduleDto } from "../../dtos/schedule.dto";
 import { ISchedule } from "../../interfaces/models/ISchedule";
+import { appendEnquiryActivity } from "../../utils/enquiryActivity";
 
 @injectable()
 export class UpdateScheduleUseCase
@@ -54,13 +55,21 @@ export class UpdateScheduleUseCase
     const updated = await this._scheduleRepository.update(id, patch);
     if (!updated) return null;
 
+    const wasCompletedTransition = existing.status !== "Completed" && updated.status === "Completed";
+    const wasCancelledTransition = existing.status !== "Cancelled" && updated.status === "Cancelled";
+
     // Sync parent entity
-    await this.syncParentEntity(updated);
+    await this.syncParentEntity(updated, user, wasCompletedTransition, wasCancelledTransition);
 
     return updated;
   }
 
-  private async syncParentEntity(schedule: ISchedule): Promise<void> {
+  private async syncParentEntity(
+    schedule: ISchedule,
+    user: string,
+    wasCompletedTransition: boolean,
+    wasCancelledTransition: boolean
+  ): Promise<void> {
     const { entityType, entityId, scheduledDate, status, assignedStaffIds, assignedTo, scheduleType } = schedule;
 
     if (entityType === "enquiry") {
@@ -73,11 +82,21 @@ export class UpdateScheduleUseCase
           newStatus = "Follow-up Required";
         }
 
+        const formattedDate = new Date(scheduledDate).toLocaleDateString("en-GB");
+        let activityMsg = `Schedule updated: ${scheduleType} on ${formattedDate}`;
+        if (wasCompletedTransition) {
+          activityMsg = `Schedule completed: ${scheduleType} on ${formattedDate}`;
+        } else if (wasCancelledTransition) {
+          activityMsg = `Schedule cancelled: ${scheduleType} on ${formattedDate}`;
+        }
+        const activityLog = appendEnquiryActivity(enquiry.activityLog, "updated", activityMsg, user);
+
         await this._enquiryRepository.update(entityId, {
           followUpDate: new Date(scheduledDate),
           status: newStatus,
           assignedTo: assignedTo[0] || "",
           assignedStaffId: assignedStaffIds[0] || "",
+          activityLog,
         });
       }
     } else if (entityType === "complaint") {

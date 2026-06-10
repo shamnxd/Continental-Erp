@@ -173,9 +173,9 @@ export function EnquiryDetail() {
 
   const isClosed = enquiry?.status === "Closed";
 
-  const loadEnquiry = useCallback(async () => {
+  const loadEnquiry = useCallback(async (silent = false) => {
     if (!id) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const res = await getEnquiryByIdApi(id);
       if (res.success) setEnquiry(res.data);
@@ -183,7 +183,7 @@ export function EnquiryDetail() {
       console.error("Failed to load enquiry", err);
       toast.error("Failed to load enquiry");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [id]);
 
@@ -768,7 +768,7 @@ export function EnquiryDetail() {
                   entityNo={enquiry.enquiryNo}
                   clientName={enquiry.clientName}
                   title={enquiry.requirement}
-                  onSuccess={loadEnquiry}
+                  onSuccess={() => loadEnquiry(true)}
                   isClosed={isClosed}
                 />
               </TabsContent>

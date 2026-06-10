@@ -70,10 +70,10 @@ export function ComplaintDetail() {
   const [editPhone, setEditPhone] = useState("");
   const [editLocation, setEditLocation] = useState("");
 
-  const fetchComplaintDetails = async () => {
+  const fetchComplaintDetails = async (silent = false) => {
     if (!id) return;
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const res = await getComplaintByIdApi(id);
       if (res.success) {
         setComplaint(res.data);
@@ -101,11 +101,11 @@ export function ComplaintDetail() {
       if (smrRes.success) {
         setSmrs(smrRes.data);
       }
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load complaint data");
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -709,7 +709,7 @@ export function ComplaintDetail() {
                   entityNo={complaint.complaintNo}
                   clientName={complaint.clientName}
                   title={complaint.issue}
-                  onSuccess={fetchComplaintDetails}
+                  onSuccess={() => fetchComplaintDetails(true)}
                   isClosed={complaint.status === "Resolved"}
                 />
               </TabsContent>

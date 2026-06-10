@@ -401,9 +401,9 @@ export function Schedules({
                         <div className="flex items-center gap-1">
                           {sch.status !== "Completed" && sch.status !== "Cancelled" && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-green-600 hover:bg-green-50"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[10px] font-bold text-green-700 border-green-200 hover:bg-green-50/70 hover:border-green-300 transition-all gap-1 shadow-2xs"
                               onClick={() => {
                                 if (sch.id) {
                                   setCompleteScheduleId(sch.id);
@@ -414,9 +414,9 @@ export function Schedules({
                                   setCompletionNotesInput("");
                                 }
                               }}
-                              title="Mark Completed"
                             >
-                              <Check className="h-3.5 w-3.5 text-green-600" />
+                              <Check className="h-3 w-3 text-green-600" />
+                              Complete
                             </Button>
                           )}
                           <Button

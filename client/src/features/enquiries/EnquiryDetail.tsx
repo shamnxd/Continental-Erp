@@ -43,7 +43,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { cn } from "../../lib/utils";
-import { UnifiedScheduler } from "../../components/UnifiedScheduler";
+import { Schedules } from "../../components/Schedules";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import {
   AlertDialog,
@@ -762,14 +762,13 @@ export function EnquiryDetail() {
               </TabsContent>
 
               <TabsContent value="schedules" className="m-0">
-                <UnifiedScheduler
+                <Schedules
                   entityId={enquiry.id ?? ""}
                   entityType="enquiry"
-                  currentDate={enquiry.followUpDate}
-                  currentStatus={enquiry.status}
-                  assignedStaffIds={enquiry.assignedStaffId ? [enquiry.assignedStaffId] : []}
-                  assignedName={enquiry.assignedTo}
-                  onSuccess={(updatedEnquiry) => setEnquiry(updatedEnquiry)}
+                  entityNo={enquiry.enquiryNo}
+                  clientName={enquiry.clientName}
+                  title={enquiry.requirement}
+                  onSuccess={loadEnquiry}
                   isClosed={isClosed}
                 />
               </TabsContent>

@@ -9,9 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { getAmcApi, getAmcVisitsApi } from "../../api/amc.api";
-import { getEnquiriesApi } from "../../api/enquiry.api";
-import { getComplaintsApi } from "../../api/complaint.api";
+import { getAmcApi } from "../../api/amc.api";
+import { getSchedulesApi } from "../../api/schedule.api";
 import type { AmcContract, AmcContractStatus } from "../../interfaces/amc.interface";
 import { calculatePreferredVisitDate } from "../../utils/calculateAmcVisits";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -30,7 +29,9 @@ export type ScheduleType =
   | "AMC Visit"
   | "Preferred Visit"
   | "Site Visit"
-  | "Complaint Resolution";
+  | "Complaint Resolution"
+  | "Follow-up"
+  | "Project/Minor Job";
 
 export interface ScheduleItem {
   id: string;
@@ -48,11 +49,19 @@ export interface ScheduleItem {
   visitId?: string;
   enquiryId?: string;
   complaintId?: string;
+  projectId?: string;
+  minorjobId?: string;
 }
 
 type ScheduleTab = "scheduled" | "preferred";
 
-type ScheduledTypeFilter = "all" | "AMC Visit" | "Site Visit" | "Complaint Resolution";
+type ScheduledTypeFilter =
+  | "all"
+  | "AMC Visit"
+  | "Site Visit"
+  | "Complaint Resolution"
+  | "Follow-up"
+  | "Project/Minor Job";
 
 type PreferredContractFilter = "all" | AmcContractStatus;
 
@@ -63,6 +72,8 @@ const scheduledFilterLabels: Record<ScheduledTypeFilter, string> = {
   "AMC Visit": "AMC Visits",
   "Site Visit": "Site Visits",
   "Complaint Resolution": "Complaints",
+  "Follow-up": "Follow-ups",
+  "Project/Minor Job": "Projects & Jobs",
 };
 
 const preferredFilterLabels: Record<PreferredContractFilter, string> = {
@@ -142,82 +153,51 @@ export function Schedules() {
     try {
       const items: ScheduleItem[] = [];
 
-      const [amcRes, enquiryRes, complaintRes] = await Promise.all([
+      const [schedulesRes, amcRes] = await Promise.all([
+        getSchedulesApi({ limit: 1000 }),
         getAmcApi({ page: 1, limit: 500 }),
-        getEnquiriesApi({ page: 1, limit: 500, status: "Site Visit Scheduled" }),
-        getComplaintsApi({ page: 1, limit: 500 }),
       ]);
 
       if (amcRes.success) {
         for (const contract of amcRes.data) {
           items.push(...buildPreferredVisitItems(contract));
         }
-
-        const visitResults = await Promise.all(
-          amcRes.data
-            .filter((c) => c.id)
-            .map(async (contract) => {
-              try {
-                const visitsRes = await getAmcVisitsApi(contract.id!);
-                if (!visitsRes.success) return [];
-                return visitsRes.data
-                  .filter((v) => v.status === "Scheduled" && v.scheduledDate)
-                  .map(
-                    (visit): ScheduleItem => ({
-                      id: `amc-${visit.id}`,
-                      date: visit.scheduledDate,
-                      type: "AMC Visit",
-                      title: contract.serviceType,
-                      clientName: contract.clientName,
-                      clientSubtitle: contract.email?.trim() || contract.contactPerson,
-                      eventSubtitle: contract.location || "AMC service visit",
-                      status: visit.status,
-                      reference: contract.amcNo,
-                      amcId: contract.id,
-                      visitId: visit.id,
-                    })
-                  );
-              } catch {
-                return [];
-              }
-            })
-        );
-        items.push(...visitResults.flat());
       }
 
-      if (enquiryRes.success) {
-        for (const enquiry of enquiryRes.data) {
-          const scheduleDate = enquiry.followUpDate || enquiry.date;
-          if (!scheduleDate) continue;
-          items.push({
-            id: `enquiry-${enquiry.id}`,
-            date: scheduleDate,
-            type: "Site Visit",
-            title: enquiry.requirement || "Site visit",
-            clientName: enquiry.clientName,
-            clientSubtitle: enquiry.email?.trim() || enquiry.contactPerson,
-            eventSubtitle: enquiry.phone,
-            status: enquiry.status,
-            reference: enquiry.enquiryNo,
-            enquiryId: enquiry.id,
-          });
-        }
-      }
+      if (schedulesRes.success) {
+        for (const sch of schedulesRes.data) {
+          let itemType: ScheduleType = "Site Visit";
+          if (sch.scheduleType === "Follow-up") {
+            itemType = "Follow-up";
+          } else if (sch.scheduleType === "AMC Visit") {
+            itemType = "AMC Visit";
+          } else if (sch.scheduleType === "Complaint Resolution") {
+            itemType = "Complaint Resolution";
+          } else if (
+            sch.scheduleType === "Project Installation" ||
+            sch.scheduleType === "Minor Job"
+          ) {
+            itemType = "Project/Minor Job";
+          } else {
+            itemType = "Site Visit";
+          }
 
-      if (complaintRes.success) {
-        for (const complaint of complaintRes.data) {
-          if (!complaint.expectedResolution || complaint.status === "Resolved") continue;
           items.push({
-            id: `complaint-${complaint.id}`,
-            date: complaint.expectedResolution,
-            type: "Complaint Resolution",
-            title: complaint.issue,
-            clientName: complaint.clientName,
-            clientSubtitle: complaint.phone || complaint.contactPerson,
-            eventSubtitle: complaint.location,
-            status: complaint.status,
-            reference: complaint.complaintNo,
-            complaintId: complaint.id,
+            id: `schedule-${sch.id}`,
+            date: sch.scheduledDate,
+            type: itemType,
+            title: sch.title,
+            clientName: sch.clientName,
+            clientSubtitle: sch.clientRef || (sch.assignedTo && sch.assignedTo.length > 0 ? `Assigned: ${sch.assignedTo.join(", ")}` : ""),
+            eventSubtitle: sch.notes || "",
+            status: sch.status,
+            reference: sch.entityNo,
+            amcId: sch.entityType === "amc" ? sch.entityId : undefined,
+            visitId: sch.entityType === "amc" && sch.scheduleType === "AMC Visit" ? sch.id : undefined,
+            enquiryId: sch.entityType === "enquiry" ? sch.entityId : undefined,
+            complaintId: sch.entityType === "complaint" ? sch.entityId : undefined,
+            projectId: sch.entityType === "project" ? sch.entityId : undefined,
+            minorjobId: sch.entityType === "minorjob" ? sch.entityId : undefined,
           });
         }
       }
@@ -258,6 +238,8 @@ export function Schedules() {
       amc: scheduledItems.filter((i) => i.type === "AMC Visit").length,
       site: scheduledItems.filter((i) => i.type === "Site Visit").length,
       complaint: scheduledItems.filter((i) => i.type === "Complaint Resolution").length,
+      followUp: scheduledItems.filter((i) => i.type === "Follow-up").length,
+      projectJob: scheduledItems.filter((i) => i.type === "Project/Minor Job").length,
     }),
     [scheduledItems]
   );
@@ -313,6 +295,10 @@ export function Schedules() {
       navigate(AppRoute.COMPLAINT_DETAIL.replace(":id", row.complaintId));
     } else if (row.amcId) {
       navigate(AppRoute.AMC_DETAIL.replace(":id", row.amcId));
+    } else if (row.projectId) {
+      navigate(AppRoute.PROJECTS);
+    } else if (row.minorjobId) {
+      navigate(AppRoute.MINOR_JOBS);
     }
   };
 
@@ -514,6 +500,13 @@ export function Schedules() {
                 count: scheduledStats.complaint,
                 tone: "amber",
               },
+              { value: "Follow-up", label: "Follow-ups", count: scheduledStats.followUp, tone: "pink" },
+              {
+                value: "Project/Minor Job",
+                label: "Projects/Jobs",
+                count: scheduledStats.projectJob,
+                tone: "green",
+              },
             ]
       }
       filterValue={isPreferredTab ? preferredFilter : scheduledFilter}
@@ -542,3 +535,4 @@ export function Schedules() {
     />
   );
 }
+

@@ -13,8 +13,10 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import type { AmcContract, AmcVisit } from "../../interfaces/amc.interface";
 import type { SMR } from "../../interfaces/smr.interface";
 import { getAmcByIdApi, getAmcVisitsApi, getAmcVisitSmrApi } from "../../api/amc.api";
-import { AmcScheduleVisitModal } from "../../components/AmcScheduleVisitModal";
 import { SMRReportView } from "../complaints/SMRReportView";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
+import { updateScheduleApi } from "../../api/schedule.api";
 import { toast } from "sonner";
 
 const getStatusColor = (status: string) => {
@@ -47,6 +49,8 @@ export function AmcVisitDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSmr, setIsLoadingSmr] = useState(false);
   const [isReassignOpen, setIsReassignOpen] = useState(false);
+  const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const loadVisitSmr = useCallback(async () => {
     if (!amcId || !visitId || !visit?.smrId) {
@@ -110,12 +114,23 @@ export function AmcVisitDetailPage() {
     else setVisitSmr(null);
   }, [visit?.smrId, visit?.id, loadVisitSmr]);
 
-  const handleReassignSuccess = async () => {
-    setIsReassignOpen(false);
+  const handleSaveReassign = async () => {
+    if (!visitId) return;
+    setIsSaving(true);
     try {
-      await fetchVisitData();
+      const res = await updateScheduleApi(visitId, {
+        assignedStaffIds: selectedTechs,
+      });
+      if (res.success) {
+        toast.success("Staff reassigned successfully");
+        setIsReassignOpen(false);
+        await fetchVisitData();
+      }
     } catch (err) {
       console.error(err);
+      toast.error("Failed to reassign staff");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -168,7 +183,10 @@ export function AmcVisitDetailPage() {
               </div>
               <div className="flex flex-wrap gap-2 self-end sm:self-auto">
                 {visit.status === "Scheduled" && (
-                  <Button size="sm" variant="outline" onClick={() => setIsReassignOpen(true)}>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setSelectedTechs(visit.assignedStaffIds || []);
+                    setIsReassignOpen(true);
+                  }}>
                     <Users className="h-4 w-4 mr-1.5" />
                     Reassign Staff
                   </Button>
@@ -270,13 +288,39 @@ export function AmcVisitDetailPage() {
         </div>
       </ScrollArea>
 
-      <AmcScheduleVisitModal
-        isOpen={isReassignOpen}
-        onClose={() => setIsReassignOpen(false)}
-        onSuccess={handleReassignSuccess}
-        contract={contract}
-        visit={visit}
-      />
+      <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-foreground">Reassign Staff</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <StaffSelectDropdown
+              selected={selectedTechs}
+              onChange={setSelectedTechs}
+              label="Assigned Staff"
+              placement="top"
+            />
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsReassignOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={isSaving}
+                onClick={handleSaveReassign}
+                className="bg-pink-700 hover:bg-pink-800 text-white h-8 text-xs font-semibold"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -69,13 +69,6 @@ import { GetAmcUseCase } from "../usecases/amc/GetAmcUseCase";
 import { GetAmcByIdUseCase } from "../usecases/amc/GetAmcByIdUseCase";
 import { UpdateAmcUseCase } from "../usecases/amc/UpdateAmcUseCase";
 import { DeleteAmcUseCase } from "../usecases/amc/DeleteAmcUseCase";
-import { IAmcVisitRepository } from "../interfaces/repositories/IAmcVisitRepository";
-import { AmcVisitRepository } from "../repositories/mongo/AmcVisitRepository";
-import { IAmcVisit } from "../interfaces/models/IAmcVisit";
-import { ScheduleAmcVisitDto, UpdateAmcVisitDto } from "../dtos/amcVisit.dto";
-import { GetAmcVisitsUseCase } from "../usecases/amc/GetAmcVisitsUseCase";
-import { ScheduleAmcVisitUseCase } from "../usecases/amc/ScheduleAmcVisitUseCase";
-import { UpdateAmcVisitUseCase } from "../usecases/amc/UpdateAmcVisitUseCase";
 import { AddAmcRemarkUseCase } from "../usecases/amc/AddAmcRemarkUseCase";
 import { RecordAmcPaymentUseCase } from "../usecases/amc/RecordAmcPaymentUseCase";
 import { AddAmcRemarkDto, RecordAmcPaymentDto } from "../dtos/amcRemark.dto";
@@ -94,6 +87,16 @@ import { EditEnquiryRemarkUseCase } from "../usecases/enquiries/EditEnquiryRemar
 import { EditAmcRemarkUseCase } from "../usecases/amc/EditAmcRemarkUseCase";
 import { AddEnquiryDrawingUseCase, AddEnquiryDrawingInput } from "../usecases/enquiries/AddEnquiryDrawingUseCase";
 import { AddEnquiryRemarkDto, EditEnquiryRemarkDto } from "../dtos/enquiryRemark.dto";
+
+// Schedules Imports
+import { IScheduleRepository, PaginatedSchedules, GetSchedulesQuery } from "../interfaces/repositories/IScheduleRepository";
+import { ScheduleRepository } from "../repositories/mongo/ScheduleRepository";
+import { ISchedule } from "../interfaces/models/ISchedule";
+import { CreateScheduleDto, UpdateScheduleDto } from "../dtos/schedule.dto";
+import { CreateScheduleUseCase } from "../usecases/schedules/CreateScheduleUseCase";
+import { GetSchedulesUseCase } from "../usecases/schedules/GetSchedulesUseCase";
+import { UpdateScheduleUseCase } from "../usecases/schedules/UpdateScheduleUseCase";
+import { DeleteScheduleUseCase } from "../usecases/schedules/DeleteScheduleUseCase";
 
 // Costing Imports
 import { ICostingRepository } from "../interfaces/repositories/ICostingRepository";
@@ -175,11 +178,11 @@ container.registerSingleton<IComplaintRepository>("ComplaintRepository", Complai
 container.registerSingleton<ISMRRepository>("SMRRepository", SMRRepository);
 container.registerSingleton<IStaffRepository>("StaffRepository", StaffRepository);
 container.registerSingleton<IAmcRepository>("AmcRepository", AmcRepository);
-container.registerSingleton<IAmcVisitRepository>("AmcVisitRepository", AmcVisitRepository);
 container.registerSingleton<IEnquiryRepository>("EnquiryRepository", EnquiryRepository);
 container.registerSingleton<IQuotationRepository>("QuotationRepository", QuotationRepository);
 container.registerSingleton<IAuditLogRepository>("AuditLogRepository", AuditLogRepository);
 container.registerSingleton<ICostingRepository>("CostingRepository", CostingRepository);
+container.registerSingleton<IScheduleRepository>("ScheduleRepository", ScheduleRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
@@ -224,14 +227,6 @@ container.registerSingleton<IUseCase<GetAmcQuery, PaginatedAmc>>("GetAmcUseCase"
 container.registerSingleton<IUseCase<string, IAmc | null>>("GetAmcByIdUseCase", GetAmcByIdUseCase);
 container.registerSingleton<IUseCase<{ id: string; data: UpdateAmcDto }, IAmc | null>>("UpdateAmcUseCase", UpdateAmcUseCase);
 container.registerSingleton<IUseCase<string, boolean>>("DeleteAmcUseCase", DeleteAmcUseCase);
-container.registerSingleton<IUseCase<string, IAmcVisit[]>>("GetAmcVisitsUseCase", GetAmcVisitsUseCase);
-container.registerSingleton<IUseCase<{ amcId: string; data: ScheduleAmcVisitDto }, IAmcVisit>>(
-  "ScheduleAmcVisitUseCase",
-  ScheduleAmcVisitUseCase
-);
-container.registerSingleton<
-  IUseCase<{ amcId: string; visitId: string; data: UpdateAmcVisitDto }, IAmcVisit | null>
->("UpdateAmcVisitUseCase", UpdateAmcVisitUseCase);
 container.registerSingleton<
   IUseCase<{ amcId: string; data: AddAmcRemarkDto; user: string }, IAmc | null>
 >("AddAmcRemarkUseCase", AddAmcRemarkUseCase);
@@ -262,6 +257,12 @@ container.registerSingleton<
 container.registerSingleton<
   IUseCase<{ amcId: string; remarkKey: string; data: EditEnquiryRemarkDto; user: string }, IAmc | null>
 >("EditAmcRemarkUseCase", EditAmcRemarkUseCase);
+
+// Schedule Use Cases
+container.registerSingleton<IUseCase<{ data: CreateScheduleDto; user: string }, ISchedule>>("CreateScheduleUseCase", CreateScheduleUseCase);
+container.registerSingleton<IUseCase<GetSchedulesQuery, PaginatedSchedules>>("GetSchedulesUseCase", GetSchedulesUseCase);
+container.registerSingleton<IUseCase<{ id: string; data: UpdateScheduleDto; user: string }, ISchedule | null>>("UpdateScheduleUseCase", UpdateScheduleUseCase);
+container.registerSingleton<IUseCase<{ id: string; user: string }, boolean>>("DeleteScheduleUseCase", DeleteScheduleUseCase);
 
 // Costing UseCases
 container.registerSingleton<IUseCase<{ data: CreateCostingDto }, ICosting>>(

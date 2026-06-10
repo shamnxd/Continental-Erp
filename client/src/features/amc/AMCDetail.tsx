@@ -18,10 +18,10 @@ import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { RemarksPanel } from "../../components/RemarksPanel";
-import type { AmcContract, AmcVisit } from "../../interfaces/amc.interface";
-import { getAmcByIdApi, getAmcVisitsApi, addAmcRemarkApi, updateAmcRemarkApi } from "../../api/amc.api";
+import type { AmcContract } from "../../interfaces/amc.interface";
+import { getAmcByIdApi, addAmcRemarkApi, updateAmcRemarkApi } from "../../api/amc.api";
 import { AmcFormModal } from "../../components/AmcFormModal";
-import { AmcScheduleVisitModal } from "../../components/AmcScheduleVisitModal";
+import { Schedules } from "../../components/Schedules";
 import { NextVisitCell } from "../../components/NextVisitCell";
 import { calculateNextPreferredVisitDate } from "../../utils/calculateAmcVisits";
 import { toast } from "sonner";
@@ -63,24 +63,17 @@ export function AMCDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [contract, setContract] = useState<AmcContract | null>(null);
-  const [visits, setVisits] = useState<AmcVisit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [editVisit, setEditVisit] = useState<AmcVisit | null>(null);
   const [newRemark, setNewRemark] = useState("");
   const [isEditingRemark, setIsEditingRemark] = useState(false);
 
   const fetchContractData = useCallback(async () => {
     if (!id) return;
-    const [contractRes, visitsRes] = await Promise.all([
-      getAmcByIdApi(id),
-      getAmcVisitsApi(id),
-    ]);
+    const contractRes = await getAmcByIdApi(id);
     if (contractRes.success) setContract(contractRes.data);
     else toast.error("Contract not found");
-    if (visitsRes.success) setVisits(visitsRes.data);
   }, [id]);
 
   const loadContract = useCallback(async () => {
@@ -108,11 +101,6 @@ export function AMCDetail() {
   useEffect(() => {
     loadContract();
   }, [loadContract]);
-
-  const handleScheduleSuccess = useCallback(() => {
-    setActiveTab("visits");
-    refreshContractData();
-  }, [refreshContractData]);
 
   const handleAddRemark = async () => {
     if (!id || !newRemark.trim()) return;
@@ -144,17 +132,6 @@ export function AMCDetail() {
     } finally {
       setIsEditingRemark(false);
     }
-  };
-
-  const closeScheduleModal = () => {
-    setIsScheduleOpen(false);
-    setEditVisit(null);
-  };
-
-  const openSchedule = (visit?: AmcVisit | null) => {
-    setEditVisit(visit ?? null);
-    setActiveTab("visits");
-    setIsScheduleOpen(true);
   };
 
   if (isLoading) {
@@ -218,9 +195,9 @@ export function AMCDetail() {
                     >
                       {contract.status}
                     </span>
-                    <Button size="sm" variant="outline" className="h-9" onClick={() => openSchedule()}>
+                    <Button size="sm" variant="outline" className="h-9" onClick={() => setActiveTab("visits")}>
                       <CalendarClock className="h-4 w-4 mr-1.5" />
-                      Schedule Visit
+                      View/Schedule Visits
                     </Button>
                     <Button
                       size="sm"
@@ -413,74 +390,16 @@ export function AMCDetail() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="visits" className="m-0 space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-muted-foreground">
-                    {visits.length} visit{visits.length !== 1 ? "s" : ""} on record
-                  </p>
-                  <Button
-                    size="sm"
-                    className="bg-pink-700 hover:bg-pink-800 text-white"
-                    onClick={() => openSchedule()}
-                  >
-                    <CalendarClock className="h-4 w-4 mr-1.5" />
-                    Schedule Visit
-                  </Button>
-                </div>
-
-                {visits.length === 0 ? (
-                  <div className="bg-card rounded-xl border border-border p-10 text-center text-muted-foreground">
-                    <CalendarClock className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                    <p className="font-medium">No visits scheduled yet</p>
-                    <p className="text-sm mt-1">Schedule the first AMC visit for this contract.</p>
-                  </div>
-                ) : (
-                  <div className="bg-card rounded-xl border border-border divide-y divide-border overflow-hidden">
-                    {visits.map((visit) => {
-                      const staffNames =
-                        visit.assignedStaff?.map((s) => s.fullName).join(", ") ||
-                        (visit.assignedStaffIds?.length ? "Staff assigned" : null);
-
-                      return (
-                        <button
-                          key={visit.id}
-                          type="button"
-                          className="w-full text-left p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                          onClick={() => visit.id && navigate(`/amc/${id}/visits/${visit.id}`)}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-foreground">{fmtDate(visit.scheduledDate)}</p>
-                              <span
-                                className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${getStatusColor(visit.status)}`}
-                              >
-                                {visit.status}
-                              </span>
-                              {visit.smrId ? (
-                                <span className="text-[10px] font-semibold text-pink-700 flex items-center gap-1">
-                                  <FileText className="h-3 w-3" />
-                                  SMR linked
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-medium text-muted-foreground">No SMR yet</span>
-                              )}
-                            </div>
-                            {staffNames && (
-                              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                <Users className="h-3 w-3 shrink-0" />
-                                {staffNames}
-                              </p>
-                            )}
-                            {visit.notes?.trim() && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{visit.notes}</p>
-                            )}
-                          </div>
-                          <span className="text-xs font-semibold text-pink-700 shrink-0">View details →</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+              <TabsContent value="visits" className="m-0">
+                <Schedules
+                  entityId={contract.id ?? ""}
+                  entityType="amc"
+                  entityNo={contract.amcNo}
+                  clientName={contract.clientName}
+                  title={`AMC Visit - ${contract.amcNo}`}
+                  onSuccess={refreshContractData}
+                  isClosed={contract.status === "Expired"}
+                />
               </TabsContent>
 
               <TabsContent value="remarks" className="m-0">
@@ -506,14 +425,6 @@ export function AMCDetail() {
         onClose={() => setIsEditOpen(false)}
         onSuccess={loadContract}
         contract={contract}
-      />
-
-      <AmcScheduleVisitModal
-        isOpen={isScheduleOpen}
-        onClose={closeScheduleModal}
-        onSuccess={handleScheduleSuccess}
-        contract={contract}
-        visit={editVisit}
       />
     </div>
   );

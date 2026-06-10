@@ -2,7 +2,8 @@ import { injectable, inject } from "tsyringe";
 import { IUseCase } from "../../interfaces/usecases/IUseCase";
 import { ISMRRepository } from "../../interfaces/repositories/ISMRRepository";
 import { IComplaintRepository } from "../../interfaces/repositories/IComplaintRepository";
-import { IAmcVisitRepository } from "../../interfaces/repositories/IAmcVisitRepository";
+import { IScheduleRepository } from "../../interfaces/repositories/IScheduleRepository";
+import { IAmcRepository } from "../../interfaces/repositories/IAmcRepository";
 import { CreateSMRDto } from "../../dtos/smr.dto";
 import { ISMR } from "../../interfaces/models/ISMR";
 import { BadRequestError } from "../../errors/BadRequestError";
@@ -14,8 +15,10 @@ export class CreateSMRUseCase implements IUseCase<CreateSMRDto, ISMR> {
     private _smrRepository: ISMRRepository,
     @inject("ComplaintRepository")
     private _complaintRepository: IComplaintRepository,
-    @inject("AmcVisitRepository")
-    private _amcVisitRepository: IAmcVisitRepository
+    @inject("ScheduleRepository")
+    private _scheduleRepository: IScheduleRepository,
+    @inject("AmcRepository")
+    private _amcRepository: IAmcRepository
   ) {}
 
   public async execute(dto: CreateSMRDto): Promise<ISMR> {
@@ -36,7 +39,22 @@ export class CreateSMRUseCase implements IUseCase<CreateSMRDto, ISMR> {
     const smr = await this._smrRepository.create(dto);
 
     if (smr.amcVisitId && smr.id) {
-      await this._amcVisitRepository.update(smr.amcVisitId, { smrId: smr.id });
+      const updatedSchedule = await this._scheduleRepository.update(smr.amcVisitId, {
+        smrId: smr.id,
+        status: "Completed",
+      });
+
+      if (updatedSchedule && updatedSchedule.entityType === "amc") {
+        const schedules = await this._scheduleRepository.findByEntity("amc", updatedSchedule.entityId);
+        const activeSchedules = schedules.filter((s) => s.status !== "Completed" && s.status !== "Cancelled");
+        const nextVisitDate = activeSchedules.length > 0 ? activeSchedules[0].scheduledDate : null;
+        const completedCount = schedules.filter((s) => s.status === "Completed").length;
+
+        await this._amcRepository.update(updatedSchedule.entityId, {
+          nextVisit: nextVisitDate ? new Date(nextVisitDate) : null,
+          visitsCompleted: completedCount,
+        });
+      }
     }
 
     // If SMR is created for a complaint, auto-transition the complaint to "In Progress"

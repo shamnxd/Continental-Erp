@@ -7,7 +7,7 @@ import { ILeaveRequest } from "../interfaces/models/ILeaveRequest";
 import { AppError } from "../errors/AppError";
 import { StatusCode } from "../constants/statusCodes";
 import { ComplaintModel } from "../models/Complaint";
-import { AmcVisitModel } from "../models/AmcVisit";
+import { ScheduleModel } from "../models/Schedule";
 import mongoose from "mongoose";
 
 export class StaffPortalController {
@@ -29,45 +29,39 @@ export class StaffPortalController {
   public getTasks = async (req: StaffAuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const staffId = req.staff!.id;
-      const objectId = new mongoose.Types.ObjectId(staffId);
-
-      const [complaints, amcVisits] = await Promise.all([
-        ComplaintModel.find({ assignedStaffIds: staffId })
-          .sort({ createdAt: -1 })
-          .select("complaintNo clientName issue status priority createdAt location")
-          .lean(),
-        AmcVisitModel.find({ assignedStaffIds: objectId })
-          .sort({ scheduledDate: 1 })
-          .populate({ path: "amcId", select: "contractNo clientName siteAddress" })
-          .select("scheduledDate status notes amcId")
-          .lean(),
-      ]);
+      const schedules = await ScheduleModel.find({ assignedStaffIds: staffId })
+        .sort({ scheduledDate: 1 })
+        .lean();
 
       res.status(StatusCode.OK).json({
         success: true,
         data: {
-          complaints: complaints.map((c: any) => ({
-            id: c._id.toString(),
-            type: "complaint",
-            title: c.issue,
-            reference: c.complaintNo,
-            client: c.clientName,
-            status: c.status,
-            priority: c.priority,
-            date: c.createdAt,
-            location: c.location,
-          })),
-          amcVisits: amcVisits.map((v: any) => ({
-            id: v._id.toString(),
-            type: "amc_visit",
-            title: "AMC Service Visit",
-            reference: (v.amcId as any)?.contractNo || "—",
-            client: (v.amcId as any)?.clientName || "—",
-            status: v.status,
-            date: v.scheduledDate,
-            location: (v.amcId as any)?.siteAddress || "—",
-            notes: v.notes,
-          })),
+          complaints: schedules
+            .filter((s: any) => s.entityType === "complaint")
+            .map((s: any) => ({
+              id: s._id.toString(),
+              type: "complaint",
+              title: s.title,
+              reference: s.entityNo,
+              client: s.clientName,
+              status: s.status,
+              priority: "Medium",
+              date: s.scheduledDate,
+              location: s.notes || "",
+            })),
+          amcVisits: schedules
+             .filter((s: any) => s.entityType === "amc")
+             .map((s: any) => ({
+               id: s._id.toString(),
+               type: "amc_visit",
+               title: s.title,
+               reference: s.entityNo,
+               client: s.clientName,
+               status: s.status,
+               date: s.scheduledDate,
+               location: s.notes || "",
+               notes: s.notes || "",
+             })),
         },
       });
     } catch (error) {

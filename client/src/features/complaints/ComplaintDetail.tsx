@@ -37,7 +37,7 @@ import { SMRReportView } from "./SMRReportView";
 import { SMRApprovalModal } from "./SMRApprovalModal";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { toast } from "sonner";
-import { UnifiedScheduler } from "../../components/UnifiedScheduler";
+import { Schedules } from "../../components/Schedules";
 
 export function ComplaintDetail() {
   const { id } = useParams();
@@ -703,14 +703,13 @@ export function ComplaintDetail() {
 
               {/* SCHEDULES TAB */}
               <TabsContent value="schedules" className="m-0">
-                <UnifiedScheduler
+                <Schedules
                   entityId={complaint.id ?? ""}
                   entityType="complaint"
-                  currentDate={complaint.expectedResolution}
-                  currentStatus={complaint.status}
-                  assignedStaffIds={complaint.assignedStaffIds ?? []}
-                  assignedName={complaint.assignedTo?.join(", ")}
-                  onSuccess={(updatedComplaint) => setComplaint(updatedComplaint)}
+                  entityNo={complaint.complaintNo}
+                  clientName={complaint.clientName}
+                  title={complaint.issue}
+                  onSuccess={fetchComplaintDetails}
                   isClosed={complaint.status === "Resolved"}
                 />
               </TabsContent>

@@ -34,7 +34,6 @@ import {
 import type { AmcContract } from "../../interfaces/amc.interface";
 import { getAmcApi, deleteAmcApi } from "../../api/amc.api";
 import { AmcFormModal } from "../../components/AmcFormModal";
-import { AmcScheduleVisitModal } from "../../components/AmcScheduleVisitModal";
 import { canRenewAmc } from "../../utils/amcRenewal";
 import { RefreshCw } from "lucide-react";
 import { NextVisitCell } from "../../components/NextVisitCell";
@@ -79,7 +78,6 @@ export function AMC() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editContract, setEditContract] = useState<AmcContract | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [scheduleContract, setScheduleContract] = useState<AmcContract | null>(null);
   const [renewContract, setRenewContract] = useState<AmcContract | null>(null);
   const [stats, setStats] = useState({ total: 0, active: 0, renewal: 0, expired: 0 });
 
@@ -180,12 +178,12 @@ export function AMC() {
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
-              setScheduleContract(c);
+              c.id && navigate(`/amc/${c.id}`);
             }}
             className="cursor-pointer"
           >
             <CalendarClock className="mr-2 h-4 w-4 text-pink-600" />
-            Schedule Visit
+            Schedule/View Visits
           </DropdownMenuItem>
           {canRenewAmc(c) && (
             <DropdownMenuItem
@@ -381,15 +379,7 @@ export function AMC() {
         renewalSource={renewContract}
       />
 
-      <AmcScheduleVisitModal
-        isOpen={!!scheduleContract}
-        onClose={() => setScheduleContract(null)}
-        onSuccess={() => {
-          refreshList();
-          setScheduleContract(null);
-        }}
-        contract={scheduleContract}
-      />
+
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>

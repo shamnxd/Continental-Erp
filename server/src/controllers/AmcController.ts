@@ -4,11 +4,9 @@ import { IUseCase } from "../interfaces/usecases/IUseCase";
 import { IAmc } from "../interfaces/models/IAmc";
 import { ISMR } from "../interfaces/models/ISMR";
 import { CreateAmcDto, UpdateAmcDto } from "../dtos/amc.dto";
-import { ScheduleAmcVisitDto, UpdateAmcVisitDto } from "../dtos/amcVisit.dto";
 import { AddAmcRemarkDto, RecordAmcPaymentDto } from "../dtos/amcRemark.dto";
 import { EditEnquiryRemarkDto } from "../dtos/enquiryRemark.dto";
 import { GetAmcQuery, PaginatedAmc } from "../interfaces/repositories/IAmcRepository";
-import { IAmcVisit } from "../interfaces/models/IAmcVisit";
 import { ISMRRepository } from "../interfaces/repositories/ISMRRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
@@ -22,14 +20,6 @@ export class AmcController {
     @inject("GetAmcByIdUseCase") private _getAmcByIdUseCase?: IUseCase<string, IAmc | null>,
     @inject("UpdateAmcUseCase") private _updateAmcUseCase?: IUseCase<{ id: string; data: UpdateAmcDto }, IAmc | null>,
     @inject("DeleteAmcUseCase") private _deleteAmcUseCase?: IUseCase<string, boolean>,
-    @inject("GetAmcVisitsUseCase") private _getAmcVisitsUseCase?: IUseCase<string, IAmcVisit[]>,
-    @inject("ScheduleAmcVisitUseCase")
-    private _scheduleAmcVisitUseCase?: IUseCase<{ amcId: string; data: ScheduleAmcVisitDto }, IAmcVisit>,
-    @inject("UpdateAmcVisitUseCase")
-    private _updateAmcVisitUseCase?: IUseCase<
-      { amcId: string; visitId: string; data: UpdateAmcVisitDto },
-      IAmcVisit | null
-    >,
     @inject("AddAmcRemarkUseCase")
     private _addAmcRemarkUseCase?: IUseCase<
       { amcId: string; data: AddAmcRemarkDto; user: string },
@@ -122,67 +112,25 @@ export class AmcController {
 
   public getVisits = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const visits = await this._getAmcVisitsUseCase!.execute(req.params.id);
+      const { ScheduleModel } = require("../models/Schedule");
+      const schedules = await ScheduleModel.find({ entityType: "amc", entityId: req.params.id })
+        .sort({ scheduledDate: 1 })
+        .lean();
+
+      const visits = schedules.map((s: any) => ({
+        id: s._id.toString(),
+        scheduledDate: s.scheduledDate,
+        status: s.status,
+        notes: s.notes,
+        assignedStaffIds: s.assignedStaffIds,
+        smrId: s.smrId,
+      }));
       res.status(StatusCode.OK).json({ success: true, data: visits });
     } catch (error) {
       next(error);
     }
   };
 
-  public scheduleVisit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const amcId = req.params.id;
-      const amc = await this._getAmcByIdUseCase!.execute(amcId);
-      const amcNo = amc ? amc.amcNo : amcId;
-
-      const visit = await this._scheduleAmcVisitUseCase!.execute({
-        amcId,
-        data: req.body as ScheduleAmcVisitDto
-      });
-
-      await AuditLogger.log(
-        authReq.user?.name || "Unknown Admin",
-        "Schedule AMC Visit",
-        "AMC",
-        `Scheduled AMC visit on ${new Date(visit.scheduledDate).toLocaleDateString()} for contract: ${amcNo}`
-      );
-
-      res.status(StatusCode.CREATED).json({ success: true, data: visit });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  public updateVisit = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      const amcId = req.params.id;
-      const amc = await this._getAmcByIdUseCase!.execute(amcId);
-      const amcNo = amc ? amc.amcNo : amcId;
-
-      const visit = await this._updateAmcVisitUseCase!.execute({
-        amcId,
-        visitId: req.params.visitId,
-        data: req.body as UpdateAmcVisitDto
-      });
-      if (!visit) {
-        res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Visit not found" });
-        return;
-      }
-
-      await AuditLogger.log(
-        authReq.user?.name || "Unknown Admin",
-        "Update AMC Visit",
-        "AMC",
-        `Updated AMC visit status to ${visit.status} for contract: ${amcNo}`
-      );
-
-      res.status(StatusCode.OK).json({ success: true, data: visit });
-    } catch (error) {
-      next(error);
-    }
-  };
 
   public editRemark = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

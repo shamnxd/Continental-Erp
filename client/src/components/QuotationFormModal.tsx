@@ -33,6 +33,8 @@ export interface QuotationPrefillFromEnquiry {
   enquiryNo: string;
   clientId: string;
   clientName: string;
+  requirement?: string;
+  description?: string;
 }
 
 interface QuotationFormModalProps {
@@ -148,7 +150,14 @@ export function QuotationFormModal({
       setValidUntil(d.toISOString().split("T")[0]);
       setStatus("Pending Approval");
       setGstPercent(18);
-      setItems([emptyLineItem()]);
+      if (prefillFromEnquiry.requirement) {
+        const desc = prefillFromEnquiry.description
+          ? `${prefillFromEnquiry.requirement} - ${prefillFromEnquiry.description}`
+          : prefillFromEnquiry.requirement;
+        setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+      } else {
+        setItems([emptyLineItem()]);
+      }
       setNotes("");
     } else {
       setSelectedClientId("");
@@ -223,7 +232,7 @@ export function QuotationFormModal({
       gstPercent,
       items: validItems,
       notes: notes.trim(),
-      ...(isEdit ? { status } : {}),
+      status,
     };
 
     setIsSubmitting(true);
@@ -342,6 +351,12 @@ export function QuotationFormModal({
                               setEnquirySearch("");
                               setEnquirySuggestions([]);
                               setSelectedClientId(enq.clientId);
+                              if (enq.requirement) {
+                                const desc = enq.description
+                                  ? `${enq.requirement} - ${enq.description}`
+                                  : enq.requirement;
+                                setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+                              }
                             }}
                           >
                             <div className="font-semibold text-foreground">{enq.enquiryNo}</div>

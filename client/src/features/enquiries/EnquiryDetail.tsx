@@ -409,6 +409,8 @@ export function EnquiryDetail() {
                                   enquiryNo: enquiry.enquiryNo,
                                   clientId: enquiry.clientId,
                                   clientName: enquiry.clientName,
+                                  requirement: enquiry.requirement,
+                                  description: enquiry.description,
                                 },
                               },
                             })

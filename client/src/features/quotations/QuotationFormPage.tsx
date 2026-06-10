@@ -36,6 +36,8 @@ export interface QuotationPrefillFromEnquiry {
   enquiryNo: string;
   clientId: string;
   clientName: string;
+  requirement?: string;
+  description?: string;
 }
 
 function toDateInputValue(value?: string | null): string {
@@ -134,6 +136,12 @@ export function QuotationFormPage() {
         setSelectedClientId(prefillFromEnquiry.clientId);
         setEnquiryId(prefillFromEnquiry.enquiryId);
         setEnquiryNo(prefillFromEnquiry.enquiryNo);
+        if (prefillFromEnquiry.requirement) {
+          const desc = prefillFromEnquiry.description
+            ? `${prefillFromEnquiry.requirement} - ${prefillFromEnquiry.description}`
+            : prefillFromEnquiry.requirement;
+          setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+        }
       }
       setIsLoading(false);
       return;
@@ -215,7 +223,7 @@ export function QuotationFormPage() {
       gstPercent,
       items: validItems,
       notes: notes.trim(),
-      ...(isEdit ? { status } : {}),
+      status,
     };
 
     setIsSubmitting(true);
@@ -367,6 +375,12 @@ export function QuotationFormPage() {
                                 setEnquirySearch("");
                                 setEnquirySuggestions([]);
                                 setSelectedClientId(enq.clientId);
+                                if (enq.requirement) {
+                                  const desc = enq.description
+                                    ? `${enq.requirement} - ${enq.description}`
+                                    : enq.requirement;
+                                  setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+                                }
                               }}
                             >
                               <div className="font-semibold text-foreground">{enq.enquiryNo}</div>

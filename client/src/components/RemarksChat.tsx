@@ -221,7 +221,7 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
       </div>
 
       {/* ── Right: Compose area ── */}
-      <div className="w-72 shrink-0 flex flex-col bg-muted/20">
+      <div className="w-96 shrink-0 flex flex-col bg-muted/20">
         <div className="px-5 py-3 border-b border-border bg-muted/40 shrink-0">
           <p className="text-sm font-semibold text-foreground">New Remark</p>
         </div>

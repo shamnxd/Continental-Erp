@@ -30,6 +30,16 @@ import {
 import { Schedule } from "../interfaces/schedule.interface";
 import { toast } from "sonner";
 import { Link } from "react-router";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 interface SchedulesProps {
   entityId: string;
@@ -59,6 +69,7 @@ export function Schedules({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Form fields
   const [dateInput, setDateInput] = useState("");
@@ -291,20 +302,28 @@ export function Schedules({
                             <span>Assigned to: <strong>{sch.assignedTo.join(", ")}</strong></span>
                           </div>
                         )}
-                        {sch.smrId && (
+                        {entityType === "amc" ? (
                           <div className="mt-1">
                             <Link
-                              to={
-                                entityType === "amc"
-                                  ? `/amc/${entityId}/visits/${sch.id}`
-                                  : `/complaints/${entityId}`
-                              }
+                              to={`/amc/${entityId}/visits/${sch.id}`}
                               className="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 hover:underline"
                             >
                               <FileText className="h-3 w-3" />
-                              View Linked SMR Report
+                              {sch.smrId ? "View Linked SMR Report" : "Manage Visit & SMR"}
                             </Link>
                           </div>
+                        ) : (
+                          sch.smrId && (
+                            <div className="mt-1">
+                              <Link
+                                to={`/complaints/${entityId}`}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 hover:underline"
+                              >
+                                <FileText className="h-3 w-3" />
+                                View Linked SMR Report
+                              </Link>
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
@@ -332,11 +351,7 @@ export function Schedules({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
-                            onClick={() => {
-                              if (sch.id && window.confirm("Are you sure you want to delete this schedule?")) {
-                                handleDelete(sch.id);
-                              }
-                            }}
+                            onClick={() => sch.id && setConfirmDeleteId(sch.id)}
                             disabled={isDeletingId === sch.id}
                           >
                             {isDeletingId === sch.id ? (
@@ -516,6 +531,31 @@ export function Schedules({
           </div>
         )}
       </div>
+
+      <AlertDialog open={confirmDeleteId !== null} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Schedule</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this schedule? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmDeleteId) {
+                  handleDelete(confirmDeleteId);
+                  setConfirmDeleteId(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

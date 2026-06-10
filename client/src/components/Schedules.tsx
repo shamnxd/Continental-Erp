@@ -196,19 +196,26 @@ export function Schedules({
     }
   };
 
-  const getStatusBadgeTone = (status: Schedule["status"]): string => {
-    switch (status) {
-      case "Completed":
-        return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
-      case "Cancelled":
-        return "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20";
-      case "In Progress":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
-      case "Pending":
-        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-      default:
-        return "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20";
+  const getStatusColorClass = (status: string) => {
+    const enquiryColors: Record<string, string> = {
+      "Site Visit Scheduled": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      "Follow-up Required": "bg-amber-500/10 text-amber-500 border-amber-500/20",
+      Scheduled: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    };
+
+    const generalColors: Record<string, string> = {
+      Scheduled: "bg-pink-500/10 text-pink-600 border-pink-500/20",
+      Pending: "bg-amber-500/10 text-amber-550 border-amber-500/20",
+      "In Progress": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      Completed: "bg-green-500/10 text-green-600 border-green-500/20",
+      Cancelled: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+      Resolved: "bg-green-500/10 text-green-600 border-green-500/20",
+    };
+
+    if (entityType === "enquiry") {
+      return enquiryColors[status] ?? generalColors[status] ?? "bg-muted text-muted-foreground";
     }
+    return generalColors[status] ?? "bg-muted text-muted-foreground";
   };
 
   const isFollowUpType = scheduleType === "Follow-up";
@@ -222,7 +229,7 @@ export function Schedules({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Part: Schedules List (Col Span 2) */}
+      {/* Left Part: Current Schedule View (Col Span 2) */}
       <div className="lg:col-span-2 space-y-4">
         <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-border/50">
@@ -230,12 +237,7 @@ export function Schedules({
               <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
                 <CalendarDays className="h-4 w-4 text-pink-600" />
               </div>
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">Schedules & Visits</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Timeline of reminders, client calls, and site visits for this record
-                </p>
-              </div>
+              <h3 className="text-base font-semibold text-foreground">Current Schedule</h3>
             </div>
           </div>
 
@@ -245,111 +247,123 @@ export function Schedules({
               <span className="text-xs">Loading schedules...</span>
             </div>
           ) : schedules.length === 0 ? (
-            <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border p-4">
-              <CalendarDays className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
-              <h4 className="font-medium text-foreground text-xs mb-1">No schedules found</h4>
-              <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
-                No active follow-ups, visits, or resolution schedules are linked to this record.
+            <div className="text-center py-10 bg-muted/20 rounded-lg border border-dashed border-border p-4">
+              <CalendarDays className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
+              <h4 className="font-medium text-foreground text-sm mb-1">No upcoming schedules found</h4>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                There are no active visits or follow-ups scheduled for this {entityType}. Use the form to assign a date and status.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {schedules.map((sch) => {
                 const dateStr = new Date(sch.scheduledDate).toLocaleDateString("en-IN", {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "short",
+                  weekday: "long",
                   year: "numeric",
+                  month: "long",
+                  day: "numeric",
                 });
 
                 return (
                   <div
                     key={sch.id}
-                    className="bg-card rounded-xl border border-border p-4 shadow-sm hover:border-pink-600/30 transition-all flex flex-col justify-between gap-3"
+                    className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/60 hover:border-pink-600/30 transition-all gap-4"
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {sch.scheduleType}
-                          </span>
-                          <h4 className="text-xs font-semibold text-foreground">{dateStr}</h4>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full border ${getStatusBadgeTone(
-                            sch.status
-                          )}`}
-                        >
-                          {sch.status}
-                        </span>
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="h-10 w-10 rounded-full bg-pink-50 flex items-center justify-center shrink-0 border border-pink-100 mt-0.5 animate-pulse">
+                        <Clock className="h-5 w-5 text-pink-600" />
                       </div>
-
-                      {sch.notes && (
-                        <p className="text-xs text-muted-foreground mt-2 bg-muted/40 p-2 rounded-md italic border border-border/50">
-                          {sch.notes}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-foreground text-sm">
+                          {sch.scheduleType}
+                        </h4>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {dateStr}
                         </p>
-                      )}
+                        {sch.notes && (
+                          <p className="text-xs text-muted-foreground mt-1.5 italic bg-card px-2.5 py-1 rounded border border-border/50 w-fit">
+                            Notes: {sch.notes}
+                          </p>
+                        )}
+                        {sch.assignedTo && sch.assignedTo.length > 0 && (
+                          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-md border w-fit shadow-xs">
+                            <User className="h-3 w-3 text-pink-600" />
+                            <span>Assigned to: <strong>{sch.assignedTo.join(", ")}</strong></span>
+                          </div>
+                        )}
+                        {sch.smrId && (
+                          <div className="mt-2">
+                            <Link
+                              to={
+                                entityType === "amc"
+                                  ? `/amc/${entityId}/visits/${sch.id}`
+                                  : `/complaints/${entityId}`
+                              }
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 hover:underline"
+                            >
+                              <FileText className="h-3 w-3" />
+                              View Linked SMR Report
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-                      {sch.assignedTo && sch.assignedTo.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1.5 mt-3">
-                          <User className="h-3.5 w-3.5 text-pink-600 shrink-0" />
-                          <span className="text-[11px] text-muted-foreground">
-                            Assigned: <strong>{sch.assignedTo.join(", ")}</strong>
-                          </span>
-                        </div>
-                      )}
+                    <div className="flex flex-col items-end gap-2 shrink-0 self-start sm:self-center">
+                      <span
+                        className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-full border ${getStatusColorClass(
+                          sch.status
+                        )}`}
+                      >
+                        {sch.status}
+                      </span>
 
-                      {sch.smrId && (
-                        <div className="mt-3">
-                          <Link
-                            to={
-                              entityType === "amc"
-                                ? `/amc/${entityId}/visits/${sch.id}`
-                                : `/complaints/${entityId}`
-                            }
-                            className="inline-flex items-center gap-1 text-[10px] font-bold text-pink-700 hover:underline"
+                      {!isClosed && !sch.smrId && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            onClick={() => handleOpenEdit(sch)}
                           >
-                            <FileText className="h-3 w-3" />
-                            View Linked SMR Report
-                          </Link>
+                            <Edit className="h-3.5 w-3.5 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
+                            onClick={() => sch.id && handleDelete(sch.id)}
+                            disabled={isDeletingId === sch.id}
+                          >
+                            {isDeletingId === sch.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                            )}
+                          </Button>
                         </div>
                       )}
                     </div>
-
-                    {!isClosed && !sch.smrId && (
-                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-                          onClick={() => handleOpenEdit(sch)}
-                        >
-                          <Edit className="h-3.5 w-3.5 text-blue-500" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
-                          onClick={() => sch.id && handleDelete(sch.id)}
-                          disabled={isDeletingId === sch.id}
-                        >
-                          {isDeletingId === sch.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                          )}
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
           )}
+
+          <div className="text-xs text-muted-foreground leading-relaxed bg-amber-500/5 p-3.5 rounded-lg border border-amber-500/10 flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <span>
+              {entityType === "enquiry"
+                ? "This event is linked to the active enquiry. Setting a follow-up/site-visit date ensures this enquiry appears on the schedules calendar dashboard."
+                : entityType === "complaint"
+                ? "This event tracks the target resolution timeline. Keeping it updated prevents breach of client SLA limits."
+                : `This event tracks scheduled activities for this ${entityType}.`}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Right Part: Schedule Form Card (Col Span 1) */}
+      {/* Right Part: Quick Action Form Card (Col Span 1) */}
       <div className="space-y-4">
         {!isClosed ? (
           <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4">
@@ -358,14 +372,22 @@ export function Schedules({
                 <CalendarDays className="h-4 w-4 text-blue-500" />
               </div>
               <h3 className="text-base font-semibold text-foreground">
-                {editingSchedule ? "Edit Schedule Event" : "Create Schedule Event"}
+                {entityType === "enquiry"
+                  ? "Schedule a Visit / Follow-up"
+                  : entityType === "complaint"
+                  ? "Schedule Case Resolution"
+                  : `Schedule ${entityType}`}
               </h3>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label htmlFor="schDate" className="text-xs font-semibold text-foreground">
-                  Date *
+                  {entityType === "enquiry"
+                    ? "Schedule Date"
+                    : entityType === "complaint"
+                    ? "Expected Resolution Date"
+                    : "Date"} *
                 </Label>
                 <Input
                   id="schDate"
@@ -377,7 +399,7 @@ export function Schedules({
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-foreground">Schedule Type</Label>
                 <Select
                   value={scheduleType}
@@ -396,7 +418,7 @@ export function Schedules({
                 </Select>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-foreground">Status</Label>
                 <Select
                   value={statusInput}
@@ -425,12 +447,12 @@ export function Schedules({
                 </Select>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <StaffSelectDropdown
                   selected={staffIds}
                   onChange={(ids) => setStaffIds(isFollowUpType ? ids.slice(-1) : ids)}
-                  label="Assign Staff"
-                  placement="top"
+                  label="Assign To"
+                  placement="bottom"
                   nameById={staffNameByIds}
                 />
                 {isFollowUpType && staffIds.length > 0 && (
@@ -440,7 +462,7 @@ export function Schedules({
                 )}
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <Label htmlFor="schNotes" className="text-xs font-semibold text-foreground">
                   Description / Notes
                 </Label>
@@ -458,7 +480,7 @@ export function Schedules({
                   type="submit"
                   size="sm"
                   disabled={isSaving}
-                  className="w-full bg-pink-700 hover:bg-pink-800 text-white h-9 text-xs font-semibold"
+                  className="w-full bg-pink-700 hover:bg-pink-800 text-white h-9 text-xs font-semibold gap-1.5 transition-all shadow-sm"
                 >
                   {isSaving ? (
                     <>

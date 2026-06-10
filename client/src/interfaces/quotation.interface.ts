@@ -10,6 +10,8 @@ export interface QuotationLineItem {
   qty: number;
   rate: number;
   total: number;
+  section?: "machine_side" | "low_side";
+  unit?: string;
 }
 
 export interface QuotationRemark {

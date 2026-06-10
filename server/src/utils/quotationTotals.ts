@@ -11,7 +11,7 @@ export function computeQuotationTotals(
 }
 
 export function normalizeLineItems(
-  items: Array<{ description: string; qty: number; rate: number; total?: number }>,
+  items: Array<{ description: string; qty: number; rate: number; total?: number; section?: "machine_side" | "low_side"; unit?: string }>,
 ): IQuotationLineItem[] {
   return items.map((item) => {
     const qty = Number(item.qty) || 0;
@@ -22,6 +22,8 @@ export function normalizeLineItems(
       qty,
       rate,
       total,
+      section: item.section || "machine_side",
+      unit: item.unit || "",
     };
   });
 }

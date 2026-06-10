@@ -9,6 +9,7 @@ import {
   Pencil,
   MessageSquare,
   Receipt,
+  Download,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -28,6 +29,7 @@ import {
 import { Quotation, QuotationStatus } from "../../interfaces/quotation.interface";
 import { AppRoute } from "../../constants/routes.enum";
 import { toast } from "sonner";
+import { exportQuotationToPdf } from "./quotationPdfExport";
 
 const QUOTATION_STATUSES: QuotationStatus[] = [
   "Draft",
@@ -115,6 +117,12 @@ export function QuotationDetail() {
     );
   }
 
+  const machineItems = quotation.items.filter((i) => !i.section || i.section === "machine_side");
+  const lowSideItems = quotation.items.filter((i) => i.section === "low_side");
+
+  const machineTotal = machineItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+  const lowSideTotal = lowSideItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+
   return (
     <div className="h-full bg-background">
       <ScrollArea className="h-full">
@@ -173,6 +181,15 @@ export function QuotationDetail() {
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => exportQuotationToPdf(quotation)}
+                      className="h-9 px-4 font-semibold gap-1.5"
+                    >
+                      <Download className="h-4 w-4" />
+                      Export PDF
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => quotation.id && navigate(`${AppRoute.QUOTATIONS}/${quotation.id}/edit`)}
                       className="h-9 px-4 font-semibold gap-1.5"
                     >
@@ -202,50 +219,112 @@ export function QuotationDetail() {
 
               <TabsContent value="details" className="m-0 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <div className="lg:col-span-2 bg-card rounded-xl border border-border p-5 space-y-4">
+                  <div className="lg:col-span-2 bg-card rounded-xl border border-border p-5 space-y-6">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Line Items</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b text-left text-muted-foreground text-xs uppercase">
-                            <th className="pb-2 font-semibold">Description</th>
-                            <th className="pb-2 font-semibold text-right">Qty</th>
-                            <th className="pb-2 font-semibold text-right">Rate</th>
-                            <th className="pb-2 font-semibold text-right">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {quotation.items.map((item, i) => (
-                            <tr key={i} className="border-b border-border/50 last:border-0">
-                              <td className="py-2.5 pr-4">{item.description}</td>
-                              <td className="py-2.5 text-right">{item.qty}</td>
-                              <td className="py-2.5 text-right">{formatInr(item.rate)}</td>
-                              <td className="py-2.5 text-right font-medium">{formatInr(item.total)}</td>
+                    
+                    {/* A. MACHINE SIDE */}
+                    {machineItems.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-foreground bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded uppercase tracking-wider">A. MACHINE SIDE:-</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b text-left text-muted-foreground text-xs uppercase">
+                                <th className="pb-2 font-semibold">Description</th>
+                                <th className="pb-2 font-semibold text-center w-16">Unit</th>
+                                <th className="pb-2 font-semibold text-right w-16">Qty</th>
+                                <th className="pb-2 font-semibold text-right w-28">Rate</th>
+                                <th className="pb-2 font-semibold text-right w-32">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {machineItems.map((item, i) => (
+                                <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                                  <td className="py-2.5 pr-4 align-top">{item.description}</td>
+                                  <td className="py-2.5 text-center align-top">{item.unit || "No"}</td>
+                                  <td className="py-2.5 text-right align-top">{item.qty}</td>
+                                  <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
+                                  <td className="py-2.5 text-right align-top font-medium">{formatInr(item.qty * item.rate)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex justify-end pr-2 py-2 text-xs font-bold text-muted-foreground border-t border-dashed border-border">
+                          <span>TOTAL MACHINE SIDE COST: {formatInr(machineTotal)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* B. LOW SIDE WORKS */}
+                    {lowSideItems.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <h4 className="text-xs font-bold text-foreground bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded uppercase tracking-wider">B. LOW SIDE WORKS:-</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b text-left text-muted-foreground text-xs uppercase">
+                                <th className="pb-2 font-semibold">Description</th>
+                                <th className="pb-2 font-semibold text-center w-16">Unit</th>
+                                <th className="pb-2 font-semibold text-right w-16">Qty</th>
+                                <th className="pb-2 font-semibold text-right w-28">Rate</th>
+                                <th className="pb-2 font-semibold text-right w-32">Total</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lowSideItems.map((item, i) => (
+                                <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                                  <td className="py-2.5 pr-4 align-top">{item.description}</td>
+                                  <td className="py-2.5 text-center align-top">{item.unit || "Rmt"}</td>
+                                  <td className="py-2.5 text-right align-top">{item.qty}</td>
+                                  <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
+                                  <td className="py-2.5 text-right align-top font-medium">{formatInr(item.qty * item.rate)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex justify-end pr-2 py-2 text-xs font-bold text-muted-foreground border-t border-dashed border-border">
+                          <span>TOTAL LOW SIDE COST: {formatInr(lowSideTotal)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SUMMARY BLOCK */}
+                    <div className="pt-4 border-t border-border space-y-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Summary</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm border border-border rounded-lg overflow-hidden">
+                          <tbody>
+                            <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-800/20">
+                              <td className="py-2 px-3 font-semibold text-muted-foreground">TOTAL FOR HIGH SIDE WORKS (AC MACHINES SUPPLY)</td>
+                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(machineTotal)}</td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="flex justify-end pt-2 border-t">
-                      <div className="text-right space-y-1 text-sm w-48">
-                        <p className="flex justify-between">
-                          <span className="text-muted-foreground">Subtotal</span>
-                          <span>{formatInr(quotation.amount)}</span>
-                        </p>
-                        <p className="flex justify-between">
-                          <span className="text-muted-foreground">GST ({quotation.gstPercent}%)</span>
-                          <span>{formatInr(quotation.gst)}</span>
-                        </p>
-                        <p className="flex justify-between text-base font-bold pt-1 border-t">
-                          <span>Total</span>
-                          <span className="text-pink-700">{formatInr(quotation.total)}</span>
-                        </p>
+                            <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-800/20">
+                              <td className="py-2 px-3 font-semibold text-muted-foreground">TOTAL FOR LOW SIDE WORKS</td>
+                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.total - machineTotal - quotation.gst)}</td>
+                            </tr>
+                            <tr className="border-b border-border">
+                              <td className="py-2 px-3 font-semibold text-muted-foreground">SUBTOTAL (EXCL. GST)</td>
+                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.amount)}</td>
+                            </tr>
+                            <tr className="border-b border-border">
+                              <td className="py-2 px-3 font-semibold text-muted-foreground">GST ({quotation.gstPercent}%)</td>
+                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.gst)}</td>
+                            </tr>
+                            <tr className="bg-pink-50/50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-400 font-bold">
+                              <td className="py-2.5 px-3 uppercase tracking-wider text-xs">Grand Total With GST</td>
+                              <td className="py-2.5 px-3 text-right text-base">{formatInr(quotation.total)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
+
                     {quotation.notes && (
-                      <div className="pt-2 border-t">
+                      <div className="pt-4 border-t border-border">
                         <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Notes</p>
-                        <p className="text-sm text-foreground">{quotation.notes}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap">{quotation.notes}</p>
                       </div>
                     )}
                   </div>

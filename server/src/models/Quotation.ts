@@ -18,6 +18,8 @@ const lineItemSchema = new Schema(
     qty: { type: Number, required: true, min: 0 },
     rate: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
+    section: { type: String, enum: ["machine_side", "low_side"], default: "machine_side" },
+    unit: { type: String, default: "" },
   },
   { _id: false },
 );

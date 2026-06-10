@@ -27,8 +27,6 @@ export const requireAuth = (
   next: NextFunction
 ): void => {
   const authHeader = req.headers.authorization;
-  console.log(`[Auth Debug] URL: ${req.originalUrl}, Method: ${req.method}, AuthHeader: ${authHeader}`);
-
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new AppError("Access token required", StatusCode.UNAUTHORIZED);
   }

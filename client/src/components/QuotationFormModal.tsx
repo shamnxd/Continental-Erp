@@ -17,6 +17,7 @@ import { Quotation, QuotationLineItem, QuotationStatus } from "../interfaces/quo
 import { Client } from "../interfaces/client.interface";
 import { Enquiry } from "../interfaces/enquiry.interface";
 import { getEnquiriesApi } from "../api/enquiry.api";
+import { getCostingsByEnquiryIdApi } from "../api/costing.api";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "sonner";
 import { DEFAULT_QUOTATION_ITEMS } from "../constants/quotationTemplate";
@@ -151,11 +152,7 @@ export function QuotationFormModal({
       setValidUntil(d.toISOString().split("T")[0]);
       setStatus("Pending Approval");
       setGstPercent(18);
-      if (prefillFromEnquiry.requirement) {
-        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
-      } else {
-        setItems([emptyLineItem()]);
-      }
+      setItems([emptyLineItem()]);
       setNotes("");
     } else {
       setSelectedClientId("");
@@ -173,6 +170,56 @@ export function QuotationFormModal({
     }
     setClientSearch("");
   }, [isOpen, quotation, prefillFromEnquiry]);
+
+  useEffect(() => {
+    if (!isOpen || isEdit || !enquiryId) return;
+
+    getCostingsByEnquiryIdApi(enquiryId)
+      .then((res) => {
+        if (res.success && res.data.length > 0) {
+          const activeCosting = res.data.find((c) => c.isActive) || res.data[res.data.length - 1];
+          const mappedItems: QuotationLineItem[] = [];
+
+          if (activeCosting.highSide?.equipment) {
+            activeCosting.highSide.equipment.forEach((eq) => {
+              mappedItems.push({
+                description: eq.description,
+                qty: eq.qty || 0,
+                rate: eq.unitRate || 0,
+                total: (eq.qty || 0) * (eq.unitRate || 0),
+                section: "machine_side",
+                unit: "No"
+              });
+            });
+          }
+
+          if (activeCosting.lowSide?.items) {
+            activeCosting.lowSide.items.forEach((item) => {
+              if (item.qty > 0) {
+                mappedItems.push({
+                  description: item.description,
+                  qty: item.qty || 0,
+                  rate: item.stdRate || 0,
+                  total: (item.qty || 0) * (item.stdRate || 0),
+                  section: "low_side",
+                  unit: item.unit || "Rmt"
+                });
+              }
+            });
+          }
+
+          if (mappedItems.length > 0) {
+            setItems(mappedItems);
+            return;
+          }
+        }
+        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
+      })
+      .catch((err) => {
+        console.error("Failed to load costing sheet for prefill:", err);
+        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
+      });
+  }, [isOpen, isEdit, enquiryId]);
 
   const filteredClients = clients.filter(
     (c) =>
@@ -349,9 +396,6 @@ export function QuotationFormModal({
                               setEnquirySearch("");
                               setEnquirySuggestions([]);
                               setSelectedClientId(enq.clientId);
-                              if (enq.requirement) {
-                                setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
-                              }
                             }}
                           >
                             <div className="font-semibold text-foreground">{enq.enquiryNo}</div>

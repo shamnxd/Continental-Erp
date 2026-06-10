@@ -16,6 +16,7 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import { createQuotationApi, updateQuotationApi, getQuotationByIdApi } from "../../api/quotation.api";
 import { getClientsApi } from "../../api/client.api";
 import { getEnquiriesApi } from "../../api/enquiry.api";
+import { getCostingsByEnquiryIdApi } from "../../api/costing.api";
 import { Quotation, QuotationLineItem, QuotationStatus } from "../../interfaces/quotation.interface";
 import { Client } from "../../interfaces/client.interface";
 import type { Enquiry } from "../../interfaces/enquiry.interface";
@@ -137,9 +138,6 @@ export function QuotationFormPage() {
         setSelectedClientId(prefillFromEnquiry.clientId);
         setEnquiryId(prefillFromEnquiry.enquiryId);
         setEnquiryNo(prefillFromEnquiry.enquiryNo);
-        if (prefillFromEnquiry.requirement) {
-          setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
-        }
       }
       setIsLoading(false);
       return;
@@ -164,6 +162,60 @@ export function QuotationFormPage() {
       .catch(() => toast.error("Failed to load quotation"))
       .finally(() => setIsLoading(false));
   }, [id, isEdit, prefillFromEnquiry]);
+
+  useEffect(() => {
+    if (isEdit || !enquiryId) return;
+
+    setIsLoading(true);
+    getCostingsByEnquiryIdApi(enquiryId)
+      .then((res) => {
+        if (res.success && res.data.length > 0) {
+          const activeCosting = res.data.find((c) => c.isActive) || res.data[res.data.length - 1];
+          const mappedItems: QuotationLineItem[] = [];
+
+          if (activeCosting.highSide?.equipment) {
+            activeCosting.highSide.equipment.forEach((eq) => {
+              mappedItems.push({
+                description: eq.description,
+                qty: eq.qty || 0,
+                rate: eq.unitRate || 0,
+                total: (eq.qty || 0) * (eq.unitRate || 0),
+                section: "machine_side",
+                unit: "No"
+              });
+            });
+          }
+
+          if (activeCosting.lowSide?.items) {
+            activeCosting.lowSide.items.forEach((item) => {
+              if (item.qty > 0) {
+                mappedItems.push({
+                  description: item.description,
+                  qty: item.qty || 0,
+                  rate: item.stdRate || 0,
+                  total: (item.qty || 0) * (item.stdRate || 0),
+                  section: "low_side",
+                  unit: item.unit || "Rmt"
+                });
+              }
+            });
+          }
+
+          if (mappedItems.length > 0) {
+            setItems(mappedItems);
+            return;
+          }
+        }
+        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
+      })
+      .catch((err) => {
+        console.error("Failed to load costing sheet for prefill:", err);
+        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [isEdit, enquiryId]);
 
   const filteredClients = clients.filter(
     (c) =>
@@ -373,9 +425,6 @@ export function QuotationFormPage() {
                                 setEnquirySearch("");
                                 setEnquirySuggestions([]);
                                 setSelectedClientId(enq.clientId);
-                                if (enq.requirement) {
-                                  setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
-                                }
                               }}
                             >
                               <div className="font-semibold text-foreground">{enq.enquiryNo}</div>

@@ -267,32 +267,32 @@ export function Schedules({
                 return (
                   <div
                     key={sch.id}
-                    className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/60 hover:border-pink-600/30 transition-all gap-4"
+                    className="flex items-center justify-between py-2.5 px-3.5 bg-muted/30 rounded-lg border border-border/60 hover:border-pink-600/30 transition-all gap-3"
                   >
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-full bg-pink-50 flex items-center justify-center shrink-0 border border-pink-100 mt-0.5 animate-pulse">
-                        <Clock className="h-5 w-5 text-pink-600" />
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className="h-8 w-8 rounded-full bg-pink-50 flex items-center justify-center shrink-0 border border-pink-100 mt-0.5 animate-pulse">
+                        <Clock className="h-4 w-4 text-pink-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-semibold text-foreground text-sm">
+                        <h4 className="font-semibold text-foreground text-[13px]">
                           {sch.scheduleType}
                         </h4>
-                        <p className="text-sm text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {dateStr}
                         </p>
                         {sch.notes && (
-                          <p className="text-xs text-muted-foreground mt-1.5 italic bg-card px-2.5 py-1 rounded border border-border/50 w-fit">
+                          <p className="text-[11px] text-muted-foreground mt-1 italic bg-card px-2 py-0.5 rounded border border-border/50 w-fit">
                             Notes: {sch.notes}
                           </p>
                         )}
                         {sch.assignedTo && sch.assignedTo.length > 0 && (
-                          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-md border w-fit shadow-xs">
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-muted-foreground bg-background px-2 py-0.5 rounded-md border w-fit shadow-xs">
                             <User className="h-3 w-3 text-pink-600" />
                             <span>Assigned to: <strong>{sch.assignedTo.join(", ")}</strong></span>
                           </div>
                         )}
                         {sch.smrId && (
-                          <div className="mt-2">
+                          <div className="mt-1">
                             <Link
                               to={
                                 entityType === "amc"
@@ -309,9 +309,9 @@ export function Schedules({
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-2 shrink-0 self-start sm:self-center">
+                    <div className="flex flex-col items-end gap-1.5 shrink-0 self-start sm:self-center">
                       <span
-                        className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-full border ${getStatusColorClass(
+                        className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-full border ${getStatusColorClass(
                           sch.status
                         )}`}
                       >
@@ -332,7 +332,11 @@ export function Schedules({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
-                            onClick={() => sch.id && handleDelete(sch.id)}
+                            onClick={() => {
+                              if (sch.id && window.confirm("Are you sure you want to delete this schedule?")) {
+                                handleDelete(sch.id);
+                              }
+                            }}
                             disabled={isDeletingId === sch.id}
                           >
                             {isDeletingId === sch.id ? (

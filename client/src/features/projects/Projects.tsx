@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, CalendarDays } from "lucide-react";
+import { Plus, Eye } from "lucide-react";
+import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
@@ -11,13 +12,6 @@ import {
   tableCellClass,
 } from "../../components/tableCells";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Schedules } from "../../components/Schedules";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
 
 type StatusFilter = "all" | "Planning" | "Active" | "On Hold" | "Completed";
 
@@ -70,7 +64,7 @@ export function Projects() {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -128,10 +122,13 @@ export function Projects() {
           variant="outline"
           size="sm"
           className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
-          onClick={() => setSelectedProject(row)}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/projects/${row.id}`, { state: { project: row } });
+          }}
         >
-          <CalendarDays className="h-3.5 w-3.5" />
-          Schedules
+          <Eye className="h-3.5 w-3.5" />
+          View
         </Button>
       ),
       className: tableCellClass.narrow,
@@ -139,71 +136,49 @@ export function Projects() {
   ];
 
   return (
-    <>
-      <ManagementListPage
-        title="Projects"
-        subtitle="Converted enquiries and installation projects"
-        headerAction={
-          <Button className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-800 text-white font-semibold">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
-        }
-        searchPlaceholder="Search projects..."
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterOptions={[
-          { value: "all", label: "All", count: projects.length, tone: "primary" },
-          {
-            value: "Planning",
-            label: "Planning",
-            count: projects.filter((p) => p.status === "Planning").length,
-            tone: "blue",
-          },
-          { value: "Active", label: "Active", count: projects.filter((p) => p.status === "Active").length, tone: "green" },
-          { value: "On Hold", label: "On Hold", count: projects.filter((p) => p.status === "On Hold").length, tone: "amber" },
-          {
-            value: "Completed",
-            label: "Completed",
-            count: projects.filter((p) => p.status === "Completed").length,
-            tone: "muted",
-          },
-        ]}
-        filterValue={statusFilter}
-        onFilterChange={setStatusFilter}
-        columns={columns}
-        data={pageItems}
-        emptyMessage="No projects yet. Convert an enquiry to create a project."
-        currentPage={currentPage}
-        totalPages={totalPages}
-        total={total}
-        pageSize={PAGE_SIZE}
-        onPageChange={setCurrentPage}
-        entityLabel="projects"
-      />
-
-      <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
-        <DialogContent className="max-w-2xl bg-card border border-border shadow-xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-foreground">
-              Schedules for Project: {selectedProject?.name} ({selectedProject?.projectNo})
-            </DialogTitle>
-          </DialogHeader>
-          {selectedProject && (
-            <div className="mt-4">
-              <Schedules
-                entityId={selectedProject.id}
-                entityType="project"
-                entityNo={selectedProject.projectNo}
-                clientName={selectedProject.clientName}
-                title={selectedProject.name}
-                isClosed={selectedProject.status === "Completed"}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    <ManagementListPage
+      title="Projects"
+      subtitle="Converted enquiries and installation projects"
+      headerAction={
+        <Button className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-800 text-white font-semibold">
+          <Plus className="h-4 w-4" />
+          New Project
+        </Button>
+      }
+      searchPlaceholder="Search projects..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+      filterOptions={[
+        { value: "all", label: "All", count: projects.length, tone: "primary" },
+        {
+          value: "Planning",
+          label: "Planning",
+          count: projects.filter((p) => p.status === "Planning").length,
+          tone: "blue",
+        },
+        { value: "Active", label: "Active", count: projects.filter((p) => p.status === "Active").length, tone: "green" },
+        { value: "On Hold", label: "On Hold", count: projects.filter((p) => p.status === "On Hold").length, tone: "amber" },
+        {
+          value: "Completed",
+          label: "Completed",
+          count: projects.filter((p) => p.status === "Completed").length,
+          tone: "muted",
+        },
+      ]}
+      filterValue={statusFilter}
+      onFilterChange={setStatusFilter}
+      columns={columns}
+      data={pageItems}
+      emptyMessage="No projects yet. Convert an enquiry to create a project."
+      currentPage={currentPage}
+      totalPages={totalPages}
+      total={total}
+      pageSize={PAGE_SIZE}
+      onPageChange={setCurrentPage}
+      entityLabel="projects"
+      onRowClick={(row) => navigate(`/projects/${row.id}`, { state: { project: row } })}
+    />
   );
 }
+
 

@@ -42,12 +42,15 @@ export enum AppRoute {
   FINANCE_REPORTS = "/finance/reports",
   REPORTS = "/reports",
   SCHEDULES = "/schedules",
-  MINOR_JOBS = "/minor-jobs",
   PROJECTS = "/projects",
+  PROJECT_DETAIL = "/projects/:id",
+  MINOR_JOBS = "/minor-jobs",
+  MINOR_JOB_DETAIL = "/minor-jobs/:id",
   CUSTOMER_COMPLAINTS = "/customer-complaints",
   LEAVE_MANAGEMENT = "/leave-management",
   AUDIT_LOGS = "/audit-logs",
   WARRANTY_MANAGEMENT = "/warranty-management",
+  WARRANTY_DETAIL = "/warranty-management/:id",
   ADMIN_MANAGEMENT = "/admin-management",
   PUBLIC_COMPLAINT_REGISTER = "/register-complaint",
   // Staff Portal
@@ -89,5 +92,6 @@ export enum ApiRoute {
   COMPLAINT_REQUESTS = "/complaint-requests",
   COSTINGS = "/costings",
   SCHEDULES = "/schedules",
+  REMARKS = "/remarks",
 }
 

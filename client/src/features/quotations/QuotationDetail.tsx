@@ -19,13 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { RemarksPanel, remarkKey } from "../../components/RemarksPanel";
+import { RemarksChat } from "../../components/RemarksChat";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import {
   getQuotationByIdApi,
   updateQuotationApi,
-  addQuotationRemarkApi,
-  updateQuotationRemarkApi,
 } from "../../api/quotation.api";
 import { Quotation, QuotationStatus } from "../../interfaces/quotation.interface";
 import { AppRoute } from "../../constants/routes.enum";
@@ -62,9 +60,6 @@ export function QuotationDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [newRemark, setNewRemark] = useState("");
-  const [isAddingRemark, setIsAddingRemark] = useState(false);
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
 
   const loadQuotation = useCallback(async () => {
     if (!id) return;
@@ -101,41 +96,6 @@ export function QuotationDetail() {
     }
   };
 
-  const handleAddRemark = async () => {
-    if (!quotation?.id || !newRemark.trim()) return;
-    setIsAddingRemark(true);
-    try {
-      const res = await addQuotationRemarkApi(quotation.id, newRemark.trim());
-      if (res.success) {
-        setQuotation(res.data);
-        setNewRemark("");
-        toast.success("Remark added");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add remark");
-    } finally {
-      setIsAddingRemark(false);
-    }
-  };
-
-  const handleEditRemark = async (key: string, text: string) => {
-    if (!quotation?.id) return;
-    setIsEditingRemark(true);
-    try {
-      const res = await updateQuotationRemarkApi(quotation.id, key, text);
-      if (res.success) {
-        setQuotation(res.data);
-        toast.success("Remark updated");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update remark");
-    } finally {
-      setIsEditingRemark(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -154,12 +114,6 @@ export function QuotationDetail() {
       </div>
     );
   }
-
-  const remarks = (quotation.remarks ?? []).map((r, i) => ({
-    ...r,
-    date: typeof r.date === "string" ? r.date : new Date(r.date).toISOString(),
-    id: r.id ?? remarkKey(r, i),
-  }));
 
   return (
     <div className="h-full bg-background">
@@ -241,9 +195,6 @@ export function QuotationDetail() {
                     >
                       <MessageSquare className="h-4 w-4" />
                       Remarks
-                      {remarks.length > 0 && (
-                        <span className="ml-1 text-[10px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">{remarks.length}</span>
-                      )}
                     </TabsTrigger>
                   </TabsList>
                 </div>
@@ -334,17 +285,12 @@ export function QuotationDetail() {
               </TabsContent>
 
               <TabsContent value="remarks" className="m-0">
-                <div className="bg-card rounded-xl border border-border p-5">
-                  <RemarksPanel
-                    remarks={remarks}
-                    newRemark={newRemark}
-                    onNewRemarkChange={setNewRemark}
-                    onAddRemark={handleAddRemark}
-                    onEditRemark={handleEditRemark}
-                    isSubmitting={isAddingRemark}
-                    isEditingRemark={isEditingRemark}
+                {quotation.id && (
+                  <RemarksChat
+                    entityType="quotation"
+                    entityId={quotation.id}
                   />
-                </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

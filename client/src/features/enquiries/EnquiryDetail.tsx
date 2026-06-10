@@ -58,8 +58,6 @@ import {
 import {
   getEnquiryByIdApi,
   updateEnquiryApi,
-  addEnquiryRemarkApi,
-  updateEnquiryRemarkApi,
   uploadEnquiryDrawingApi,
 } from "../../api/enquiry.api";
 import { getClientsApi } from "../../api/client.api";
@@ -67,8 +65,8 @@ import { Enquiry, EnquiryActivity, EnquiryActivityType, EnquiryStatus } from "..
 import { Client } from "../../interfaces/client.interface";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { EnquiryFormModal } from "../../components/EnquiryFormModal";
-import { RemarksPanel } from "../../components/RemarksPanel";
 import { CostingTab } from "./costing/CostingTab";
+import { RemarksChat } from "../../components/RemarksChat";
 import { toast } from "sonner";
 
 const ENQUIRY_STATUSES: EnquiryStatus[] = [
@@ -157,12 +155,9 @@ export function EnquiryDetail() {
   const navigate = useNavigate();
   const [enquiry, setEnquiry] = useState<Enquiry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [newRemark, setNewRemark] = useState("");
   const [isReassignOpen, setIsReassignOpen] = useState(false);
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [isSavingReassign, setIsSavingReassign] = useState(false);
-  const [isAddingRemark, setIsAddingRemark] = useState(false);
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -226,7 +221,6 @@ export function EnquiryDetail() {
     return fallback;
   }, [enquiry]);
 
-  const remarks = enquiry?.remarks ?? [];
 
   const openReassign = () => {
     if (!enquiry) return;
@@ -336,40 +330,6 @@ export function EnquiryDetail() {
     toast.error("Download link not available for this file");
   };
 
-  const handleAddRemark = async () => {
-    if (!enquiry?.id || !newRemark.trim()) return;
-    setIsAddingRemark(true);
-    try {
-      const res = await addEnquiryRemarkApi(enquiry.id, newRemark.trim());
-      if (res.success) {
-        setEnquiry(res.data);
-        setNewRemark("");
-        toast.success("Remark added");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add remark");
-    } finally {
-      setIsAddingRemark(false);
-    }
-  };
-
-  const handleEditRemark = async (remarkKey: string, text: string) => {
-    if (!enquiry?.id) return;
-    setIsEditingRemark(true);
-    try {
-      const res = await updateEnquiryRemarkApi(enquiry.id, remarkKey, text);
-      if (res.success) {
-        setEnquiry(res.data);
-        toast.success("Remark updated");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update remark");
-    } finally {
-      setIsEditingRemark(false);
-    }
-  };
 
   if (isLoading || !enquiry) {
     return (
@@ -513,7 +473,7 @@ export function EnquiryDetail() {
                       value="remarks"
                       className="flex-none w-auto shrink-0 h-full rounded-md !border-b-2 border-0 border-transparent data-[state=active]:border-pink-600 data-[state=active]:text-pink-700 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none px-4 text-sm font-bold transition-all"
                     >
-                      Remarks ({remarks.length})
+                      Remarks
                     </TabsTrigger>
                     <TabsTrigger
                       value="costing"
@@ -743,18 +703,13 @@ export function EnquiryDetail() {
               </TabsContent>
 
               <TabsContent value="remarks" className="m-0">
-                <RemarksPanel
-                  remarks={remarks}
-                  newRemark={newRemark}
-                  onNewRemarkChange={setNewRemark}
-                  onAddRemark={handleAddRemark}
-                  onEditRemark={handleEditRemark}
-                  isSubmitting={isAddingRemark}
-                  isEditingRemark={isEditingRemark}
-                  disabled={isClosed}
-                  emptyMessage="No remarks recorded yet."
-                  placeholder="Add follow-up notes or site visit observations..."
-                />
+                {enquiry.id && (
+                  <RemarksChat
+                    entityType="enquiry"
+                    entityId={enquiry.id}
+                    disabled={isClosed}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="costing" className="m-0">

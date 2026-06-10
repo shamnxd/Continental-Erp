@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Eye } from "lucide-react";
+import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
@@ -26,7 +27,26 @@ interface WarrantyRecord {
 
 const PAGE_SIZE = 10;
 
-const initialWarranties: WarrantyRecord[] = [];
+const initialWarranties: WarrantyRecord[] = [
+  {
+    id: "warr_1",
+    warrantyNo: "WRN-2026-001",
+    clientName: "Metro Mall Center",
+    product: "Chiller Unit 500TR - Carrier",
+    startDate: "2025-01-15T00:00:00.000Z",
+    endDate: "2027-01-15T00:00:00.000Z",
+    status: "Active",
+  },
+  {
+    id: "warr_2",
+    warrantyNo: "WRN-2026-002",
+    clientName: "Capital Residence",
+    product: "Ductable Split AC 5.0TR - Daikin",
+    startDate: "2025-06-20T00:00:00.000Z",
+    endDate: "2026-06-20T00:00:00.000Z",
+    status: "Expiring Soon",
+  },
+];
 
 const statusTone = (s: WarrantyRecord["status"]) => {
   if (s === "Active") return "green" as const;
@@ -41,6 +61,7 @@ export function WarrantyManagement() {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -91,6 +112,24 @@ export function WarrantyManagement() {
       accessor: (row) => <TableStatusBadge label={row.status} tone={statusTone(row.status)} />,
       className: tableCellClass.narrow,
     },
+    {
+      header: "Actions",
+      accessor: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/warranty-management/${row.id}`, { state: { warranty: row } });
+          }}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          View
+        </Button>
+      ),
+      className: tableCellClass.narrow,
+    },
   ];
 
   return (
@@ -129,6 +168,7 @@ export function WarrantyManagement() {
       pageSize={PAGE_SIZE}
       onPageChange={setCurrentPage}
       entityLabel="warranties"
+      onRowClick={(row) => navigate(`/warranty-management/${row.id}`, { state: { warranty: row } })}
     />
   );
 }

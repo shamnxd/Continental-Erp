@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, Calendar, CalendarDays } from "lucide-react";
+import { Plus, Calendar, Eye } from "lucide-react";
+import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
@@ -11,13 +12,6 @@ import {
   tableCellClass,
 } from "../../components/tableCells";
 import { useDebounce } from "../../hooks/useDebounce";
-import { Schedules } from "../../components/Schedules";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
 
 type StatusFilter = "all" | "Open" | "In Progress" | "Completed";
 
@@ -69,7 +63,7 @@ export function MinorJobs() {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedJob, setSelectedJob] = useState<MinorJob | null>(null);
+  const navigate = useNavigate();
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
@@ -133,10 +127,13 @@ export function MinorJobs() {
           variant="outline"
           size="sm"
           className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
-          onClick={() => setSelectedJob(row)}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/minor-jobs/${row.id}`, { state: { job: row } });
+          }}
         >
-          <CalendarDays className="h-3.5 w-3.5" />
-          Schedules
+          <Eye className="h-3.5 w-3.5" />
+          View
         </Button>
       ),
       className: tableCellClass.narrow,
@@ -144,70 +141,48 @@ export function MinorJobs() {
   ];
 
   return (
-    <>
-      <ManagementListPage
-        title="Minor Jobs"
-        subtitle="Small service jobs and quick fixes"
-        headerAction={
-          <Button className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-800 text-white font-semibold">
-            <Plus className="h-4 w-4" />
-            New Minor Job
-          </Button>
-        }
-        searchPlaceholder="Search minor jobs..."
-        searchValue={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterOptions={[
-          { value: "all", label: "All", count: jobs.length, tone: "primary" },
-          { value: "Open", label: "Open", count: jobs.filter((j) => j.status === "Open").length, tone: "blue" },
-          {
-            value: "In Progress",
-            label: "In Progress",
-            count: jobs.filter((j) => j.status === "In Progress").length,
-            tone: "amber",
-          },
-          {
-            value: "Completed",
-            label: "Completed",
-            count: jobs.filter((j) => j.status === "Completed").length,
-            tone: "green",
-          },
-        ]}
-        filterValue={statusFilter}
-        onFilterChange={setStatusFilter}
-        columns={columns}
-        data={pageItems}
-        emptyMessage="No minor jobs yet. Create one to get started."
-        currentPage={currentPage}
-        totalPages={totalPages}
-        total={total}
-        pageSize={PAGE_SIZE}
-        onPageChange={setCurrentPage}
-        entityLabel="minor jobs"
-      />
-
-      <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
-        <DialogContent className="max-w-2xl bg-card border border-border shadow-xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-foreground">
-              Schedules for Minor Job: {selectedJob?.jobNo}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedJob && (
-            <div className="mt-4">
-              <Schedules
-                entityId={selectedJob.id}
-                entityType="minorjob"
-                entityNo={selectedJob.jobNo}
-                clientName={selectedJob.clientName}
-                title={selectedJob.description}
-                isClosed={selectedJob.status === "Completed"}
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    <ManagementListPage
+      title="Minor Jobs"
+      subtitle="Small service jobs and quick fixes"
+      headerAction={
+        <Button className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-805 text-white font-semibold">
+          <Plus className="h-4 w-4" />
+          New Minor Job
+        </Button>
+      }
+      searchPlaceholder="Search minor jobs..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+      filterOptions={[
+        { value: "all", label: "All", count: jobs.length, tone: "primary" },
+        { value: "Open", label: "Open", count: jobs.filter((j) => j.status === "Open").length, tone: "blue" },
+        {
+          value: "In Progress",
+          label: "In Progress",
+          count: jobs.filter((j) => j.status === "In Progress").length,
+          tone: "amber",
+        },
+        {
+          value: "Completed",
+          label: "Completed",
+          count: jobs.filter((j) => j.status === "Completed").length,
+          tone: "green",
+        },
+      ]}
+      filterValue={statusFilter}
+      onFilterChange={setStatusFilter}
+      columns={columns}
+      data={pageItems}
+      emptyMessage="No minor jobs yet. Create one to get started."
+      currentPage={currentPage}
+      totalPages={totalPages}
+      total={total}
+      pageSize={PAGE_SIZE}
+      onPageChange={setCurrentPage}
+      entityLabel="minor jobs"
+      onRowClick={(row) => navigate(`/minor-jobs/${row.id}`, { state: { job: row } })}
+    />
   );
 }
+
 

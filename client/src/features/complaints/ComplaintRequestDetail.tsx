@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
-import { RemarksPanel } from "../../components/RemarksPanel";
+import { RemarksChat } from "../../components/RemarksChat";
 import {
   Select,
   SelectContent,
@@ -17,7 +17,6 @@ import {
 import { TableStatusBadge } from "../../components/tableCells";
 import {
   getComplaintRequestByIdApi,
-  addComplaintRequestRemarkApi,
   convertComplaintRequestApi,
   rejectComplaintRequestApi,
   ComplaintRequest,
@@ -30,8 +29,6 @@ export function ComplaintRequestDetail() {
 
   const [request, setRequest] = useState<ComplaintRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [newRemark, setNewRemark] = useState("");
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
 
   // Conversion Form State
   const [clients, setClients] = useState<{ id: string; companyName: string }[]>([]);
@@ -123,21 +120,6 @@ export function ComplaintRequestDetail() {
     }
   };
 
-  const handleAddRemark = async () => {
-    if (!request || !newRemark.trim() || !id) return;
-    try {
-      const res = await addComplaintRequestRemarkApi(id, newRemark.trim());
-      if (res.success) {
-        setRequest(res.data);
-        setNewRemark("");
-        toast.success("Remark added successfully!");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add remark");
-    }
-  };
-
   const statusTone = (s: string): "amber" | "green" | "red" | "muted" => {
     if (s === "Pending") return "amber";
     if (s === "Converted") return "green";
@@ -165,13 +147,6 @@ export function ComplaintRequestDetail() {
       </div>
     );
   }
-
-  const remarksList = (request.remarks || []).map((r, i) => ({
-    id: r.id || String(i),
-    user: r.user,
-    date: r.date,
-    text: r.text,
-  }));
 
   const refCode = request.id ? `REF-${String(request.id).slice(-6).toUpperCase()}` : "REF-PENDING";
 
@@ -227,7 +202,7 @@ export function ComplaintRequestDetail() {
                 value="remarks"
                 className="flex-none w-auto h-full shrink-0 rounded border-0 !border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary px-4 text-xs font-bold uppercase tracking-wider transition-all hover:text-primary"
               >
-                Remarks ({remarksList.length})
+                Remarks
               </TabsTrigger>
             </TabsList>
           </div>
@@ -420,16 +395,13 @@ export function ComplaintRequestDetail() {
 
         {/* REMARKS TAB */}
         <TabsContent value="remarks" className="m-0">
-          <RemarksPanel
-            remarks={remarksList}
-            newRemark={newRemark}
-            onNewRemarkChange={setNewRemark}
-            onAddRemark={handleAddRemark}
-            disabled={request.status !== "Pending"}
-            emptyMessage="No follow-up remarks recorded for this request."
-            placeholder="Add a remark regarding request follow-up..."
-            sectionTitle="Add Follow-up Remark"
-          />
+          {request.id && (
+            <RemarksChat
+              entityType="complaint_request"
+              entityId={request.id}
+              disabled={request.status !== "Pending"}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>

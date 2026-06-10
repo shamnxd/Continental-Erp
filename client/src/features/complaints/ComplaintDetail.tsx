@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router";
 import { ArrowLeft, Phone, Building, MapPin, Calendar, AlertCircle, MessageSquare, Clipboard, CheckCircle2, ShieldCheck, ShieldAlert, Shield, Mail, User, Pencil } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { RemarksPanel } from "../../components/RemarksPanel";
+import { RemarksChat } from "../../components/RemarksChat";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
@@ -50,8 +50,6 @@ export function ComplaintDetail() {
   const [clientAmc, setClientAmc] = useState<AmcContract | null>(null);
   const [smrs, setSmrs] = useState<SMR[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [newRemark, setNewRemark] = useState("");
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
   
   // Modal states
   const [isApprovalOpen, setIsApprovalOpen] = useState(false);
@@ -171,52 +169,6 @@ export function ComplaintDetail() {
       toast.error("Failed to update complaint");
     } finally {
       setIsSavingEdit(false);
-    }
-  };
-
-  const handleEditRemark = async (remarkKey: string, text: string) => {
-    if (!complaint || !id) return;
-    setIsEditingRemark(true);
-    try {
-      const updatedRemarks = complaint.remarks.map((r, i) => {
-        const key = r.id ?? String(i);
-        return key === remarkKey ? { ...r, text: text.trim() } : r;
-      });
-      const res = await updateComplaintApi(id, { remarks: updatedRemarks as never });
-      if (res.success) {
-        setComplaint(res.data);
-        toast.success("Remark updated");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update remark");
-    } finally {
-      setIsEditingRemark(false);
-    }
-  };
-
-  const handleAddRemark = async () => {
-    if (!complaint || !newRemark.trim() || !id) return;
-
-    try {
-      const updatedRemarks = [
-        ...complaint.remarks,
-        {
-          user: "Technician/Admin",
-          date: new Date().toISOString(),
-          text: newRemark.trim()
-        }
-      ];
-
-      const res = await updateComplaintApi(id, { remarks: updatedRemarks as any });
-      if (res.success) {
-        setComplaint(res.data);
-        setNewRemark("");
-        toast.success("Remark added successfully!");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add remark");
     }
   };
 
@@ -687,18 +639,13 @@ export function ComplaintDetail() {
 
               {/* REMARKS TAB */}
               <TabsContent value="remarks" className="m-0">
-                <RemarksPanel
-                  remarks={complaint.remarks}
-                  newRemark={newRemark}
-                  onNewRemarkChange={setNewRemark}
-                  onAddRemark={handleAddRemark}
-                  onEditRemark={handleEditRemark}
-                  isEditingRemark={isEditingRemark}
-                  disabled={complaint.status === "Resolved"}
-                  emptyMessage="No follow-up remarks recorded."
-                  placeholder="Add a progress remark or site notes..."
-                  sectionTitle="Add Follow-up Remark"
-                />
+                {complaint.id && (
+                  <RemarksChat
+                    entityType="complaint"
+                    entityId={complaint.id}
+                    disabled={complaint.status === "Resolved"}
+                  />
+                )}
               </TabsContent>
 
               {/* SCHEDULES TAB */}

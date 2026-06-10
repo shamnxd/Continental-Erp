@@ -35,11 +35,14 @@ import { VendorBillFormPage } from "./features/finance/VendorBillFormPage";
 import { Reports } from "./features/reports/Reports";
 import { Schedules } from "./features/schedules/Schedules";
 import { MinorJobs } from "./features/minor-jobs/MinorJobs";
+import { MinorJobDetail } from "./features/minor-jobs/MinorJobDetail";
 import { Projects } from "./features/projects/Projects";
+import { ProjectDetail } from "./features/projects/ProjectDetail";
 import { CustomerComplaints } from "./features/customer-complaints/CustomerComplaints";
 import { LeaveManagement } from "./features/leave-management/LeaveManagement";
 import { AuditLogs } from "./features/audit-logs/AuditLogs";
 import { WarrantyManagement } from "./features/warranty/WarrantyManagement";
+import { WarrantyDetail } from "./features/warranty/WarrantyDetail";
 import { Kanban } from "./features/kanban/Kanban";
 import { Login } from "./features/auth/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -121,12 +124,15 @@ export const router = createBrowserRouter([
       { path: AppRoute.REPORTS, element: <Reports /> },
       { path: AppRoute.SCHEDULES, element: <Schedules /> },
       { path: AppRoute.MINOR_JOBS, element: <MinorJobs /> },
+      { path: AppRoute.MINOR_JOB_DETAIL, element: <MinorJobDetail /> },
       { path: AppRoute.PROJECTS, element: <Projects /> },
+      { path: AppRoute.PROJECT_DETAIL, element: <ProjectDetail /> },
       { path: AppRoute.CUSTOMER_COMPLAINTS, element: <ComplaintRequests /> },
       { path: `${AppRoute.CUSTOMER_COMPLAINTS}/:id`, element: <ComplaintRequestDetail /> },
       { path: AppRoute.LEAVE_MANAGEMENT, element: <LeaveManagement /> },
       { path: AppRoute.AUDIT_LOGS, element: <AuditLogs /> },
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },
+      { path: AppRoute.WARRANTY_DETAIL, element: <WarrantyDetail /> },
       { path: AppRoute.ADMIN_MANAGEMENT, element: <AdminManagement /> },
     ],
   },

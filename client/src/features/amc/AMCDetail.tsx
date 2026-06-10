@@ -17,9 +17,9 @@ import {
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ScrollArea } from "../../components/ui/scroll-area";
-import { RemarksPanel } from "../../components/RemarksPanel";
+import { RemarksChat } from "../../components/RemarksChat";
 import type { AmcContract } from "../../interfaces/amc.interface";
-import { getAmcByIdApi, addAmcRemarkApi, updateAmcRemarkApi } from "../../api/amc.api";
+import { getAmcByIdApi } from "../../api/amc.api";
 import { AmcFormModal } from "../../components/AmcFormModal";
 import { Schedules } from "../../components/Schedules";
 import { NextVisitCell } from "../../components/NextVisitCell";
@@ -66,8 +66,6 @@ export function AMCDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [newRemark, setNewRemark] = useState("");
-  const [isEditingRemark, setIsEditingRemark] = useState(false);
 
   const fetchContractData = useCallback(async () => {
     if (!id) return;
@@ -102,38 +100,6 @@ export function AMCDetail() {
     loadContract();
   }, [loadContract]);
 
-  const handleAddRemark = async () => {
-    if (!id || !newRemark.trim()) return;
-    try {
-      const res = await addAmcRemarkApi(id, newRemark.trim());
-      if (res.success) {
-        setContract(res.data);
-        setNewRemark("");
-        toast.success("Remark added");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to add remark");
-    }
-  };
-
-  const handleEditRemark = async (remarkKey: string, text: string) => {
-    if (!id) return;
-    setIsEditingRemark(true);
-    try {
-      const res = await updateAmcRemarkApi(id, remarkKey, text);
-      if (res.success) {
-        setContract(res.data);
-        toast.success("Remark updated");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update remark");
-    } finally {
-      setIsEditingRemark(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
@@ -154,7 +120,6 @@ export function AMCDetail() {
     );
   }
 
-  const remarks = contract.remarks ?? [];
   const payments = contract.payments ?? [];
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const pendingAmount = Math.max(0, (contract.amount || 0) - totalPaid);
@@ -403,17 +368,13 @@ export function AMCDetail() {
               </TabsContent>
 
               <TabsContent value="remarks" className="m-0">
-                <RemarksPanel
-                  remarks={remarks}
-                  newRemark={newRemark}
-                  onNewRemarkChange={setNewRemark}
-                  onAddRemark={handleAddRemark}
-                  onEditRemark={handleEditRemark}
-                  isEditingRemark={isEditingRemark}
-                  emptyMessage="No follow-up remarks recorded."
-                  placeholder="Add a progress remark or site notes..."
-                  sectionTitle="Add Follow-up Remark"
-                />
+                {contract.id && (
+                  <RemarksChat
+                    entityType="amc"
+                    entityId={contract.id}
+                    disabled={contract.status === "Expired"}
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </div>

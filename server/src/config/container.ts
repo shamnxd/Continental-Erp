@@ -98,6 +98,13 @@ import { GetSchedulesUseCase } from "../usecases/schedules/GetSchedulesUseCase";
 import { UpdateScheduleUseCase } from "../usecases/schedules/UpdateScheduleUseCase";
 import { DeleteScheduleUseCase } from "../usecases/schedules/DeleteScheduleUseCase";
 
+// Remark Imports
+import { IRemarkRepository } from "../interfaces/repositories/IRemarkRepository";
+import { RemarkRepository } from "../repositories/mongo/RemarkRepository";
+import { IRemark, RemarkEntityType } from "../interfaces/models/IRemark";
+import { GetRemarksUseCase } from "../usecases/remarks/GetRemarksUseCase";
+import { AddRemarkUseCase, AddRemarkInput } from "../usecases/remarks/AddRemarkUseCase";
+
 // Costing Imports
 import { ICostingRepository } from "../interfaces/repositories/ICostingRepository";
 import { CostingRepository } from "../repositories/mongo/CostingRepository";
@@ -183,6 +190,7 @@ container.registerSingleton<IQuotationRepository>("QuotationRepository", Quotati
 container.registerSingleton<IAuditLogRepository>("AuditLogRepository", AuditLogRepository);
 container.registerSingleton<ICostingRepository>("CostingRepository", CostingRepository);
 container.registerSingleton<IScheduleRepository>("ScheduleRepository", ScheduleRepository);
+container.registerSingleton<IRemarkRepository>("RemarkRepository", RemarkRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
@@ -263,6 +271,10 @@ container.registerSingleton<IUseCase<{ data: CreateScheduleDto; user: string }, 
 container.registerSingleton<IUseCase<GetSchedulesQuery, PaginatedSchedules>>("GetSchedulesUseCase", GetSchedulesUseCase);
 container.registerSingleton<IUseCase<{ id: string; data: UpdateScheduleDto; user: string }, ISchedule | null>>("UpdateScheduleUseCase", UpdateScheduleUseCase);
 container.registerSingleton<IUseCase<{ id: string; user: string }, boolean>>("DeleteScheduleUseCase", DeleteScheduleUseCase);
+
+// Remark Use Cases
+container.registerSingleton<IUseCase<{ entityType: RemarkEntityType; entityId: string }, IRemark[]>>("GetRemarksUseCase", GetRemarksUseCase);
+container.registerSingleton<IUseCase<AddRemarkInput, IRemark>>("AddRemarkUseCase", AddRemarkUseCase);
 
 // Costing UseCases
 container.registerSingleton<IUseCase<{ data: CreateCostingDto }, ICosting>>(

@@ -37,6 +37,7 @@ import { SMRReportView } from "./SMRReportView";
 import { SMRApprovalModal } from "./SMRApprovalModal";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { toast } from "sonner";
+import { UnifiedScheduler } from "../../components/UnifiedScheduler";
 
 export function ComplaintDetail() {
   const { id } = useParams();
@@ -371,6 +372,7 @@ export function ComplaintDetail() {
             <TabsList className="w-fit h-12 bg-transparent p-0 rounded inline-flex flex-nowrap justify-start gap-6 lg:gap-8">
               {[
                 { value: "details", label: "Details" },
+                { value: "schedules", label: "Schedules" },
                 { value: "service", label: "SM Report" },
                 { value: "remarks", label: `Remarks (${complaint.remarks.length})` },
               ].map((tab) => (
@@ -696,6 +698,20 @@ export function ComplaintDetail() {
                   emptyMessage="No follow-up remarks recorded."
                   placeholder="Add a progress remark or site notes..."
                   sectionTitle="Add Follow-up Remark"
+                />
+              </TabsContent>
+
+              {/* SCHEDULES TAB */}
+              <TabsContent value="schedules" className="m-0">
+                <UnifiedScheduler
+                  entityId={complaint.id ?? ""}
+                  entityType="complaint"
+                  currentDate={complaint.expectedResolution}
+                  currentStatus={complaint.status}
+                  assignedStaffIds={complaint.assignedStaffIds ?? []}
+                  assignedName={complaint.assignedTo?.join(", ")}
+                  onSuccess={(updatedComplaint) => setComplaint(updatedComplaint)}
+                  isClosed={complaint.status === "Resolved"}
                 />
               </TabsContent>
 

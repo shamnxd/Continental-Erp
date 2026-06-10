@@ -43,6 +43,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { cn } from "../../lib/utils";
+import { UnifiedScheduler } from "../../components/UnifiedScheduler";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import {
   AlertDialog,
@@ -170,33 +171,7 @@ export function EnquiryDetail() {
   const [clients, setClients] = useState<Client[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [scheduleDateInput, setScheduleDateInput] = useState("");
-  const [scheduleStatusInput, setScheduleStatusInput] = useState<EnquiryStatus>("Site Visit Scheduled");
-  const [scheduleStaffIds, setScheduleStaffIds] = useState<string[]>([]);
-  const [isUpdatingSchedule, setIsUpdatingSchedule] = useState(false);
-
   const isClosed = enquiry?.status === "Closed";
-
-  const handleSaveSchedule = async () => {
-    if (!enquiry?.id) return;
-    setIsUpdatingSchedule(true);
-    try {
-      const res = await updateEnquiryApi(enquiry.id, {
-        followUpDate: scheduleDateInput ? new Date(scheduleDateInput).toISOString() : null,
-        status: scheduleStatusInput,
-        assignedStaffId: scheduleStaffIds[0] || "",
-      });
-      if (res.success) {
-        setEnquiry(res.data);
-        toast.success("Schedule updated successfully");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to update schedule");
-    } finally {
-      setIsUpdatingSchedule(false);
-    }
-  };
 
   const loadEnquiry = useCallback(async () => {
     if (!id) return;
@@ -224,13 +199,7 @@ export function EnquiryDetail() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (enquiry) {
-      setScheduleDateInput(enquiry.followUpDate ? enquiry.followUpDate.split("T")[0] : "");
-      setScheduleStatusInput(enquiry.status === "Site Visit Scheduled" ? "Site Visit Scheduled" : "Follow-up Required");
-      setScheduleStaffIds(enquiry.assignedStaffId ? [enquiry.assignedStaffId] : []);
-    }
-  }, [enquiry]);
+
 
   const timelineItems = useMemo(() => {
     if (!enquiry) return [];
@@ -793,156 +762,16 @@ export function EnquiryDetail() {
               </TabsContent>
 
               <TabsContent value="schedules" className="m-0">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {/* Left Part: Current Schedule View */}
-                  <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4">
-                      <div className="flex items-center gap-2 pb-3 border-b border-border/50">
-                        <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
-                          <CalendarDays className="h-4 w-4 text-pink-600" />
-                        </div>
-                        <h3 className="text-base font-semibold text-foreground">Current Schedule</h3>
-                      </div>
-
-                      {enquiry.followUpDate ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border/60">
-                            <div className="flex items-start gap-3">
-                              <div className="h-10 w-10 rounded-full bg-pink-50 flex items-center justify-center shrink-0 border border-pink-100 mt-0.5 animate-pulse">
-                                <Clock className="h-5 w-5 text-pink-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-foreground text-sm">
-                                  {enquiry.status === "Site Visit Scheduled" ? "Site Visit Scheduled" : "Follow-up Scheduled"}
-                                </h4>
-                                <p className="text-sm text-muted-foreground mt-0.5">
-                                  {new Date(enquiry.followUpDate).toLocaleDateString("en-IN", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })}
-                                </p>
-                                {enquiry.assignedTo && (
-                                  <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground bg-background px-2.5 py-1 rounded-md border w-fit shadow-xs">
-                                    <User className="h-3 w-3 text-pink-600" />
-                                    <span>Assigned to: <strong>{enquiry.assignedTo}</strong></span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <span className={cn(
-                              "px-2.5 py-1 text-[10px] font-bold uppercase rounded-full border shrink-0 self-start sm:self-center",
-                              enquiry.status === "Site Visit Scheduled" 
-                                ? "bg-blue-50/60 text-blue-700 border-blue-100" 
-                                : "bg-amber-50/60 text-amber-700 border-amber-100"
-                            )}>
-                              {enquiry.status}
-                            </span>
-                          </div>
-
-                          <div className="text-xs text-muted-foreground leading-relaxed bg-amber-500/5 p-3.5 rounded-lg border border-amber-500/10 flex items-start gap-2.5">
-                            <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                            <span>
-                              This event is linked to the active enquiry. Setting a follow-up/site-visit date ensures this enquiry appears on the schedules calendar dashboard.
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-10 bg-muted/20 rounded-lg border border-dashed border-border p-4">
-                          <CalendarDays className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
-                          <h4 className="font-medium text-foreground text-sm mb-1">No upcoming schedules found</h4>
-                          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                            There are no active site visits or follow-ups scheduled for this enquiry. Use the form to assign a date and status.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Part: Quick Action Form Card */}
-                  <div className="space-y-4">
-                    <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4">
-                      <div className="flex items-center gap-2 pb-3 border-b border-border/50">
-                        <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                          <CalendarDays className="h-4 w-4 text-blue-500" />
-                        </div>
-                        <h3 className="text-base font-semibold text-foreground">Schedule a Visit / Follow-up</h3>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="schedDate" className="text-xs font-semibold text-foreground">Schedule Date</Label>
-                          <Input
-                            id="schedDate"
-                            type="date"
-                            value={scheduleDateInput}
-                            onChange={(e) => setScheduleDateInput(e.target.value)}
-                            className="h-9 text-xs"
-                            disabled={isClosed}
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold text-foreground">Schedule Type / Status</Label>
-                          <Select
-                            value={scheduleStatusInput}
-                            onValueChange={(v) => setScheduleStatusInput(v as EnquiryStatus)}
-                            disabled={isClosed}
-                          >
-                            <SelectTrigger className="h-9 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Site Visit Scheduled" className="text-xs">
-                                Site Visit Scheduled
-                              </SelectItem>
-                              <SelectItem value="Follow-up Required" className="text-xs">
-                                Follow-up Required
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <StaffSelectDropdown
-                            selected={scheduleStaffIds}
-                            onChange={(ids) => setScheduleStaffIds(ids.slice(-1))}
-                            label="Assign To"
-                            placement="bottom"
-                            nameById={
-                              enquiry.assignedStaffId && enquiry.assignedTo
-                                ? { [enquiry.assignedStaffId]: enquiry.assignedTo }
-                                : undefined
-                            }
-                          />
-                        </div>
-
-                        <div className="pt-2">
-                          <Button
-                            className="w-full bg-pink-700 hover:bg-pink-800 active:scale-95 text-white text-xs font-semibold h-9 gap-1.5 transition-all shadow-sm"
-                            onClick={handleSaveSchedule}
-                            disabled={isUpdatingSchedule || isClosed}
-                          >
-                            {isUpdatingSchedule ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                <span>Updating...</span>
-                              </>
-                            ) : (
-                              <span>Save Schedule</span>
-                            )}
-                          </Button>
-                        </div>
-                        {isClosed && (
-                          <p className="text-[11px] text-center text-muted-foreground italic">
-                            Reopen this enquiry to reschedule.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <UnifiedScheduler
+                  entityId={enquiry.id ?? ""}
+                  entityType="enquiry"
+                  currentDate={enquiry.followUpDate}
+                  currentStatus={enquiry.status}
+                  assignedStaffIds={enquiry.assignedStaffId ? [enquiry.assignedStaffId] : []}
+                  assignedName={enquiry.assignedTo}
+                  onSuccess={(updatedEnquiry) => setEnquiry(updatedEnquiry)}
+                  isClosed={isClosed}
+                />
               </TabsContent>
             </Tabs>
           </div>

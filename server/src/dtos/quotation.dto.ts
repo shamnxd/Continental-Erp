@@ -5,6 +5,8 @@ const lineItemSchema = z.object({
   qty: z.number().min(0),
   rate: z.number().min(0),
   total: z.number().min(0).optional(),
+  section: z.enum(["machine_side", "low_side"]).optional().default("machine_side"),
+  unit: z.string().optional().default(""),
 });
 
 export const CreateQuotationSchema = z.object({

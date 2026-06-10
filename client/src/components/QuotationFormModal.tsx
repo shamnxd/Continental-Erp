@@ -19,6 +19,7 @@ import { Enquiry } from "../interfaces/enquiry.interface";
 import { getEnquiriesApi } from "../api/enquiry.api";
 import { useDebounce } from "../hooks/useDebounce";
 import { toast } from "sonner";
+import { DEFAULT_QUOTATION_ITEMS } from "../constants/quotationTemplate";
 
 const QUOTATION_STATUSES: QuotationStatus[] = [
   "Draft",
@@ -151,10 +152,7 @@ export function QuotationFormModal({
       setStatus("Pending Approval");
       setGstPercent(18);
       if (prefillFromEnquiry.requirement) {
-        const desc = prefillFromEnquiry.description
-          ? `${prefillFromEnquiry.requirement} - ${prefillFromEnquiry.description}`
-          : prefillFromEnquiry.requirement;
-        setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+        setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
       } else {
         setItems([emptyLineItem()]);
       }
@@ -352,10 +350,7 @@ export function QuotationFormModal({
                               setEnquirySuggestions([]);
                               setSelectedClientId(enq.clientId);
                               if (enq.requirement) {
-                                const desc = enq.description
-                                  ? `${enq.requirement} - ${enq.description}`
-                                  : enq.requirement;
-                                setItems([{ description: desc, qty: 1, rate: 0, total: 0 }]);
+                                setItems(DEFAULT_QUOTATION_ITEMS.map((item) => ({ ...item })));
                               }
                             }}
                           >
@@ -404,14 +399,39 @@ export function QuotationFormModal({
                   key={index}
                   className="grid grid-cols-12 gap-2 items-end rounded-lg border border-border/50 p-2 sm:p-0 sm:border-0"
                 >
-                  <div className="col-span-12 sm:col-span-5">
+                  <div className="col-span-12 sm:col-span-4">
+                    {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Description</Label>}
                     <Input
                       placeholder="Description"
                       value={item.description}
                       onChange={(e) => updateItem(index, "description", e.target.value)}
                     />
                   </div>
-                  <div className="col-span-4 sm:col-span-2">
+                  <div className="col-span-6 sm:col-span-2">
+                    {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Section</Label>}
+                    <Select
+                      value={item.section || "machine_side"}
+                      onValueChange={(v) => updateItem(index, "section", v as any)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="machine_side">Machine Side</SelectItem>
+                        <SelectItem value="low_side">Low Side</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-6 sm:col-span-1">
+                    {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Unit</Label>}
+                    <Input
+                      placeholder="Unit"
+                      value={item.unit || ""}
+                      onChange={(e) => updateItem(index, "unit", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-4 sm:col-span-1">
+                    {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Qty</Label>}
                     <Input
                       type="number"
                       min={0}
@@ -421,6 +441,7 @@ export function QuotationFormModal({
                     />
                   </div>
                   <div className="col-span-4 sm:col-span-2">
+                    {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Rate</Label>}
                     <Input
                       type="number"
                       min={0}
@@ -429,10 +450,10 @@ export function QuotationFormModal({
                       onChange={(e) => updateItem(index, "rate", Number(e.target.value))}
                     />
                   </div>
-                  <div className="col-span-3 sm:col-span-2 text-sm font-medium text-right pb-0 sm:pb-2">
+                  <div className="col-span-3 sm:col-span-1 text-sm font-medium text-right pb-2.5">
                     {formatInr((Number(item.qty) || 0) * (Number(item.rate) || 0))}
                   </div>
-                  <div className="col-span-1 flex justify-end pb-0 sm:pb-1">
+                  <div className="col-span-1 flex justify-end pb-1.5">
                     <Button
                       type="button"
                       variant="ghost"

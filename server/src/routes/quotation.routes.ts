@@ -11,6 +11,7 @@ const controller = new QuotationController();
 router.use(requireAuth);
 
 router.post("/", validateDto(CreateQuotationSchema), controller.create);
+router.post("/:id/revision", controller.createRevision);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateQuotationSchema), controller.update);

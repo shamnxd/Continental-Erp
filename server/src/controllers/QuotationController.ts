@@ -14,6 +14,8 @@ export class QuotationController {
   constructor(
     @inject("CreateQuotationUseCase")
     private _createQuotationUseCase?: IUseCase<CreateQuotationDto, IQuotation>,
+    @inject("CreateQuotationRevisionUseCase")
+    private _createQuotationRevisionUseCase?: IUseCase<{ id: string }, IQuotation>,
     @inject("GetQuotationsUseCase")
     private _getQuotationsUseCase?: IUseCase<GetQuotationsQuery, PaginatedQuotations>,
     @inject("GetQuotationByIdUseCase")
@@ -44,6 +46,26 @@ export class QuotationController {
         "Create Quotation",
         "Clients",
         `Created quotation: ${quotation.quotationNo} for client ${quotation.clientName}`
+      );
+
+      res.status(StatusCode.CREATED).json({ success: true, data: quotation });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public createRevision = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const quotation = await this._createQuotationRevisionUseCase!.execute({
+        id: req.params.id,
+      });
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Create Quotation Revision",
+        "Clients",
+        `Created revision Rev ${quotation.revision} for quotation: ${quotation.quotationNo}`
       );
 
       res.status(StatusCode.CREATED).json({ success: true, data: quotation });

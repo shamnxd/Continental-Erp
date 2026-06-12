@@ -294,9 +294,15 @@ container.registerSingleton<IUseCase<{ id: string; data: UpdateCostingDto }, ICo
   UpdateCostingUseCase
 );
 
+import { CreateQuotationRevisionUseCase } from "../usecases/quotations/CreateQuotationRevisionUseCase";
+
 container.registerSingleton<IUseCase<CreateQuotationDto, IQuotation>>(
   "CreateQuotationUseCase",
   CreateQuotationUseCase,
+);
+container.registerSingleton<IUseCase<{ id: string }, IQuotation>>(
+  "CreateQuotationRevisionUseCase",
+  CreateQuotationRevisionUseCase,
 );
 container.registerSingleton<IUseCase<GetQuotationsQuery, PaginatedQuotations>>(
   "GetQuotationsUseCase",

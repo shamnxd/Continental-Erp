@@ -33,6 +33,9 @@ export class CreateQuotationUseCase implements IUseCase<CreateQuotationDto, IQuo
       items,
       remarks: [],
       notes: dto.notes ?? "",
+      costingId: dto.costingId || undefined,
+      revision: dto.revision ?? 0,
+      isActive: dto.isActive ?? true,
     });
 
     if (dto.enquiryId?.trim()) {

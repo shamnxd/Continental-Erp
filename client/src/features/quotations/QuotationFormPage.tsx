@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams, useLocation } from "react-router";
-import { ArrowLeft, Plus, Trash2, Search, Loader2, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, Loader2, X, Check } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -49,12 +49,22 @@ function toDateInputValue(value?: string | null): string {
   return d.toISOString().split("T")[0];
 }
 
-function emptyLineItem(): QuotationLineItem {
-  return { description: "", qty: 1, rate: 0, total: 0, section: "machine_side", unit: "" };
+interface FormQuotationLineItem extends QuotationLineItem {
+  discountPercent?: number;
+  originalRate?: number;
 }
 
-function computeTotals(items: QuotationLineItem[], gstPercent: number) {
-  const amount = items.reduce((sum, i) => sum + (i.qty || 0) * (i.rate || 0), 0);
+function emptyLineItem(): FormQuotationLineItem {
+  return { description: "", qty: 1, rate: 0, total: 0, section: "machine_side", unit: "", discountPercent: 0, originalRate: 0 };
+}
+
+function computeTotals(items: FormQuotationLineItem[], gstPercent: number) {
+  const amount = items.reduce((sum, i) => {
+    const originalRate = Number(i.originalRate ?? i.rate) || 0;
+    const disc = Number(i.discountPercent) || 0;
+    const discountedRate = Math.round(originalRate * (1 - disc / 100));
+    return sum + (i.qty || 0) * discountedRate;
+  }, 0);
   const gst = Math.round((amount * gstPercent) / 100);
   return { amount, gst, total: amount + gst };
 }
@@ -71,6 +81,8 @@ export function QuotationFormPage() {
 
   const prefillFromEnquiry = (location.state as { prefillFromEnquiry?: QuotationPrefillFromEnquiry } | null)
     ?.prefillFromEnquiry;
+  const prefillFromCosting = (location.state as { prefillFromCosting?: any } | null)
+    ?.prefillFromCosting;
 
   const [quotation, setQuotation] = useState<Quotation | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
@@ -79,6 +91,7 @@ export function QuotationFormPage() {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [enquiryId, setEnquiryId] = useState("");
   const [enquiryNo, setEnquiryNo] = useState("");
+  const [costingId, setCostingId] = useState("");
   const [enquirySearch, setEnquirySearch] = useState("");
   const debouncedEnquirySearch = useDebounce(enquirySearch, 250);
   const [enquirySuggestions, setEnquirySuggestions] = useState<Enquiry[]>([]);
@@ -91,7 +104,7 @@ export function QuotationFormPage() {
   });
   const [status, setStatus] = useState<QuotationStatus>("Pending Approval");
   const [gstPercent, setGstPercent] = useState(18);
-  const [items, setItems] = useState<QuotationLineItem[]>([emptyLineItem()]);
+  const [items, setItems] = useState<FormQuotationLineItem[]>([emptyLineItem()]);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
@@ -117,7 +130,7 @@ export function QuotationFormPage() {
       search: debouncedEnquirySearch.trim(),
       clientId: selectedClientId || undefined,
     })
-      .then((res) => {
+      .then(async (res) => {
         if (res.success) {
           const openOnly = res.data.filter(
             (e) =>
@@ -125,7 +138,24 @@ export function QuotationFormPage() {
               e.status !== "Closed" &&
               e.status !== "Converted to Project",
           );
-          setEnquirySuggestions(openOnly);
+          
+          // Parallel-fetch costing sheets for all suggestion items to check for approved status
+          const enquiriesWithApprovedFlag = await Promise.all(
+            openOnly.map(async (enq) => {
+              try {
+                const costingsRes = await getCostingsByEnquiryIdApi(enq.id!);
+                if (costingsRes.success && costingsRes.data.length > 0) {
+                  const hasApprovedCosting = costingsRes.data.some((c) => !!c.approvedBy);
+                  return { ...enq, hasApprovedCosting };
+                }
+              } catch (e) {
+                console.error("Failed to load costing status for enquiry", e);
+              }
+              return { ...enq, hasApprovedCosting: false };
+            })
+          );
+
+          setEnquirySuggestions(enquiriesWithApprovedFlag);
         }
       })
       .catch(() => setEnquirySuggestions([]))
@@ -134,7 +164,51 @@ export function QuotationFormPage() {
 
   useEffect(() => {
     if (!isEdit || !id) {
-      if (prefillFromEnquiry) {
+      if (prefillFromCosting) {
+        setSelectedClientId(prefillFromCosting.clientId);
+        setEnquiryId(prefillFromCosting.enquiryId);
+        setEnquiryNo(prefillFromCosting.enquiryNo);
+        setCostingId(prefillFromCosting.id || prefillFromCosting._id || "");
+        
+        const mappedItems: FormQuotationLineItem[] = [];
+
+        if (prefillFromCosting.highSide?.equipment) {
+          prefillFromCosting.highSide.equipment.forEach((eq: any) => {
+            const pct = eq.cpfMarkupPercent ?? prefillFromCosting.highSide.cpfMarkupPercent ?? 16;
+            const rateWithMarkup = Math.round(eq.unitRate * (1 + pct / 100));
+            mappedItems.push({
+              description: eq.description,
+              qty: eq.qty || 0,
+              rate: rateWithMarkup,
+              originalRate: rateWithMarkup,
+              discountPercent: 0,
+              total: (eq.qty || 0) * rateWithMarkup,
+              section: "machine_side",
+              unit: "No"
+            });
+          });
+        }
+
+        if (prefillFromCosting.lowSide?.items) {
+          prefillFromCosting.lowSide.items.forEach((item: any) => {
+            if (item.qty > 0) {
+              const rateWithMarkup = Math.round((item.qRate || 0) / (item.qty || 1));
+              mappedItems.push({
+                description: item.description,
+                qty: item.qty || 0,
+                rate: rateWithMarkup,
+                originalRate: rateWithMarkup,
+                discountPercent: 0,
+                total: (item.qty || 0) * rateWithMarkup,
+                section: "low_side",
+                unit: item.unit || "Rmt"
+              });
+            }
+          });
+        }
+
+        setItems(mappedItems.length ? mappedItems : [emptyLineItem()]);
+      } else if (prefillFromEnquiry) {
         setSelectedClientId(prefillFromEnquiry.clientId);
         setEnquiryId(prefillFromEnquiry.enquiryId);
         setEnquiryNo(prefillFromEnquiry.enquiryNo);
@@ -152,16 +226,36 @@ export function QuotationFormPage() {
         setSelectedClientId(q.clientId);
         setEnquiryId(q.enquiryId ?? "");
         setEnquiryNo(q.enquiryNo ?? "");
+        setCostingId(q.costingId ?? "");
         setQuotationDate(toDateInputValue(q.date));
         setValidUntil(toDateInputValue(q.validUntil));
         setStatus(q.status);
         setGstPercent(q.gstPercent ?? 18);
-        setItems(q.items?.length ? q.items.map((i) => ({ ...i })) : [emptyLineItem()]);
+        setItems(q.items?.length ? q.items.map((i) => {
+          const match = i.description.match(/(.*) \((\d+(?:\.\d+)?)% Disc\.\)/);
+          if (match) {
+            const desc = match[1];
+            const disc = parseFloat(match[2]);
+            const originalRate = Math.round(i.rate / (1 - disc / 100));
+            return {
+              ...i,
+              description: desc,
+              discountPercent: disc,
+              originalRate: originalRate,
+              rate: originalRate
+            };
+          }
+          return {
+            ...i,
+            discountPercent: 0,
+            originalRate: i.rate
+          };
+        }) : [emptyLineItem()]);
         setNotes(q.notes ?? "");
       })
       .catch(() => toast.error("Failed to load quotation"))
       .finally(() => setIsLoading(false));
-  }, [id, isEdit, prefillFromEnquiry]);
+  }, [id, isEdit, prefillFromEnquiry, prefillFromCosting]);
 
   useEffect(() => {
     if (isEdit || !enquiryId) return;
@@ -175,11 +269,15 @@ export function QuotationFormPage() {
 
           if (activeCosting.highSide?.equipment) {
             activeCosting.highSide.equipment.forEach((eq) => {
+              const pct = eq.cpfMarkupPercent ?? activeCosting.highSide.cpfMarkupPercent ?? 16;
+              const rateWithMarkup = Math.round(eq.unitRate * (1 + pct / 100));
               mappedItems.push({
                 description: eq.description,
                 qty: eq.qty || 0,
-                rate: eq.unitRate || 0,
-                total: (eq.qty || 0) * (eq.unitRate || 0),
+                rate: rateWithMarkup,
+                originalRate: rateWithMarkup,
+                discountPercent: 0,
+                total: (eq.qty || 0) * rateWithMarkup,
                 section: "machine_side",
                 unit: "No"
               });
@@ -189,11 +287,14 @@ export function QuotationFormPage() {
           if (activeCosting.lowSide?.items) {
             activeCosting.lowSide.items.forEach((item) => {
               if (item.qty > 0) {
+                const rateWithMarkup = Math.round((item.qRate || 0) / (item.qty || 1));
                 mappedItems.push({
                   description: item.description,
                   qty: item.qty || 0,
-                  rate: item.stdRate || 0,
-                  total: (item.qty || 0) * (item.stdRate || 0),
+                  rate: rateWithMarkup,
+                  originalRate: rateWithMarkup,
+                  discountPercent: 0,
+                  total: (item.qty || 0) * rateWithMarkup,
                   section: "low_side",
                   unit: item.unit || "Rmt"
                 });
@@ -228,18 +329,25 @@ export function QuotationFormPage() {
     () =>
       items.map((item) => {
         const qty = Number(item.qty) || 0;
-        const rate = Number(item.rate) || 0;
+        const originalRate = Number(item.originalRate ?? item.rate) || 0;
+        const disc = Number(item.discountPercent) || 0;
+        const rate = Math.round(originalRate * (1 - disc / 100));
         return { ...item, qty, rate, total: qty * rate };
       }),
     [items],
   );
 
-  const totals = useMemo(() => computeTotals(normalizedItems, gstPercent), [normalizedItems, gstPercent]);
+  const totals = useMemo(() => computeTotals(items, gstPercent), [items, gstPercent]);
 
-  const updateItem = (index: number, field: keyof QuotationLineItem, value: string | number) => {
+  const updateItem = (index: number, field: keyof FormQuotationLineItem, value: string | number) => {
     setItems((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
+      if (field === "originalRate" || field === "discountPercent") {
+        const originalRate = Number(next[index].originalRate ?? next[index].rate) || 0;
+        const disc = Number(next[index].discountPercent) || 0;
+        next[index].rate = Math.round(originalRate * (1 - disc / 100));
+      }
       return next;
     });
   };
@@ -256,7 +364,20 @@ export function QuotationFormPage() {
       toast.error("Please select a client");
       return;
     }
-    const validItems = normalizedItems.filter((i) => i.description.trim());
+    const validItems = normalizedItems
+      .filter((i) => i.description.trim())
+      .map((i) => {
+        const disc = Number(i.discountPercent) || 0;
+        const desc = disc > 0 ? `${i.description.trim()} (${disc}% Disc.)` : i.description.trim();
+        return {
+          description: desc,
+          qty: i.qty,
+          rate: i.rate,
+          total: i.total,
+          section: i.section,
+          unit: i.unit,
+        };
+      });
     if (validItems.length === 0) {
       toast.error("Add at least one line item");
       return;
@@ -274,6 +395,7 @@ export function QuotationFormPage() {
       items: validItems,
       notes: notes.trim(),
       status,
+      costingId: costingId.trim() || undefined,
     };
 
     setIsSubmitting(true);
@@ -406,37 +528,93 @@ export function QuotationFormPage() {
                     </button>
                   )}
 
-                  {!prefillFromEnquiry && enquirySearch.trim() && (
-                    <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md overflow-hidden">
-                      {isLoadingEnquiries ? (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">Searching…</div>
-                      ) : enquirySuggestions.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">No enquiries found</div>
-                      ) : (
-                        <div className="max-h-56 overflow-auto">
-                          {enquirySuggestions.map((enq) => (
-                            <button
-                              key={enq.id}
-                              type="button"
-                              className="w-full text-left px-3 py-2 hover:bg-muted/60 text-sm"
-                              onClick={() => {
-                                setEnquiryId(enq.id || "");
-                                setEnquiryNo(enq.enquiryNo);
-                                setEnquirySearch("");
-                                setEnquirySuggestions([]);
-                                setSelectedClientId(enq.clientId);
-                              }}
-                            >
-                              <div className="font-semibold text-foreground">{enq.enquiryNo}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {enq.clientName} · {enq.phone}
+                  {!prefillFromEnquiry && enquirySearch.trim() && (() => {
+                    const approvedCostingEnquiries = enquirySuggestions.filter((e: any) => e.hasApprovedCosting);
+                    const otherEnquiries = enquirySuggestions.filter((e: any) => !e.hasApprovedCosting);
+
+                    return (
+                      <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-md overflow-hidden animate-in fade-in-50 slide-in-from-top-1 duration-200">
+                        {isLoadingEnquiries ? (
+                          <div className="px-3 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-pink-700" />
+                            <span>Searching…</span>
+                          </div>
+                        ) : enquirySuggestions.length === 0 ? (
+                          <div className="px-3 py-2.5 text-sm text-muted-foreground">No enquiries found</div>
+                        ) : (
+                          <div className="max-h-64 overflow-auto divide-y divide-border/40">
+                            {approvedCostingEnquiries.length > 0 && (
+                              <div>
+                                <div className="bg-green-50/50 dark:bg-green-950/10 px-3 py-1.5 text-[10px] font-bold text-green-700 uppercase tracking-wider border-b border-border/30 flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                  Costing Approved
+                                </div>
+                                {approvedCostingEnquiries.map((enq) => (
+                                  <button
+                                    key={enq.id}
+                                    type="button"
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-muted/65 text-sm transition-colors duration-150 flex flex-col gap-0.5"
+                                    onClick={() => {
+                                      setEnquiryId(enq.id || "");
+                                      setEnquiryNo(enq.enquiryNo);
+                                      setEnquirySearch("");
+                                      setEnquirySuggestions([]);
+                                      setSelectedClientId(enq.clientId);
+                                    }}
+                                  >
+                                    <div className="font-bold text-slate-800 flex items-center justify-between">
+                                      <div className="flex items-center gap-1.5">
+                                        <span>{enq.enquiryNo}</span>
+                                        <div className="h-4 w-4 rounded-full bg-green-100 flex items-center justify-center">
+                                          <Check className="h-3 w-3 text-green-600 stroke-[3]" />
+                                        </div>
+                                      </div>
+                                      <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-bold uppercase">Ready</span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {enq.clientName} · {enq.phone}
+                                    </div>
+                                  </button>
+                                ))}
                               </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            )}
+
+                            {otherEnquiries.length > 0 && (
+                              <div>
+                                {approvedCostingEnquiries.length > 0 && (
+                                  <div className="bg-slate-50/80 px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-y border-border/30">
+                                    Other Enquiries (Pending Approval / No Costing)
+                                  </div>
+                                )}
+                                {otherEnquiries.map((enq) => (
+                                  <button
+                                    key={enq.id}
+                                    type="button"
+                                    className="w-full text-left px-3.5 py-2.5 hover:bg-muted/65 text-sm transition-colors duration-150 flex flex-col gap-0.5"
+                                    onClick={() => {
+                                      setEnquiryId(enq.id || "");
+                                      setEnquiryNo(enq.enquiryNo);
+                                      setEnquirySearch("");
+                                      setEnquirySuggestions([]);
+                                      setSelectedClientId(enq.clientId);
+                                    }}
+                                  >
+                                    <div className="font-bold text-slate-800 flex items-center justify-between">
+                                      <span>{enq.enquiryNo}</span>
+                                      <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-medium">No Approved Costing</span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {enq.clientName} · {enq.phone}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               {isEdit && (
@@ -470,18 +648,18 @@ export function QuotationFormPage() {
                 {items.map((item, index) => (
                   <div
                     key={index}
-                    className="grid grid-cols-12 gap-2 items-end rounded-lg border border-border/50 p-2 sm:p-0 sm:border-0"
+                    className="grid grid-cols-12 gap-2 items-end rounded-lg border border-border/50 p-2 md:p-0 md:border-0"
                   >
-                    <div className="col-span-12 sm:col-span-4">
-                      {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Description</Label>}
+                    <div className="col-span-12 md:col-span-3">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Description</Label>}
                       <Input
                         placeholder="Description"
                         value={item.description}
                         onChange={(e) => updateItem(index, "description", e.target.value)}
                       />
                     </div>
-                    <div className="col-span-6 sm:col-span-2">
-                      {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Section</Label>}
+                    <div className="col-span-6 md:col-span-2">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Section</Label>}
                       <Select
                         value={item.section || "machine_side"}
                         onValueChange={(v) => updateItem(index, "section", v as any)}
@@ -495,16 +673,16 @@ export function QuotationFormPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="col-span-6 sm:col-span-1">
-                      {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Unit</Label>}
+                    <div className="col-span-6 md:col-span-1">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Unit</Label>}
                       <Input
                         placeholder="Unit"
                         value={item.unit || ""}
                         onChange={(e) => updateItem(index, "unit", e.target.value)}
                       />
                     </div>
-                    <div className="col-span-4 sm:col-span-1">
-                      {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Qty</Label>}
+                    <div className="col-span-4 md:col-span-1">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Qty</Label>}
                       <Input
                         type="number"
                         min={0}
@@ -513,17 +691,28 @@ export function QuotationFormPage() {
                         onChange={(e) => updateItem(index, "qty", Number(e.target.value))}
                       />
                     </div>
-                    <div className="col-span-4 sm:col-span-2">
-                      {index === 0 && <Label className="text-xs text-muted-foreground hidden sm:block">Rate</Label>}
+                    <div className="col-span-4 md:col-span-2">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Rate</Label>}
                       <Input
                         type="number"
                         min={0}
                         placeholder="Rate"
-                        value={item.rate || ""}
-                        onChange={(e) => updateItem(index, "rate", Number(e.target.value))}
+                        value={item.originalRate ?? item.rate ?? ""}
+                        onChange={(e) => updateItem(index, "originalRate", Number(e.target.value))}
                       />
                     </div>
-                    <div className="col-span-3 sm:col-span-1 text-sm font-medium text-right pb-2.5">
+                    <div className="col-span-4 md:col-span-1">
+                      {index === 0 && <Label className="text-xs text-muted-foreground hidden md:block">Disc %</Label>}
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder="0"
+                        value={item.discountPercent ?? ""}
+                        onChange={(e) => updateItem(index, "discountPercent", Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="col-span-3 md:col-span-1 text-sm font-medium text-right pb-2.5">
                       {formatInr((Number(item.qty) || 0) * (Number(item.rate) || 0))}
                     </div>
                     <div className="col-span-1 flex justify-end pb-1.5">

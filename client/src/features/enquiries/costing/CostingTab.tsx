@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { useAppSelector } from "../../../store/hooks";
 import {
   FileSpreadsheet,
@@ -35,6 +36,8 @@ import {
   deleteCopperPipeRateApi,
   ICopperPipeRateConfig
 } from "../../../api/costing.api";
+import { getQuotationsApi } from "../../../api/quotation.api";
+import { Quotation } from "../../../interfaces/quotation.interface";
 import { calculateCosting, createDefaultCosting, getHvacTemplateItems, syncEstimatesToLowSide, normalizeSize } from "./CostingCalculator";
 import { CostingPrintView } from "./CostingPrintView";
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "../../../components/ui/popover";
@@ -87,7 +90,7 @@ const PercentageAndAmountInput = ({
         </div>
         {/* Flat Amount Input */}
         <div className="relative flex-1">
-          <span className="absolute left-2.5 top-2 text-xs text-muted-foreground font-bold">â‚¹</span>
+          <span className="absolute left-2.5 top-2 text-xs text-muted-foreground font-bold">₹</span>
           <input
             type="number"
             value={calculatedAmount || 0}
@@ -110,7 +113,7 @@ const PercentageAndAmountInput = ({
 };
 
 // ---------------------------------------------------------------------------
-// REMARK CELL â€“ reusable icon button + modal for adding/editing notes
+// REMARK CELL – reusable icon button + modal for adding/editing notes
 // ---------------------------------------------------------------------------
 interface RemarkCellProps {
   remark: string | undefined;
@@ -156,7 +159,7 @@ const RemarkCell = ({ remark, onSave }: RemarkCellProps) => {
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      {/* Hover tooltip using Popover (portal-rendered â€” escapes table overflow) */}
+      {/* Hover tooltip using Popover (portal-rendered — escapes table overflow) */}
       <Popover>
         <PopoverTrigger asChild>
           <button
@@ -270,7 +273,7 @@ const isRowSummary = (ws: any, R: number, range: any) => {
         valLower === "gst" ||
         valLower === "over head" ||
         valLower.startsWith("profit")
-        // NOTE: "freight" removed â€” Freight is a calculation row in estimates, not a grand-total summary
+        // NOTE: "freight" removed — Freight is a calculation row in estimates, not a grand-total summary
       ) {
         return true;
       }
@@ -349,9 +352,9 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
             if (val > 0 && val <= 1 && (cellRef.includes("D") || cellRef.includes("F") || cellRef.includes("G") || cellRef.includes("H") || cellRef.includes("I") || cellRef.includes("J") || cellRef.includes("K"))) {
               cell.z = "0.0%";
             } else if (val > 5 && C >= 2) {
-              // Only apply â‚¹ format from column C onwards â€” columns A (Sr.No) and B (Description)
-              // are never monetary values. Without this guard, Sr.No 6, 7, 8, 9 render as â‚¹6, â‚¹7â€¦
-              cell.z = "â‚¹#,##0";
+              // Only apply ₹ format from column C onwards — columns A (Sr.No) and B (Description)
+              // are never monetary values. Without this guard, Sr.No 6, 7, 8, 9 render as ₹6, ₹7…
+              cell.z = "₹#,##0";
             } else {
               cell.z = "0";
             }
@@ -363,14 +366,14 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         }
       }
 
-      // â”€â”€ Reference theme: Banner rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      // Row 2: Sheet-title banner â†’ bright green #00B050 (matches reference exactly)
+      // ── Reference theme: Banner rows ──────────────────────────────────────
+      // Row 2: Sheet-title banner → bright green #00B050 (matches reference exactly)
       if (rowNum === 2) {
         cell.s.font = { name: "Calibri", sz: 12, bold: true, color: { rgb: "FFFFFF" } };
         cell.s.fill = { fgColor: { rgb: "00B050" } }; // Reference green
         cell.s.alignment = { vertical: "center", horizontal: "center" };
       } else if (rowNum === 3) {
-        // Row 3: Sub-title banner â†’ same green, white bold text
+        // Row 3: Sub-title banner → same green, white bold text
         cell.s.font = { name: "Calibri", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
         cell.s.fill = { fgColor: { rgb: "00B050" } }; // Reference green
         cell.s.alignment = { vertical: "center", horizontal: "center" };
@@ -389,11 +392,11 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
       const ESTIMATE_HEADER_VALUES = new Set([
         // Generic headers
         "Description", "UR", "Qty", "Unit", "Total",
-        // Section 7 â€“ GSS Ducting
+        // Section 7 – GSS Ducting
         "Desc.", "Qty (Sq.m)", "No. Of Sheet", "Wt/Sheet", "Total Wt", "Rate/Kg", "Rate/SqMtr",
-        // Section 8 â€“ Air Terminals
+        // Section 8 – Air Terminals
         "Grill Size/Desc", "Grill Size", "Area (Sq.ft)", "Rate/Sq. ft",
-        // Section 9 â€“ Eyeball Diffuser
+        // Section 9 – Eyeball Diffuser
         "Rate",
       ]);
       const isTableHeaderRow = 
@@ -409,7 +412,7 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         cell.s.alignment = { vertical: "center", horizontal: "center" };
       }
 
-      // â”€â”€ Summary rows (Total, Sub Total, Grand Total, Project Value, Final Value) â”€â”€
+      // ── Summary rows (Total, Sub Total, Grand Total, Project Value, Final Value) ──
       // Reference: soft blue #95B3D7 (accounts section gets yellow override below)
       if (isSummaryRow && rowNum > 8) {
         cell.s.font = { name: "Calibri", sz: 9, bold: true, color: { rgb: "1E293B" } };
@@ -420,9 +423,9 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         }
       }
 
-      // â”€â”€ HIGH SIDE: Accounts section â†’ yellow #FFFF00 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── HIGH SIDE: Accounts section → yellow #FFFF00 ───────────────────────
       // The accounts section (stacked below engineering) gets yellow background
-      // on its title, header, and all summary/total rows â€” matching the reference
+      // on its title, header, and all summary/total rows — matching the reference
       // yellow band applied to the accounts columns (H-K) in the original.
       if (tabType === "highside" && acctStartRow > 0 && rowNum >= acctStartRow) {
         if (rowNum === acctStartRow) {
@@ -431,7 +434,7 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
           cell.s.fill = { fgColor: { rgb: "FFFF00" } };
           cell.s.alignment = { vertical: "center", horizontal: "center" };
         } else if (rowNum === acctStartRow + 1) {
-          // Accounts column-header row (Sr.No, Equipment Description, Material Costâ€¦)
+          // Accounts column-header row (Sr.No, Equipment Description, Material Cost…)
           cell.s.font = { name: "Calibri", sz: 9, bold: true, color: { rgb: "1E293B" } };
           cell.s.fill = { fgColor: { rgb: "FFFF00" } };
           cell.s.alignment = { vertical: "center", horizontal: "center" };
@@ -442,7 +445,7 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         }
       }
 
-      // â”€â”€ LOW SIDE: Accounts columns (J-M, indices 9-12) â†’ yellow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── LOW SIDE: Accounts columns (J-M, indices 9-12) → yellow ───────────
       // Reference uses yellow on the ACTUAL EXPENSE header columns and total rows
       if (tabType === "lowside" && C >= 9 && C <= 12) {
         if (rowNum === 9 || rowNum === 10) {
@@ -457,23 +460,23 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         }
       }
 
-      // â”€â”€ MATERIAL SUMMARY: Section / sub-section title styling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      // Reference has NO colored fills on section titles â€” just bold text + borders.
+      // ── MATERIAL SUMMARY: Section / sub-section title styling ────────────
+      // Reference has NO colored fills on section titles — just bold text + borders.
       if (tabType === "estimates" && rowNum > 8) {
         const titleCell = ws[XLSX.utils.encode_cell({ r: R, c: 0 })];
         if (titleCell && typeof titleCell.v === "string") {
           const desc = titleCell.v;
           // IMPORTANT: Use \.\s (dot + space) not just \. so decimal numbers like
           // "0.875", "0.5", "1.125" (pipe sizes) are NOT matched as section headers.
-          // "1. Installation" has a space â†’ matches. "0.875" has no space â†’ does NOT match.
-          const isNumberedSection = /^\d+\.\s/.test(desc);   // "1. Installation", "7. Ductingâ€¦"
-          const isLetterSection   = /^[a-d]\.\s/.test(desc); // "a. GSS Ducting", "b. Thermalâ€¦"
+          // "1. Installation" has a space → matches. "0.875" has no space → does NOT match.
+          const isNumberedSection = /^\d+\.\s/.test(desc);   // "1. Installation", "7. Ducting…"
+          const isLetterSection   = /^[a-d]\.\s/.test(desc); // "a. GSS Ducting", "b. Thermal…"
           const isTotalForRow     = desc.startsWith("Total for") || desc === "Total";
           if (isNumberedSection) {
-            // Bold, slightly larger text, blue top+bottom border â€” NO fill
-            // (cell.s.fill = {} renders as BLACK in xlsx-js-style â€” must use patternType:"none")
+            // Bold, slightly larger text, blue top+bottom border — NO fill
+            // (cell.s.fill = {} renders as BLACK in xlsx-js-style — must use patternType:"none")
             cell.s.font = { name: "Calibri", sz: 10, bold: true, color: { rgb: "1E293B" } };
-            cell.s.fill = { patternType: "none" }; // Explicit "no fill" â€” avoids black default
+            cell.s.fill = { patternType: "none" }; // Explicit "no fill" — avoids black default
             cell.s.border.bottom = { style: "thin", color: { rgb: "93CDDD" } };
             cell.s.border.top    = { style: "thin", color: { rgb: "93CDDD" } };
           } else if (isLetterSection) {
@@ -486,7 +489,7 @@ const applyWorksheetStyles = (ws: any, tabType: "summary" | "highside" | "lowsid
         }
       }
 
-      // Copper pipe rates special headers â€” use reference green
+      // Copper pipe rates special headers — use reference green
       if (tabType === "copper_pipes" && (cell.v === "HARD PIPES" || cell.v === "SOFT PIPES")) {
         cell.s.font = { name: "Calibri", sz: 10, bold: true, color: { rgb: "FFFFFF" } };
         cell.s.fill = { fgColor: { rgb: "00B050" } }; // Reference green
@@ -516,6 +519,8 @@ export function CostingTab({ enquiry }: CostingTabProps) {
   const [isCloning, setIsCloning] = useState(false);
   const [activeTab, setActiveTab] = useState<"summary" | "highside" | "lowside" | "estimates" | "copper_pipes">("summary");
   const [copperPipeRates, setCopperPipeRates] = useState<ICopperPipeRateConfig[]>([]);
+  const navigate = useNavigate();
+  const [linkedQuotations, setLinkedQuotations] = useState<Quotation[]>([]);
 
   // Copper pipe rates modals states
   const [isRateModalOpen, setIsRateModalOpen] = useState(false);
@@ -644,22 +649,22 @@ export function CostingTab({ enquiry }: CostingTabProps) {
         if (item.description) list.push({ description: item.description, qty: item.qty || 0, unit: item.unit || "Lot", ur: item.ur || 0, category: "ducting" });
       });
       
-      // 8. Air Terminals â€“ dynamic items
+      // 8. Air Terminals – dynamic items
       (est.airTerminals?.items || []).forEach(item => {
         if (item.description) list.push({ description: item.description, qty: item.qty || 0, unit: item.unit || "Nos", ur: item.ur || 0, category: "air_terminals" });
       });
 
-      // 9. Eyeball Diffusers â€“ dynamic items
+      // 9. Eyeball Diffusers – dynamic items
       (est.eyeballDiffuser?.items || []).forEach(item => {
         if (item.description) list.push({ description: item.description, qty: item.qty || 0, unit: item.unit || "Nos", ur: item.ur || 0, category: "eyeball_diffusers" });
       });
 
-      // 10. ODU Stands â€“ dynamic items
+      // 10. ODU Stands – dynamic items
       (est.oduStand?.items || []).forEach(item => {
         if (item.description) list.push({ description: item.description, qty: item.qty || 0, unit: item.unit || "Nos", ur: item.ur || 0, category: "odu_stands" });
       });
 
-      // 11. PVC Casing Caps â€“ dynamic items
+      // 11. PVC Casing Caps – dynamic items
       (est.pvcCasingCap?.items || []).forEach(item => {
         if (item.description) list.push({ description: item.description, qty: item.qty || 0, unit: item.unit || "Rmt", ur: item.ur || 0, category: "pvc_casing_caps" });
       });
@@ -771,6 +776,21 @@ export function CostingTab({ enquiry }: CostingTabProps) {
     loadCostings();
     loadCopperPipeRates();
   }, [enquiry.id]);
+
+  useEffect(() => {
+    if (!activeCosting?.id) {
+      setLinkedQuotations([]);
+      return;
+    }
+    getQuotationsApi({ enquiryId: activeCosting.enquiryId })
+      .then((res) => {
+        if (res.success) {
+          const linked = res.data.filter((q) => q.costingId === activeCosting.id);
+          setLinkedQuotations(linked);
+        }
+      })
+      .catch((err) => console.error("Failed to load linked quotations", err));
+  }, [activeCosting?.id, activeCosting?.enquiryId]);
 
   const handleCreateCosting = async () => {
     if (!enquiry.id) return;
@@ -927,7 +947,7 @@ export function CostingTab({ enquiry }: CostingTabProps) {
       <CostingPrintView costing={activeCosting} copperPipeRates={copperPipeRates} />
 
       {/* TOP HEADER CONTROLS (SCREEN ONLY) */}
-      <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+      <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Costing Revision:</label>
           <select
@@ -957,9 +977,27 @@ export function CostingTab({ enquiry }: CostingTabProps) {
             )}
             Clone Revision
           </button>
+
+          {linkedQuotations.length > 0 && (
+            <div className="flex items-center gap-2 border-l border-border pl-3 ml-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Quotations:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {linkedQuotations.map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => navigate(`/quotations/${q.id}`)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-pink-50 text-pink-700 border border-pink-200 rounded-full hover:bg-pink-100 transition duration-150"
+                  >
+                    <span>{q.quotationNo}</span>
+                    {q.revision !== undefined && <span className="text-[10px] text-pink-500 font-semibold">(Rev {q.revision})</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={handleExportExcel}
             className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
@@ -986,6 +1024,12 @@ export function CostingTab({ enquiry }: CostingTabProps) {
               Approve Costing
             </button>
           )}
+          <button
+            onClick={() => navigate("/quotations/create", { state: { prefillFromCosting: activeCosting } })}
+            className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100 transition duration-150 shadow-sm"
+          >
+            Create Quotation
+          </button>
           <button
             onClick={handleSaveCosting}
             disabled={isSaving}
@@ -1227,7 +1271,7 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                         <th className="p-3 w-28 text-center">Qty</th>
                         <th className="p-3 w-40 text-right">Unit Rate (Excl Tax)</th>
                         <th className="p-3 w-40 text-right">Total Rate</th>
-                        <th className="p-3 w-44 text-right" title="Client Price Format â€” quoted price to client incl. tax">CPF (Client Price)</th>
+                        <th className="p-3 w-44 text-right" title="Client Price Format — quoted price to client incl. tax">CPF (Client Price)</th>
                         <th className="p-3 w-16 text-center">Actions</th>
                       </tr>
                     </thead>
@@ -1280,7 +1324,7 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                                     c.highSide.equipment[i].cpfMarkupPercent = parseFloat(e.target.value) || 0;
                                   })}
                                   className="h-8 w-full rounded border border-amber-300 bg-amber-50 pl-2 pr-6 text-right text-xs font-bold text-amber-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                                  title="CPF markup % for this item (e.g. 16 = Ã—1.16)"
+                                  title="CPF markup % for this item (e.g. 16 = ×1.16)"
                                 />
                                 <span className="absolute right-2 top-1.5 text-[10px] text-amber-500 font-bold">%</span>
                               </div>
@@ -1376,9 +1420,9 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                         <span className="text-slate-800 font-semibold">{formatCurrency(hsSubtotal)}</span>
                       </div>
 
-                      {/* Internal Cost Chain â€” mirrors Excel Column F */}
+                      {/* Internal Cost Chain — mirrors Excel Column F */}
                       <div className="flex justify-between font-medium text-[11px] border-t pt-1.5">
-                        <span className="text-slate-400 italic">â€” Internal Cost Chain (Col F) â€”</span>
+                        <span className="text-slate-400 italic">— Internal Cost Chain (Col F) —</span>
                       </div>
                       <div className="flex justify-between font-medium">
                         <span className="text-slate-500">Grand Total (incl. overheads):</span>
@@ -1401,12 +1445,12 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                         <span>{formatCurrency((hsGrandTotal + activeCosting.summary.highSideProfit) * (1 + activeCosting.highSide.gstPercent))}</span>
                       </div>
 
-                      {/* CPF-Based â€” mirrors Excel Column G (Client Quoted Price) */}
+                      {/* CPF-Based — mirrors Excel Column G (Client Quoted Price) */}
                       <div className="flex justify-between font-medium text-[11px] border-t pt-1.5 mt-1">
-                        <span className="text-amber-600 italic font-semibold">â€” CPF Column (Col G â€” Client Quote) â€”</span>
+                        <span className="text-amber-600 italic font-semibold">— CPF Column (Col G — Client Quote) —</span>
                       </div>
                       <div className="flex justify-between items-center bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                        <span className="text-amber-700 text-xs font-medium">CPF Total (per-item % â€” Project Value):</span>
+                        <span className="text-amber-700 text-xs font-medium">CPF Total (per-item % — Project Value):</span>
 
                         <span className="text-amber-900 font-bold">{formatCurrency(hsCpfTotal)}</span>
                       </div>
@@ -1758,7 +1802,7 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                       <div>
                         <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Accommodation & Food (Flat Value)</label>
                         <div className="relative mt-1">
-                          <span className="absolute left-2.5 top-2 text-xs text-muted-foreground font-bold">â‚¹</span>
+                          <span className="absolute left-2.5 top-2 text-xs text-muted-foreground font-bold">₹</span>
                           <input
                             type="number"
                             value={activeCosting.lowSide.accommodationValue}
@@ -1864,9 +1908,9 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                         const expenseFinalProjectValue = expenseProjectValue + expenseGst;
                         return (
                           <>
-                            {/* Expense-Based â€” mirrors Excel Column J */}
+                            {/* Expense-Based — mirrors Excel Column J */}
                             <div className="flex justify-between font-medium text-[11px] border-t pt-1.5 mt-2">
-                              <span className="text-slate-400 italic">â€” Expense-Based (Col J) â€”</span>
+                              <span className="text-slate-400 italic">— Expense-Based (Col J) —</span>
                             </div>
                             <div className="flex justify-between font-medium">
                               <span className="text-slate-500">Total Expense Excl. Tax:</span>
@@ -1890,9 +1934,9 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                               <span>{formatCurrency(expenseFinalProjectValue)}</span>
                             </div>
 
-                            {/* Q. Rate-Based â€” mirrors Excel Column K (Client Quote) */}
+                            {/* Q. Rate-Based — mirrors Excel Column K (Client Quote) */}
                             <div className="flex justify-between font-medium text-[11px] border-t pt-1.5 mt-2">
-                              <span className="text-pink-600 italic font-semibold">â€” Q. Rate Column (Col K â€” Client Quote) â€”</span>
+                              <span className="text-pink-600 italic font-semibold">— Q. Rate Column (Col K — Client Quote) —</span>
                             </div>
                             <div className="flex justify-between items-center bg-pink-50 border border-pink-100 rounded-lg px-3 py-1.5">
                               <span className="text-pink-700 text-xs font-medium">Q. Rate Project Value:</span>
@@ -2755,7 +2799,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                           </div>
                         </div>
 
-                        {/* Drain Accessories â€“ dynamic array */}
+                        {/* Drain Accessories – dynamic array */}
                         <div className="border border-border bg-white rounded-xl overflow-hidden shadow-sm mt-4">
                           <table className="w-full border-collapse text-left text-sm table-fixed">
                             <thead>
@@ -2981,7 +3025,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                             );
                           })()}
                         </div>
-                        {/* GSS Ducting Accessories â€“ dynamic array */}
+                        {/* GSS Ducting Accessories – dynamic array */}
                         <div className="border border-border bg-white rounded-xl overflow-hidden shadow-sm mt-4">
                           <table className="w-full border-collapse text-left text-sm table-fixed">
                             <thead>
@@ -2996,7 +3040,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-border/40">
-                              {/* Insulation rows derived from ducting gauge qtys â€“ read-only */}
+                              {/* Insulation rows derived from ducting gauge qtys – read-only */}
                               <tr className="bg-white hover:bg-slate-50/40">
                                 <td className="p-3 font-semibold text-slate-700">Thermal Insulation (for 24 SWG)</td>
                                 <td className="p-2">
@@ -3192,7 +3236,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                               <tr className="bg-muted text-muted-foreground uppercase font-bold text-xs tracking-wider border-b">
                                 <th className="p-3">Grill Size / Description</th>
                                 <th className="p-3 w-24 text-center">Qty</th>
-                                <th className="p-3 w-32 text-right" title="Sq. ft area â€” if filled, Total = Area Ã— Rate instead of Qty Ã— Rate">Area (Sq.ft)</th>
+                                <th className="p-3 w-32 text-right" title="Sq. ft area — if filled, Total = Area × Rate instead of Qty × Rate">Area (Sq.ft)</th>
                                 <th className="p-3 w-32 text-right">Rate / Sq.ft</th>
                                 <th className="p-3 w-36 text-right">Total</th>
                                 <th className="p-3 w-10 text-center">Note</th>
@@ -3233,7 +3277,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                                         className="h-9 w-full text-center rounded border border-border bg-white px-2 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-slate-400"
                                       />
                                     </td>
-                                    {/* Area column â€” numeric sq.ft. When filled, Total = Area Ã— Rate */}
+                                    {/* Area column — numeric sq.ft. When filled, Total = Area × Rate */}
                                     <td className="p-2">
                                       <input
                                         type="number"
@@ -3246,8 +3290,8 @@ Adjust quantities and prices below to build your detailed material estimate.
                                             c.lowSide.materialEstimate.airTerminals.items[originalIdx].area = parseFloat(e.target.value) || 0;
                                           }
                                         })}
-                                        placeholder="â€”"
-                                        title="Area in Sq.ft â€” if filled, Total = Area Ã— Rate (instead of Qty Ã— Rate)"
+                                        placeholder="—"
+                                        title="Area in Sq.ft — if filled, Total = Area × Rate (instead of Qty × Rate)"
                                         className="h-9 w-full rounded border border-sky-200 bg-sky-50 px-2 text-right text-sm font-medium text-sky-800 placeholder:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400"
                                       />
                                     </td>
@@ -3268,7 +3312,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                                     <td className="p-3 text-right font-bold text-slate-900 whitespace-nowrap">
                                       {formatCurrency(rowTotal)}
                                       {(item.area && item.area > 0) && (
-                                        <div className="text-[10px] text-sky-500 font-normal">{item.area} Ã— {item.ur}</div>
+                                        <div className="text-[10px] text-sky-500 font-normal">{item.area} × {item.ur}</div>
                                       )}
                                     </td>
                                     <td className="p-2 text-center">
@@ -3824,7 +3868,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                                   {formatCurrency(add10)}
                                 </td>
                                 <td className="p-3 text-slate-500 text-xs italic">
-                                  {cr.remarks || "â€”"}
+                                  {cr.remarks || "—"}
                                 </td>
                                 <td className="p-3 text-center">
                                   <div className="flex justify-center gap-2">
@@ -3938,7 +3982,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                                   {formatCurrency(add10)}
                                 </td>
                                 <td className="p-3 text-slate-500 text-xs italic">
-                                  {cr.remarks || "â€”"}
+                                  {cr.remarks || "—"}
                                 </td>
                                 <td className="p-3 text-center">
                                   <div className="flex justify-center gap-2">
@@ -4139,7 +4183,7 @@ Adjust quantities and prices below to build your detailed material estimate.
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Rate (â‚¹)</label>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Rate (₹)</label>
                   <input
                     type="number"
                     value={rateForm.rate}
@@ -4149,7 +4193,7 @@ Adjust quantities and prices below to build your detailed material estimate.
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Sleeve Rate (â‚¹)</label>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">Sleeve Rate (₹)</label>
                   <input
                     type="number"
                     value={rateForm.sleeveRate}

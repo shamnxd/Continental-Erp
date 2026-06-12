@@ -10,6 +10,7 @@ import {
   MessageSquare,
   Receipt,
   Download,
+  Copy,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -25,7 +26,10 @@ import { ScrollArea } from "../../components/ui/scroll-area";
 import {
   getQuotationByIdApi,
   updateQuotationApi,
+  getQuotationsApi,
+  createQuotationRevisionApi,
 } from "../../api/quotation.api";
+import { getCostingsByEnquiryIdApi } from "../../api/costing.api";
 import { Quotation, QuotationStatus } from "../../interfaces/quotation.interface";
 import { AppRoute } from "../../constants/routes.enum";
 import { toast } from "sonner";
@@ -63,6 +67,10 @@ export function QuotationDetail() {
   const [activeTab, setActiveTab] = useState("details");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
+  const [revisions, setRevisions] = useState<Quotation[]>([]);
+  const [isCloning, setIsCloning] = useState(false);
+  const [linkedCosting, setLinkedCosting] = useState<any | null>(null);
+
   const loadQuotation = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
@@ -80,6 +88,61 @@ export function QuotationDetail() {
   useEffect(() => {
     loadQuotation();
   }, [loadQuotation]);
+
+  const loadRevisions = useCallback(async () => {
+    if (!quotation?.quotationNo) return;
+    try {
+      const res = await getQuotationsApi({ quotationNo: quotation.quotationNo });
+      if (res.success) {
+        const sorted = res.data.sort((a, b) => (a.revision ?? 0) - (b.revision ?? 0));
+        setRevisions(sorted);
+      }
+    } catch (err) {
+      console.error("Failed to load quotation revisions", err);
+    }
+  }, [quotation?.quotationNo]);
+
+  const loadLinkedCosting = useCallback(async () => {
+    if (!quotation?.enquiryId || !quotation?.costingId) {
+      setLinkedCosting(null);
+      return;
+    }
+    try {
+      const res = await getCostingsByEnquiryIdApi(quotation.enquiryId);
+      if (res.success) {
+        const costing = res.data.find((c) => c.id === quotation.costingId || (c as any)._id === quotation.costingId);
+        setLinkedCosting(costing || null);
+      }
+    } catch (err) {
+      console.error("Failed to load linked costing", err);
+    }
+  }, [quotation?.enquiryId, quotation?.costingId]);
+
+  useEffect(() => {
+    if (quotation) {
+      loadRevisions();
+      loadLinkedCosting();
+    }
+  }, [quotation, loadRevisions, loadLinkedCosting]);
+
+  const handleCreateRevision = async () => {
+    if (!quotation?.id) return;
+    setIsCloning(true);
+    try {
+      const res = await createQuotationRevisionApi(quotation.id);
+      if (res.success) {
+        toast.success(`Created revision Rev ${res.data.revision} successfully!`);
+        navigate(`/quotations/${res.data.id}`);
+      } else {
+        toast.error("Failed to create revision");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create revision");
+    } finally {
+      setIsCloning(false);
+    }
+  };
 
   const handleStatusChange = async (status: QuotationStatus) => {
     if (!quotation?.id || status === quotation.status) return;
@@ -143,7 +206,24 @@ export function QuotationDetail() {
                     </Button>
                     <div className="h-8 w-px bg-border hidden md:block" />
                     <div>
-                      <h1 className="text-xl font-bold text-foreground tracking-tight">{quotation.quotationNo}</h1>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-xl font-bold text-foreground tracking-tight">{quotation.quotationNo}</h1>
+                        {revisions.length > 0 && (
+                          <select
+                            value={quotation.id}
+                            onChange={(e) => {
+                              navigate(`/quotations/${e.target.value}`);
+                            }}
+                            className="h-7 rounded border border-border bg-white px-2 text-xs font-bold text-foreground focus:outline-none"
+                          >
+                            {revisions.map((rev) => (
+                              <option key={rev.id} value={rev.id}>
+                                Rev {rev.revision ?? 0} {rev.isActive ? "(Active)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">{quotation.clientName}</p>
                     </div>
                   </div>
@@ -195,6 +275,20 @@ export function QuotationDetail() {
                     >
                       <Pencil className="h-4 w-4" />
                       Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCreateRevision}
+                      disabled={isCloning}
+                      className="h-9 px-4 font-semibold gap-1.5 border-dashed"
+                    >
+                      {isCloning ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                      Clone Revision
                     </Button>
                   </div>
                 </div>
@@ -359,6 +453,29 @@ export function QuotationDetail() {
                         {quotation.status}
                       </span>
                     </div>
+
+                    {linkedCosting && (
+                      <div className="bg-card rounded-xl border border-border p-5 space-y-3">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Linked Costing</h3>
+                        <div className="text-sm space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-pink-700" />
+                            <span className="font-bold text-slate-800">Costing Revision {linkedCosting.revision ?? 0}</span>
+                          </div>
+                          {linkedCosting.approvedBy && (
+                            <p className="text-xs text-muted-foreground">Approved by: {linkedCosting.approvedBy}</p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full text-xs font-bold mt-1.5"
+                            onClick={() => navigate(`/enquiries/${quotation.enquiryId}`, { state: { activeTab: "costing" } })}
+                          >
+                            Go to Costing Sheet
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </TabsContent>

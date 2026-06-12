@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { AppRoute } from "../../constants/routes.enum";
 import {
   ArrowLeft,
@@ -153,6 +153,10 @@ function ActivityIcon({ type }: { type: EnquiryActivityType }) {
 export function EnquiryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const defaultTab = (location.state as { activeTab?: string } | null)?.activeTab || "details";
+
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [enquiry, setEnquiry] = useState<Enquiry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReassignOpen, setIsReassignOpen] = useState(false);
@@ -350,7 +354,7 @@ export function EnquiryDetail() {
       <ScrollArea className="h-full">
         <div className="p-2 lg:p-0">
           <div className="mx-auto space-y-4">
-            <Tabs defaultValue="details" className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
               <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
                 <div className="p-4 lg:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/50">
                   <div className="flex items-center gap-4">

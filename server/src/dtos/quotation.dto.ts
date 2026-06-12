@@ -23,6 +23,9 @@ export const CreateQuotationSchema = z.object({
     .default("Pending Approval"),
   items: z.array(lineItemSchema).min(1, "At least one line item is required"),
   notes: z.string().optional().default(""),
+  costingId: z.string().optional().default(""),
+  revision: z.number().min(0).optional().default(0),
+  isActive: z.boolean().optional().default(true),
 });
 
 export type CreateQuotationDto = z.infer<typeof CreateQuotationSchema>;

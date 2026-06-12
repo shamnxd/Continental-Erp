@@ -41,6 +41,8 @@ export class QuotationRepository
         qty: i.qty,
         rate: i.rate,
         total: i.total,
+        section: i.section,
+        unit: i.unit,
       })),
       remarks: (doc.remarks ?? []).map((r) => ({
         id: (r as { _id?: { toString(): string } })._id?.toString(),
@@ -49,16 +51,22 @@ export class QuotationRepository
         text: r.text,
       })),
       notes: doc.notes ?? "",
+      revision: doc.revision,
+      isActive: doc.isActive,
+      costingId: doc.costingId,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
   }
 
   public override async create(item: Partial<IQuotation>): Promise<IQuotation> {
-    const year = new Date().getFullYear();
-    const count = await this.model.countDocuments().exec();
-    const pad = String(count + 1).padStart(3, "0");
-    const quotationNo = `QUO-${year}-${pad}`;
+    let quotationNo = item.quotationNo;
+    if (!quotationNo) {
+      const year = new Date().getFullYear();
+      const count = await this.model.countDocuments().exec();
+      const pad = String(count + 1).padStart(3, "0");
+      quotationNo = `QUO-${year}-${pad}`;
+    }
 
     const createdDoc = new this.model({
       ...item,
@@ -76,8 +84,14 @@ export class QuotationRepository
   }
 
   public async findPaginated(query: GetQuotationsQuery): Promise<PaginatedQuotations> {
-    const { search, page = 1, limit = 10, status, clientId, enquiryId } = query;
+    const { search, page = 1, limit = 10, status, clientId, enquiryId, quotationNo } = query;
     const mongoFilter: Record<string, unknown> = {};
+
+    if (quotationNo) {
+      mongoFilter.quotationNo = quotationNo;
+    } else {
+      mongoFilter.isActive = true;
+    }
 
     if (clientId) mongoFilter.clientId = clientId;
     if (enquiryId) mongoFilter.enquiryId = enquiryId;
@@ -109,5 +123,14 @@ export class QuotationRepository
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  public async getNextRevisionNumber(quotationNo: string): Promise<number> {
+    const latest = await this.model.findOne({ quotationNo }).sort({ revision: -1 }).exec();
+    return latest ? latest.revision + 1 : 0;
+  }
+
+  public async deactivateAllForNo(quotationNo: string): Promise<void> {
+    await this.model.updateMany({ quotationNo }, { isActive: false }).exec();
   }
 }

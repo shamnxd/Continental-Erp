@@ -29,6 +29,9 @@ export interface IQuotation {
   items: IQuotationLineItem[];
   remarks?: IEnquiryRemark[];
   notes?: string;
+  revision?: number;
+  isActive?: boolean;
+  costingId?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

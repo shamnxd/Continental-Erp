@@ -185,8 +185,8 @@ export function InvoicePreviewModal({
                         <td style={{ border: "1px solid #000", padding: "5px", textAlign: "center" }}>{idx + 1}</td>
                         <td style={{ border: "1px solid #000", padding: "5px" }}>{item.description}</td>
                         <td style={{ border: "1px solid #000", padding: "5px", textAlign: "center" }}>{item.qty}</td>
-                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>â‚¹{item.rate.toFixed(2)}</td>
-                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>â‚¹{item.total.toFixed(2)}</td>
+                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
+                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>₹{item.total.toFixed(2)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -198,39 +198,39 @@ export function InvoicePreviewModal({
                     <tbody>
                       <tr>
                         <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left" }}>Taxable value</td>
-                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>â‚¹{invoice.subtotal.toFixed(2)}</td>
+                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>₹{invoice.subtotal.toFixed(2)}</td>
                       </tr>
                       {invoice.advancePaid !== undefined && (
                         <tr>
                           <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left" }}>Less: Advance Paid</td>
-                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>â‚¹{(invoice.advancePaid || 0).toFixed(2)}</td>
+                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>₹{(invoice.advancePaid || 0).toFixed(2)}</td>
                         </tr>
                       )}
                       <tr style={{ backgroundColor: "#f9f9f9" }}>
                         <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left", fontWeight: "bold" }}>Taxable Value Before Tax</td>
-                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>â‚¹{(invoice.subtotal - (invoice.advancePaid || 0)).toFixed(2)}</td>
+                        <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right", fontWeight: "bold" }}>₹{(invoice.subtotal - (invoice.advancePaid || 0)).toFixed(2)}</td>
                       </tr>
                       {invoice.cgstPercent !== undefined && (
                         <tr>
                           <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left" }}>CGST {invoice.cgstPercent}%</td>
-                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>â‚¹{invoice.cgstAmount.toFixed(2)}</td>
+                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>₹{invoice.cgstAmount.toFixed(2)}</td>
                         </tr>
                       )}
                       {invoice.sgstPercent !== undefined && (
                         <tr>
                           <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left" }}>SGST {invoice.sgstPercent}%</td>
-                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>â‚¹{invoice.sgstAmount.toFixed(2)}</td>
+                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>₹{invoice.sgstAmount.toFixed(2)}</td>
                         </tr>
                       )}
                       {invoice.roundOff !== undefined && (
                         <tr>
                           <td style={{ border: "1px solid #000", padding: "5px", textAlign: "left" }}>Round off</td>
-                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>â‚¹{(invoice.roundOff || 0).toFixed(2)}</td>
+                          <td style={{ border: "1px solid #000", padding: "5px", textAlign: "right" }}>₹{(invoice.roundOff || 0).toFixed(2)}</td>
                         </tr>
                       )}
                       <tr style={{ backgroundColor: "#e8f4f8" }}>
                         <td style={{ border: "1px solid #000", padding: "7px", textAlign: "left", fontWeight: "bold", fontSize: "11px" }}>Total Invoice Value</td>
-                        <td style={{ border: "1px solid #000", padding: "7px", textAlign: "right", fontWeight: "bold", fontSize: "11px" }}>â‚¹{invoice.grandTotal.toFixed(2)}</td>
+                        <td style={{ border: "1px solid #000", padding: "7px", textAlign: "right", fontWeight: "bold", fontSize: "11px" }}>₹{invoice.grandTotal.toFixed(2)}</td>
                       </tr>
                     </tbody>
                   </table>

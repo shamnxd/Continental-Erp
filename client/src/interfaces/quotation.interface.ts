@@ -38,6 +38,9 @@ export interface Quotation {
   items: QuotationLineItem[];
   remarks?: QuotationRemark[];
   notes?: string;
+  revision?: number;
+  isActive?: boolean;
+  costingId?: string;
   createdAt?: string;
   updatedAt?: string;
 }

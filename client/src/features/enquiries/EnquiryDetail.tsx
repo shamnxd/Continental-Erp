@@ -22,6 +22,7 @@ import {
   Pencil,
   XCircle,
   CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { ScrollArea } from "../../components/ui/scroll-area";
@@ -67,6 +68,8 @@ import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { EnquiryFormModal } from "../../components/EnquiryFormModal";
 import { CostingTab } from "./costing/CostingTab";
 import { RemarksChat } from "../../components/RemarksChat";
+import { SelectCostingDialog } from "../../components/SelectCostingDialog";
+import { EnquiryQuotationsTab } from "./EnquiryQuotationsTab";
 import { toast } from "sonner";
 
 const ENQUIRY_STATUSES: EnquiryStatus[] = [
@@ -168,6 +171,7 @@ export function EnquiryDetail() {
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+  const [isSelectCostingOpen, setIsSelectCostingOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isClosed = enquiry?.status === "Closed";
@@ -404,21 +408,7 @@ export function EnquiryDetail() {
                         <Button
                           size="sm"
                           className="bg-pink-700 hover:bg-pink-800 h-9 px-4 font-semibold"
-                          onClick={() =>
-                            enquiry?.id &&
-                            navigate(AppRoute.QUOTATION_CREATE, {
-                              state: {
-                                prefillFromEnquiry: {
-                                  enquiryId: enquiry.id,
-                                  enquiryNo: enquiry.enquiryNo,
-                                  clientId: enquiry.clientId,
-                                  clientName: enquiry.clientName,
-                                  requirement: enquiry.requirement,
-                                  description: enquiry.description,
-                                },
-                              },
-                            })
-                          }
+                          onClick={() => setIsSelectCostingOpen(true)}
                         >
                           Create Quotation
                         </Button>
@@ -486,6 +476,12 @@ export function EnquiryDetail() {
                       className="flex-none w-auto shrink-0 h-full rounded-md !border-b-2 border-0 border-transparent data-[state=active]:border-pink-600 data-[state=active]:text-pink-700 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none px-4 text-sm font-bold transition-all"
                     >
                       Costing Sheet
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="quotations"
+                      className="flex-none w-auto shrink-0 h-full rounded-md !border-b-2 border-0 border-transparent data-[state=active]:border-pink-600 data-[state=active]:text-pink-700 data-[state=active]:bg-pink-50/50 data-[state=active]:shadow-none px-4 text-sm font-bold transition-all"
+                    >
+                      Quotations
                     </TabsTrigger>
                     <TabsTrigger
                       value="schedules"
@@ -582,6 +578,15 @@ export function EnquiryDetail() {
                             <p className="text-gray-900">{enquiry.email || "—"}</p>
                           </div>
                         </div>
+                        {enquiry.clientLocation && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-500 uppercase">Location</label>
+                            <div className="mt-1 flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-gray-400 shrink-0" />
+                              <p className="text-gray-900">{enquiry.clientLocation}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -722,6 +727,15 @@ export function EnquiryDetail() {
                 <CostingTab enquiry={enquiry} />
               </TabsContent>
 
+              <TabsContent value="quotations" className="m-0">
+                {enquiry.id && (
+                  <EnquiryQuotationsTab
+                    enquiryId={enquiry.id}
+                    onCreateQuotationClick={() => setIsSelectCostingOpen(true)}
+                  />
+                )}
+              </TabsContent>
+
               <TabsContent value="schedules" className="m-0">
                 <Schedules
                   entityId={enquiry.id ?? ""}
@@ -811,6 +825,20 @@ export function EnquiryDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <SelectCostingDialog
+        isOpen={isSelectCostingOpen}
+        onClose={() => setIsSelectCostingOpen(false)}
+        enquiryId={enquiry.id || ""}
+        prefillFromEnquiry={{
+          enquiryId: enquiry.id || "",
+          enquiryNo: enquiry.enquiryNo,
+          clientId: enquiry.clientId,
+          clientName: enquiry.clientName,
+          requirement: enquiry.requirement,
+          description: enquiry.description,
+        }}
+      />
     </div>
   );
 }

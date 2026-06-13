@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   Receipt,
   Download,
   Copy,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -34,6 +35,7 @@ import { Quotation, QuotationStatus } from "../../interfaces/quotation.interface
 import { AppRoute } from "../../constants/routes.enum";
 import { toast } from "sonner";
 import { exportQuotationToPdf } from "./quotationPdfExport";
+import { PdfExportConfigModal } from "../../components/PdfExportConfigModal";
 
 const QUOTATION_STATUSES: QuotationStatus[] = [
   "Draft",
@@ -70,6 +72,7 @@ export function QuotationDetail() {
   const [revisions, setRevisions] = useState<Quotation[]>([]);
   const [isCloning, setIsCloning] = useState(false);
   const [linkedCosting, setLinkedCosting] = useState<any | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const loadQuotation = useCallback(async () => {
     if (!id) return;
@@ -125,23 +128,9 @@ export function QuotationDetail() {
     }
   }, [quotation, loadRevisions, loadLinkedCosting]);
 
-  const handleCreateRevision = async () => {
-    if (!quotation?.id) return;
-    setIsCloning(true);
-    try {
-      const res = await createQuotationRevisionApi(quotation.id);
-      if (res.success) {
-        toast.success(`Created revision Rev ${res.data.revision} successfully!`);
-        navigate(`/quotations/${res.data.id}`);
-      } else {
-        toast.error("Failed to create revision");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create revision");
-    } finally {
-      setIsCloning(false);
-    }
+  const handleCreateRevision = () => {
+    if (!quotation) return;
+    navigate(AppRoute.QUOTATION_CREATE, { state: { prefillFromQuotation: quotation } });
   };
 
   const handleStatusChange = async (status: QuotationStatus) => {
@@ -183,8 +172,32 @@ export function QuotationDetail() {
   const machineItems = quotation.items.filter((i) => !i.section || i.section === "machine_side");
   const lowSideItems = quotation.items.filter((i) => i.section === "low_side");
 
-  const machineTotal = machineItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
-  const lowSideTotal = lowSideItems.reduce((sum, item) => sum + item.qty * item.rate, 0);
+  const machineTotal = machineItems.reduce((sum, item) => sum + item.total, 0);
+  const lowSideTotal = lowSideItems.reduce((sum, item) => sum + item.total, 0);
+
+  // Group machine side items by group name
+  const machineGroups: { name: string; items: typeof machineItems }[] = [];
+  machineItems.forEach((item) => {
+    const groupName = item.group || "Supply of inverter Ductable AC Unit";
+    let g = machineGroups.find((x) => x.name === groupName);
+    if (!g) {
+      g = { name: groupName, items: [] };
+      machineGroups.push(g);
+    }
+    g.items.push(item);
+  });
+
+  // Group low side items by group name
+  const lowSideGroups: { name: string; items: typeof lowSideItems }[] = [];
+  lowSideItems.forEach((item) => {
+    const groupName = item.group || "Ungrouped Low Side Works";
+    let g = lowSideGroups.find((x) => x.name === groupName);
+    if (!g) {
+      g = { name: groupName, items: [] };
+      lowSideGroups.push(g);
+    }
+    g.items.push(item);
+  });
 
   return (
     <div className="h-full bg-background">
@@ -209,19 +222,23 @@ export function QuotationDetail() {
                       <div className="flex items-center gap-2">
                         <h1 className="text-xl font-bold text-foreground tracking-tight">{quotation.quotationNo}</h1>
                         {revisions.length > 0 && (
-                          <select
+                          <Select
                             value={quotation.id}
-                            onChange={(e) => {
-                              navigate(`/quotations/${e.target.value}`);
+                            onValueChange={(val) => {
+                              navigate(`/quotations/${val}`);
                             }}
-                            className="h-7 rounded border border-border bg-white px-2 text-xs font-bold text-foreground focus:outline-none"
                           >
-                            {revisions.map((rev) => (
-                              <option key={rev.id} value={rev.id}>
-                                Rev {rev.revision ?? 0} {rev.isActive ? "(Active)" : ""}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger className="h-7 w-[140px] text-xs font-bold border border-border bg-white text-foreground hover:bg-muted/50 rounded-md focus-visible:ring-1 focus-visible:ring-pink-700/50">
+                              <SelectValue placeholder="Select Revision" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {revisions.map((rev) => (
+                                <SelectItem key={rev.id} value={rev.id || ""}>
+                                  Rev {rev.revision ?? 0} {rev.isActive ? "(Active)" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         )}
                       </div>
                       <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">{quotation.clientName}</p>
@@ -261,7 +278,7 @@ export function QuotationDetail() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => exportQuotationToPdf(quotation)}
+                      onClick={() => setIsPdfModalOpen(true)}
                       className="h-9 px-4 font-semibold gap-1.5"
                     >
                       <Download className="h-4 w-4" />
@@ -332,14 +349,31 @@ export function QuotationDetail() {
                               </tr>
                             </thead>
                             <tbody>
-                              {machineItems.map((item, i) => (
-                                <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
-                                  <td className="py-2.5 pr-4 align-top">{item.description}</td>
-                                  <td className="py-2.5 text-center align-top">{item.unit || "No"}</td>
-                                  <td className="py-2.5 text-right align-top">{item.qty}</td>
-                                  <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
-                                  <td className="py-2.5 text-right align-top font-medium">{formatInr(item.qty * item.rate)}</td>
-                                </tr>
+                              {machineGroups.map((group, grpIdx) => (
+                                <Fragment key={grpIdx}>
+                                  <tr className="bg-slate-50/80 dark:bg-slate-800/30 border-b border-border/80">
+                                    <td colSpan={5} className="py-2 px-3 font-extrabold text-pink-700 dark:text-pink-400 uppercase tracking-wide text-[11px]">
+                                      {group.name}
+                                    </td>
+                                  </tr>
+                                  {group.items.map((item, i) => (
+                                    <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                                      {item.isDescriptionOnly ? (
+                                        <td colSpan={5} className="py-2.5 pr-4 align-top font-medium italic text-slate-600 dark:text-slate-300 pl-6">
+                                          {item.description}
+                                        </td>
+                                      ) : (
+                                        <>
+                                          <td className="py-2.5 pr-4 align-top pl-6">{item.description}</td>
+                                          <td className="py-2.5 text-center align-top">{item.unit || "No"}</td>
+                                          <td className="py-2.5 text-right align-top">{item.qty}</td>
+                                          <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
+                                          <td className="py-2.5 text-right align-top font-medium">{formatInr(item.total)}</td>
+                                        </>
+                                      )}
+                                    </tr>
+                                  ))}
+                                </Fragment>
                               ))}
                             </tbody>
                           </table>
@@ -366,14 +400,31 @@ export function QuotationDetail() {
                               </tr>
                             </thead>
                             <tbody>
-                              {lowSideItems.map((item, i) => (
-                                <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
-                                  <td className="py-2.5 pr-4 align-top">{item.description}</td>
-                                  <td className="py-2.5 text-center align-top">{item.unit || "Rmt"}</td>
-                                  <td className="py-2.5 text-right align-top">{item.qty}</td>
-                                  <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
-                                  <td className="py-2.5 text-right align-top font-medium">{formatInr(item.qty * item.rate)}</td>
-                                </tr>
+                              {lowSideGroups.map((group, grpIdx) => (
+                                <Fragment key={grpIdx}>
+                                  <tr className="bg-slate-50/80 dark:bg-slate-800/30 border-b border-border/80">
+                                    <td colSpan={5} className="py-2 px-3 font-extrabold text-pink-700 dark:text-pink-400 uppercase tracking-wide text-[11px]">
+                                      {group.name}
+                                    </td>
+                                  </tr>
+                                  {group.items.map((item, i) => (
+                                    <tr key={i} className="border-b border-border/50 last:border-0 hover:bg-slate-50/50 dark:hover:bg-slate-800/10">
+                                      {item.isDescriptionOnly ? (
+                                        <td colSpan={5} className="py-2.5 pr-4 align-top font-medium italic text-slate-600 dark:text-slate-300 pl-6">
+                                          {item.description}
+                                        </td>
+                                      ) : (
+                                        <>
+                                          <td className="py-2.5 pr-4 align-top pl-6">{item.description}</td>
+                                          <td className="py-2.5 text-center align-top">{item.unit || "Rmt"}</td>
+                                          <td className="py-2.5 text-right align-top">{item.qty}</td>
+                                          <td className="py-2.5 text-right align-top">{formatInr(item.rate)}</td>
+                                          <td className="py-2.5 text-right align-top font-medium">{formatInr(item.total)}</td>
+                                        </>
+                                      )}
+                                    </tr>
+                                  ))}
+                                </Fragment>
                               ))}
                             </tbody>
                           </table>
@@ -394,18 +445,39 @@ export function QuotationDetail() {
                               <td className="py-2 px-3 font-semibold text-muted-foreground">TOTAL FOR HIGH SIDE WORKS (AC MACHINES SUPPLY)</td>
                               <td className="py-2 px-3 text-right font-bold w-48">{formatInr(machineTotal)}</td>
                             </tr>
-                            <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-800/20">
+                             <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-800/20">
                               <td className="py-2 px-3 font-semibold text-muted-foreground">TOTAL FOR LOW SIDE WORKS</td>
-                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.total - machineTotal - quotation.gst)}</td>
+                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(lowSideTotal)}</td>
                             </tr>
                             <tr className="border-b border-border">
                               <td className="py-2 px-3 font-semibold text-muted-foreground">SUBTOTAL (EXCL. GST)</td>
                               <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.amount)}</td>
                             </tr>
-                            <tr className="border-b border-border">
-                              <td className="py-2 px-3 font-semibold text-muted-foreground">GST ({quotation.gstPercent}%)</td>
-                              <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.gst)}</td>
-                            </tr>
+                            {quotation.machineGstPercent !== undefined || quotation.lowSideGstPercent !== undefined ? (
+                              <>
+                                {machineItems.length > 0 && (
+                                  <tr className="border-b border-border">
+                                    <td className="py-2 px-3 font-semibold text-muted-foreground">GST Machine Side ({quotation.machineGstPercent ?? 28}%)</td>
+                                    <td className="py-2 px-3 text-right font-bold w-48">
+                                      {formatInr(Math.round(machineTotal * (quotation.machineGstPercent ?? 28) / 100))}
+                                    </td>
+                                  </tr>
+                                )}
+                                {lowSideItems.length > 0 && (
+                                  <tr className="border-b border-border">
+                                    <td className="py-2 px-3 font-semibold text-muted-foreground">GST Low Side ({quotation.lowSideGstPercent ?? 18}%)</td>
+                                    <td className="py-2 px-3 text-right font-bold w-48">
+                                      {formatInr(quotation.gst - Math.round(machineTotal * (quotation.machineGstPercent ?? 28) / 100))}
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            ) : (
+                              <tr className="border-b border-border">
+                                <td className="py-2 px-3 font-semibold text-muted-foreground">GST ({quotation.gstPercent}%)</td>
+                                <td className="py-2 px-3 text-right font-bold w-48">{formatInr(quotation.gst)}</td>
+                              </tr>
+                            )}
                             <tr className="bg-pink-50/50 dark:bg-pink-950/20 text-pink-700 dark:text-pink-400 font-bold">
                               <td className="py-2.5 px-3 uppercase tracking-wider text-xs">Grand Total With GST</td>
                               <td className="py-2.5 px-3 text-right text-base">{formatInr(quotation.total)}</td>
@@ -455,26 +527,88 @@ export function QuotationDetail() {
                     </div>
 
                     {linkedCosting && (
-                      <div className="bg-card rounded-xl border border-border p-5 space-y-3">
-                        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Linked Costing</h3>
-                        <div className="text-sm space-y-2">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-pink-700" />
-                            <span className="font-bold text-slate-800">Costing Revision {linkedCosting.revision ?? 0}</span>
-                          </div>
-                          {linkedCosting.approvedBy && (
-                            <p className="text-xs text-muted-foreground">Approved by: {linkedCosting.approvedBy}</p>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs font-bold mt-1.5"
-                            onClick={() => navigate(`/enquiries/${quotation.enquiryId}`, { state: { activeTab: "costing" } })}
-                          >
-                            Go to Costing Sheet
-                          </Button>
+                      <>
+                        <div className="bg-card rounded-xl border border-border p-5 space-y-3 shadow-sm">
+                          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 border-b border-border/40 pb-2">
+                            <TrendingUp className="h-4 w-4 text-emerald-600" />
+                            Profitability Analysis
+                          </h3>
+                          {(() => {
+                            const quotedPrice = quotation.amount;
+                            const materialCost = linkedCosting.summary?.totalExpenseExclTax ?? 0;
+                            const overhead = linkedCosting.summary?.totalOverhead ?? 0;
+                            const totalCost = materialCost + overhead;
+                            const netProfit = quotedPrice - totalCost;
+                            const profitMargin = quotedPrice > 0 ? (netProfit / quotedPrice) * 100 : 0;
+                            const marginColor = profitMargin >= 15 ? 'text-emerald-600 dark:text-emerald-400' : profitMargin >= 5 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400';
+                            const marginBg = profitMargin >= 15 ? 'bg-emerald-500/10' : profitMargin >= 5 ? 'bg-amber-500/10' : 'bg-rose-500/10';
+
+                            return (
+                              <div className="space-y-3 text-xs">
+                                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                                  <span className="text-muted-foreground">Quoted Price (Excl. Tax)</span>
+                                  <span className="font-semibold text-foreground">{formatInr(quotedPrice)}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                                  <span className="text-muted-foreground">Material & Expenses</span>
+                                  <span className="font-semibold text-foreground">{formatInr(materialCost)}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                                  <span className="text-muted-foreground">Overhead Costs</span>
+                                  <span className="font-semibold text-foreground">{formatInr(overhead)}</span>
+                                </div>
+                                <div className="flex justify-between items-center py-1 border-b border-border/30">
+                                  <span className="text-muted-foreground">Total Project Cost</span>
+                                  <span className="font-semibold text-foreground">{formatInr(totalCost)}</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-2">
+                                  <span className="text-muted-foreground font-medium">Estimated Net Profit</span>
+                                  <span className={`font-bold text-sm ${netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                    {formatInr(netProfit)}
+                                  </span>
+                                </div>
+                                
+                                {/* Margin Progress Bar */}
+                                <div className="pt-2">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-muted-foreground font-medium">Profit Margin</span>
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${marginBg} ${marginColor}`}>
+                                      {profitMargin.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full ${profitMargin >= 15 ? 'bg-emerald-500' : profitMargin >= 5 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                      style={{ width: `${Math.min(100, Math.max(0, profitMargin))}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
-                      </div>
+
+                        <div className="bg-card rounded-xl border border-border p-5 space-y-3 shadow-sm">
+                          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Linked Costing</h3>
+                          <div className="text-sm space-y-2">
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-pink-700" />
+                              <span className="font-bold text-slate-800">Costing Revision {linkedCosting.revision ?? 0}</span>
+                            </div>
+                            {linkedCosting.approvedBy && (
+                              <p className="text-xs text-muted-foreground">Approved by: {linkedCosting.approvedBy}</p>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full text-xs font-bold mt-1.5"
+                              onClick={() => navigate(`/enquiries/${quotation.enquiryId}`, { state: { activeTab: "costing" } })}
+                            >
+                              Go to Costing Sheet
+                            </Button>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -493,6 +627,11 @@ export function QuotationDetail() {
         </div>
       </ScrollArea>
 
+      <PdfExportConfigModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        quotation={quotation}
+      />
     </div>
   );
 }

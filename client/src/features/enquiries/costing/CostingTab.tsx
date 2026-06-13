@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useAppSelector } from "../../../store/hooks";
 import {
@@ -17,8 +17,11 @@ import {
   RefreshCw,
   MessageSquare,
   MessageSquarePlus,
-  Pencil
+  Pencil,
+  Check,
+  AlertCircle
 } from "lucide-react";
+import { useDebounce } from "../../../hooks/useDebounce";
 // @ts-ignore
 import XLSX from "xlsx-js-style";
 import { toast } from "sonner";
@@ -42,6 +45,13 @@ import { calculateCosting, createDefaultCosting, getHvacTemplateItems, syncEstim
 import { CostingPrintView } from "./CostingPrintView";
 import { Popover, PopoverContent, PopoverTrigger, PopoverAnchor } from "../../../components/ui/popover";
 import { exportCostingToExcel } from "./costingExcelExport";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import { exportCostingToPdf }   from "./costingPdfExport";
 
 
@@ -517,6 +527,8 @@ export function CostingTab({ enquiry }: CostingTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const isDirty = useRef(false);
   const [activeTab, setActiveTab] = useState<"summary" | "highside" | "lowside" | "estimates" | "copper_pipes">("summary");
   const [copperPipeRates, setCopperPipeRates] = useState<ICopperPipeRateConfig[]>([]);
   const navigate = useNavigate();
@@ -759,6 +771,8 @@ export function CostingTab({ enquiry }: CostingTabProps) {
         setCostings(res.data);
         // Set active to the currently active costing, or the latest revision
         const active = res.data.find((c) => c.isActive) || res.data[0];
+        isDirty.current = false;
+        setAutoSaveStatus("idle");
         setActiveCosting(calculateCosting(active));
       } else {
         setCostings([]);
@@ -791,6 +805,35 @@ export function CostingTab({ enquiry }: CostingTabProps) {
       })
       .catch((err) => console.error("Failed to load linked quotations", err));
   }, [activeCosting?.id, activeCosting?.enquiryId]);
+
+  const debouncedCosting = useDebounce(activeCosting, 1500);
+
+  useEffect(() => {
+    if (!debouncedCosting || !debouncedCosting.id) return;
+    if (!isDirty.current) return;
+
+    isDirty.current = false;
+
+    const performAutoSave = async () => {
+      setAutoSaveStatus("saving");
+      try {
+        const finalCalculated = calculateCosting(debouncedCosting);
+        const res = await updateCostingApi(debouncedCosting.id!, finalCalculated);
+        if (res.success) {
+          setAutoSaveStatus("saved");
+          const listRes = await getCostingsByEnquiryIdApi(enquiry.id!);
+          if (listRes.success) setCostings(listRes.data);
+        } else {
+          setAutoSaveStatus("error");
+        }
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setAutoSaveStatus("error");
+      }
+    };
+
+    performAutoSave();
+  }, [debouncedCosting, enquiry.id]);
 
   const handleCreateCosting = async () => {
     if (!enquiry.id) return;
@@ -873,12 +916,16 @@ export function CostingTab({ enquiry }: CostingTabProps) {
     updater(clone);
 
     const calculated = calculateCosting(clone);
+    isDirty.current = true;
+    setAutoSaveStatus("idle");
     setActiveCosting(calculated);
   };
 
   const handleManualSync = () => {
     if (!activeCosting) return;
     const synced = syncEstimatesToLowSide(activeCosting);
+    isDirty.current = true;
+    setAutoSaveStatus("idle");
     setActiveCosting(synced);
     toast.success("Synced estimates to Low Side successfully!");
   };
@@ -950,20 +997,24 @@ export function CostingTab({ enquiry }: CostingTabProps) {
       <div className="bg-card rounded-xl border border-border p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 print:hidden">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Costing Revision:</label>
-          <select
+          <Select
             value={activeCosting.id}
-            onChange={(e) => {
-              const selected = costings.find((c) => c.id === e.target.value);
+            onValueChange={(val) => {
+              const selected = costings.find((c) => c.id === val);
               if (selected) setActiveCosting(selected);
             }}
-            className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-bold text-foreground"
           >
-            {costings.map((c) => (
-              <option key={c.id} value={c.id}>
-                Rev {c.revision} {c.isActive ? "(Active)" : ""}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-[150px] text-xs font-bold border border-border bg-white text-foreground hover:bg-muted/50 rounded-lg focus-visible:ring-1 focus-visible:ring-pink-700/50">
+              <SelectValue placeholder="Select Revision" />
+            </SelectTrigger>
+            <SelectContent>
+              {costings.map((c) => (
+                <SelectItem key={c.id} value={c.id || ""}>
+                  Rev {c.revision} {c.isActive ? "(Active)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <button
             onClick={handleCreateRevision}
@@ -1024,24 +1075,24 @@ export function CostingTab({ enquiry }: CostingTabProps) {
               Approve Costing
             </button>
           )}
-          <button
-            onClick={() => navigate("/quotations/create", { state: { prefillFromCosting: activeCosting } })}
-            className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100 transition duration-150 shadow-sm"
-          >
-            Create Quotation
-          </button>
-          <button
-            onClick={handleSaveCosting}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg bg-pink-700 hover:bg-pink-850 text-white"
-          >
-            {isSaving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
-            Save Changes
-          </button>
+          {autoSaveStatus === "saving" && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 h-9 select-none">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-pink-700" />
+              <span>Saving...</span>
+            </div>
+          )}
+          {autoSaveStatus === "saved" && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 h-9 select-none animate-in fade-in duration-200">
+              <Check className="h-3.5 w-3.5 stroke-[3] text-green-600" />
+              <span>Saved</span>
+            </div>
+          )}
+          {autoSaveStatus === "error" && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 h-9 select-none animate-shake duration-200">
+              <AlertCircle className="h-3.5 w-3.5 text-red-650" />
+              <span>Save Error</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1488,14 +1539,6 @@ export function CostingTab({ enquiry }: CostingTabProps) {
               <div className="space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Low Side Work Items</h3>
-                  <button
-                    type="button"
-                    onClick={handleManualSync}
-                    className="flex items-center gap-1.5 text-xs font-bold px-3.5 h-9 rounded-lg border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100 transition duration-150 shadow-sm"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    Sync from Materials Summary
-                  </button>
                 </div>
 
                 {activeCosting.lowSide.items.length === 0 ? (
@@ -1505,14 +1548,21 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                     </div>
                     <h4 className="text-sm font-bold text-slate-800">No Low-Side Work Items Found</h4>
                     <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                      This costing sheet currently has no contracting items. Load standard HVAC installation template rows or add a custom item to begin.
+                      This costing sheet currently has no contracting items. Load standard HVAC installation template rows, sync from materials estimate summary, or add a custom item to begin.
                     </p>
-                    <div className="flex gap-3 mt-4">
+                    <div className="flex flex-wrap gap-3 mt-4 justify-center">
+                      <button
+                        onClick={handleManualSync}
+                        className="bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 font-bold h-9 px-4 rounded-lg shadow-sm transition duration-200 flex items-center gap-1.5 text-xs"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        Sync from Materials Summary
+                      </button>
                       <button
                         onClick={() => handleFieldChange((c) => {
                           c.lowSide.items = getHvacTemplateItems();
                         })}
-                        className="bg-pink-700 hover:bg-pink-850 text-white font-bold h-9 px-4 rounded-lg shadow-sm transition duration-200 flex items-center gap-1.5 text-xs"
+                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold h-9 px-4 rounded-lg shadow-sm transition duration-200 flex items-center gap-1.5 text-xs"
                       >
                         <Plus className="h-3.5 w-3.5" />
                         Load Standard HVAC Template
@@ -1533,7 +1583,7 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                         className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-dashed border-slate-300 text-slate-700 hover:bg-slate-50 transition duration-200"
                       >
                         <Plus className="h-4 w-4" />
-                                Add Custom Item
+                        Add Custom Item
                       </button>
                     </div>
                   </div>
@@ -1557,179 +1607,303 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
-                          {activeCosting.lowSide.items.map((item, i) => {
-                            return (
-                              <tr key={item.srNo} className="bg-white">
-                                <td className="p-1.5 pl-4 text-center font-semibold text-slate-500 text-xs">{item.srNo}</td>
-                                <td className="p-1.5 px-2">
-                                  <Popover
-                                    modal={false}
-                                    open={activeSuggestionRow === i}
-                                    onOpenChange={(open) => {
-                                      if (!open) {
-                                        setActiveSuggestionRow(null);
-                                      }
-                                    }}
-                                  >
-                                    <PopoverTrigger asChild>
-                                      <div className="w-full relative">
-                                        <AutoResizeTextarea
-                                          value={item.description}
-                                          onFocus={() => {
-                                            setActiveSuggestionRow(i);
-                                            setSearchQuery("");
-                                          }}
+                          {(() => {
+                            // Group items by group name
+                            const itemsByGroup: Record<string, { item: typeof activeCosting.lowSide.items[number]; originalIndex: number }[]> = {};
+                            activeCosting.lowSide.items.forEach((item, index) => {
+                              const grpName = item.group || "Ungrouped Low Side Works";
+                              if (!itemsByGroup[grpName]) {
+                                itemsByGroup[grpName] = [];
+                              }
+                              itemsByGroup[grpName].push({ item, originalIndex: index });
+                            });
+
+                            return Object.entries(itemsByGroup).map(([groupName, groupItems]) => {
+                              return (
+                                <React.Fragment key={groupName}>
+                                  {/* Group Header Row */}
+                                  <tr className="bg-slate-50/80 border-y border-border/50">
+                                    <td colSpan={11} className="py-2.5 px-4 bg-slate-50 dark:bg-slate-900/60">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-black uppercase text-pink-700 select-none">Group Heading:</span>
+                                        <input
+                                          type="text"
+                                          value={groupName}
                                           onChange={(e) => {
+                                            const newName = e.target.value;
                                             handleFieldChange((c) => {
-                                              c.lowSide.items[i].description = e.target.value;
+                                              groupItems.forEach(({ originalIndex }) => {
+                                                c.lowSide.items[originalIndex].group = newName;
+                                              });
                                             });
-                                            setSearchQuery(e.target.value);
                                           }}
-                                          className="min-h-[36px] w-full rounded border border-border bg-white px-2 py-2 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none overflow-hidden leading-normal"
-                                          placeholder="Enter description..."
+                                          className="h-8 w-96 rounded border border-border bg-white px-2 text-sm font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-pink-700/50"
+                                          placeholder="Group Heading..."
                                         />
                                       </div>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                      className="w-96 p-2 bg-card border border-border shadow-lg max-h-60 overflow-y-auto z-50 text-xs"
-                                      align="start"
-                                      side="bottom"
-                                      sideOffset={4}
-                                      onOpenAutoFocus={(e) => e.preventDefault()}
-                                    >
-                                      {(() => {
-                                        const query = searchQuery || "";
-                                        const category = getRowCategory(item.srNo, item.description);
-                                        let filtered: typeof detailedEstimatorSuggestions = [];
-                                        if (query.trim() === "") {
-                                          if (category) {
-                                            filtered = detailedEstimatorSuggestions.filter((s) => s.category === category);
-                                          }
-                                          if (filtered.length === 0) {
-                                            filtered = detailedEstimatorSuggestions;
-                                          }
-                                        } else {
-                                          filtered = detailedEstimatorSuggestions.filter((s) =>
-                                            s.description.toLowerCase().includes(query.toLowerCase())
-                                          );
-                                        }
-                                        if (filtered.length === 0) {
-                                          return <div className="p-2 text-muted-foreground text-center">No matching summary items</div>;
-                                        }
-                                        return (
-                                          <div className="flex flex-col gap-1">
-                                            {filtered.map((s, idx) => (
-                                              <button
-                                                key={idx}
-                                                type="button"
-                                                onMouseDown={(e) => e.preventDefault()}
-                                                onClick={() => {
-                                                  handleFieldChange((c) => {
-                                                    const row = c.lowSide.items[i];
-                                                    row.description = s.description;
-                                                    row.qty = s.qty;
-                                                    row.unit = s.unit;
-                                                    row.materialRate = Math.round(s.qty * s.ur);
-                                                    row.stdRate = s.ur;
-                                                  });
-                                                  setActiveSuggestionRow(null);
-                                                }}
-                                                className="w-full flex items-center justify-between text-left p-2 hover:bg-muted rounded transition"
-                                              >
-                                                <div className="flex flex-col">
-                                                  <span className="font-semibold text-foreground text-xs">{s.description}</span>
-                                                  <span className="text-[10px] text-muted-foreground">
-                                                    Qty: {s.qty} {s.unit} | Rate: {formatCurrency(s.ur)}
-                                                  </span>
-                                                </div>
-                                                <span className="font-bold text-pink-700 text-xs">{formatCurrency(s.qty * s.ur)}</span>
-                                              </button>
-                                            ))}
-                                          </div>
-                                        );
-                                      })()}
-                                    </PopoverContent>
-                                  </Popover>
-                                </td>
-                                <td className="p-1.5 px-2 text-center">
-                                  <input
-                                    type="number"
-                                    value={item.qty}
-                                    onChange={(e) => handleFieldChange((c) => {
-                                      c.lowSide.items[i].qty = parseFloat(e.target.value) || 0;
-                                    })}
-                                    className="h-9 w-full text-center rounded border border-border bg-white px-1 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                  />
-                                </td>
-                                <td className="p-1.5 px-2 text-center">
-                                  <input
-                                    type="text"
-                                    value={item.unit}
-                                    onChange={(e) => handleFieldChange((c) => {
-                                      c.lowSide.items[i].unit = e.target.value;
-                                    })}
-                                    className="h-9 w-full text-center rounded border border-border bg-white px-1 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                  />
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right">
-                                  <input
-                                    type="number"
-                                    value={item.materialRate}
-                                    onChange={(e) => handleFieldChange((c) => {
-                                      c.lowSide.items[i].materialRate = parseFloat(e.target.value) || 0;
-                                    })}
-                                    className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                  />
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right">
-                                  <input
-                                    type="number"
-                                    value={item.labourRate || 0}
-                                    onChange={(e) => handleFieldChange((c) => {
-                                      c.lowSide.items[i].labourRate = parseFloat(e.target.value) || 0;
-                                    })}
-                                    className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                  />
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right font-bold text-slate-800 text-xs">
-                                  {formatCurrency(item.materialRate + item.labourRate)}
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right">
-                                  <input
-                                    type="number"
-                                    value={item.stdRate || 0}
-                                    onChange={(e) => handleFieldChange((c) => {
-                                      c.lowSide.items[i].stdRate = parseFloat(e.target.value) || 0;
-                                    })}
-                                    className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                  />
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right font-bold text-slate-700 text-xs">
-                                  {formatCurrency(item.stdRate * item.qty)}
-                                </td>
-                                
-                                <td className="p-1.5 px-2 text-right font-bold text-pink-700 text-xs">
-                                  {formatCurrency(item.qRate || 0)}
-                                </td>
- 
-                                <td className="p-1.5 pr-4 text-center">
-                                  <button
-                                    onClick={() => handleFieldChange((c) => {
-                                      c.lowSide.items.splice(i, 1);
-                                    })}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition duration-150"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
+                                    </td>
+                                  </tr>
+
+                                  {/* Group Item Rows */}
+                                  {groupItems.map(({ item, originalIndex }) => {
+                                    if (item.isDescriptionOnly) {
+                                      return (
+                                        <tr key={item.srNo} className="bg-white border-b border-border/30">
+                                          <td className="p-1.5 pl-4 text-center font-semibold text-slate-500 text-xs">{item.srNo}</td>
+                                          <td className="p-1.5 px-2" colSpan={9}>
+                                            <AutoResizeTextarea
+                                              value={item.description}
+                                              onChange={(e) => {
+                                                handleFieldChange((c) => {
+                                                  c.lowSide.items[originalIndex].description = e.target.value;
+                                                });
+                                              }}
+                                              className="min-h-[36px] w-full rounded border border-dashed border-slate-350 bg-slate-50/50 px-2 py-2 text-[13px] font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none overflow-hidden leading-normal placeholder:font-normal"
+                                              placeholder="Enter description-only details..."
+                                            />
+                                          </td>
+                                          <td className="p-1.5 pr-4 text-center">
+                                            <button
+                                              onClick={() => handleFieldChange((c) => {
+                                                c.lowSide.items.splice(originalIndex, 1);
+                                              })}
+                                              className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition duration-150"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+
+                                    return (
+                                      <tr key={item.srNo} className="bg-white border-b border-border/30">
+                                        <td className="p-1.5 pl-4 text-center font-semibold text-slate-500 text-xs">{item.srNo}</td>
+                                        <td className="p-1.5 px-2">
+                                          <Popover
+                                            modal={false}
+                                            open={activeSuggestionRow === originalIndex}
+                                            onOpenChange={(open) => {
+                                              if (!open) {
+                                                setActiveSuggestionRow(null);
+                                              }
+                                            }}
+                                          >
+                                            <PopoverTrigger asChild>
+                                              <div className="w-full relative">
+                                                <AutoResizeTextarea
+                                                  value={item.description}
+                                                  onFocus={() => {
+                                                    setActiveSuggestionRow(originalIndex);
+                                                    setSearchQuery("");
+                                                  }}
+                                                  onChange={(e) => {
+                                                    handleFieldChange((c) => {
+                                                      c.lowSide.items[originalIndex].description = e.target.value;
+                                                    });
+                                                    setSearchQuery(e.target.value);
+                                                  }}
+                                                  className="min-h-[36px] w-full rounded border border-border bg-white px-2 py-2 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none overflow-hidden leading-normal"
+                                                  placeholder="Enter description..."
+                                                />
+                                              </div>
+                                            </PopoverTrigger>
+                                            <PopoverContent
+                                              className="w-96 p-2 bg-card border border-border shadow-lg max-h-60 overflow-y-auto z-50 text-xs"
+                                              align="start"
+                                              side="bottom"
+                                              sideOffset={4}
+                                              onOpenAutoFocus={(e) => e.preventDefault()}
+                                            >
+                                              {(() => {
+                                                const query = searchQuery || "";
+                                                const category = getRowCategory(item.srNo, item.description);
+                                                let filtered: typeof detailedEstimatorSuggestions = [];
+                                                if (query.trim() === "") {
+                                                  if (category) {
+                                                    filtered = detailedEstimatorSuggestions.filter((s) => s.category === category);
+                                                  }
+                                                  if (filtered.length === 0) {
+                                                    filtered = detailedEstimatorSuggestions;
+                                                  }
+                                                } else {
+                                                  filtered = detailedEstimatorSuggestions.filter((s) =>
+                                                    s.description.toLowerCase().includes(query.toLowerCase())
+                                                  );
+                                                }
+                                                if (filtered.length === 0) {
+                                                  return <div className="p-2 text-muted-foreground text-center">No matching summary items</div>;
+                                                }
+                                                return (
+                                                  <div className="flex flex-col gap-1">
+                                                    {filtered.map((s, idx) => (
+                                                      <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onMouseDown={(e) => e.preventDefault()}
+                                                        onClick={() => {
+                                                          handleFieldChange((c) => {
+                                                            const row = c.lowSide.items[originalIndex];
+                                                            row.description = s.description;
+                                                            row.qty = s.qty;
+                                                            row.unit = s.unit;
+                                                            row.materialRate = Math.round(s.qty * s.ur);
+                                                            row.stdRate = s.ur;
+                                                          });
+                                                          setActiveSuggestionRow(null);
+                                                        }}
+                                                        className="w-full flex items-center justify-between text-left p-2 hover:bg-muted rounded transition"
+                                                      >
+                                                        <div className="flex flex-col">
+                                                          <span className="font-semibold text-foreground text-xs">{s.description}</span>
+                                                          <span className="text-[10px] text-muted-foreground">
+                                                            Qty: {s.qty} {s.unit} | Rate: {formatCurrency(s.ur)}
+                                                          </span>
+                                                        </div>
+                                                        <span className="font-bold text-pink-700 text-xs">{formatCurrency(s.qty * s.ur)}</span>
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                );
+                                              })()}
+                                            </PopoverContent>
+                                          </Popover>
+                                        </td>
+                                        <td className="p-1.5 px-2 text-center">
+                                          <input
+                                            type="number"
+                                            value={item.qty}
+                                            onChange={(e) => handleFieldChange((c) => {
+                                              c.lowSide.items[originalIndex].qty = parseFloat(e.target.value) || 0;
+                                            })}
+                                            className="h-9 w-full text-center rounded border border-border bg-white px-1 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                          />
+                                        </td>
+                                        <td className="p-1.5 px-2 text-center">
+                                          <input
+                                            type="text"
+                                            value={item.unit}
+                                            onChange={(e) => handleFieldChange((c) => {
+                                              c.lowSide.items[originalIndex].unit = e.target.value;
+                                            })}
+                                            className="h-9 w-full text-center rounded border border-border bg-white px-1 text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                          />
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right">
+                                          <input
+                                            type="number"
+                                            value={item.materialRate}
+                                            onChange={(e) => handleFieldChange((c) => {
+                                              c.lowSide.items[originalIndex].materialRate = parseFloat(e.target.value) || 0;
+                                            })}
+                                            className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                          />
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right">
+                                          <input
+                                            type="number"
+                                            value={item.labourRate || 0}
+                                            onChange={(e) => handleFieldChange((c) => {
+                                              c.lowSide.items[originalIndex].labourRate = parseFloat(e.target.value) || 0;
+                                            })}
+                                            className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                          />
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right font-bold text-slate-800 text-xs">
+                                          {formatCurrency(item.materialRate + item.labourRate)}
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right">
+                                          <input
+                                            type="number"
+                                            value={item.stdRate || 0}
+                                            onChange={(e) => handleFieldChange((c) => {
+                                              c.lowSide.items[originalIndex].stdRate = parseFloat(e.target.value) || 0;
+                                            })}
+                                            className="h-9 w-full rounded border border-border bg-white px-1.5 text-right text-[13px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                          />
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right font-bold text-slate-700 text-xs">
+                                          {formatCurrency(item.stdRate * item.qty)}
+                                        </td>
+                                        
+                                        <td className="p-1.5 px-2 text-right font-bold text-pink-700 text-xs">
+                                          {formatCurrency(item.qRate || 0)}
+                                        </td>
+        
+                                        <td className="p-1.5 pr-4 text-center">
+                                          <button
+                                            onClick={() => handleFieldChange((c) => {
+                                              c.lowSide.items.splice(originalIndex, 1);
+                                            })}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded transition duration-150"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+
+                                  {/* Group Actions Row */}
+                                  <tr className="bg-white hover:bg-transparent">
+                                    <td colSpan={11} className="py-2.5 px-4 text-left border-b border-border/30">
+                                      <div className="flex items-center gap-3">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleFieldChange((c) => {
+                                            const nextSr = c.lowSide.items.length > 0 ? Math.max(...c.lowSide.items.map(it => it.srNo)) + 1 : 1;
+                                            c.lowSide.items.push({
+                                              srNo: nextSr,
+                                              group: groupName,
+                                              description: "",
+                                              qty: 1,
+                                              unit: "Nos",
+                                              materialRate: 0,
+                                              labourRate: 0,
+                                              stdRate: 0,
+                                              rateUnit: "Flat",
+                                              isDescriptionOnly: false
+                                            });
+                                          })}
+                                          className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded border border-dashed border-slate-350 text-slate-700 hover:bg-slate-50 transition duration-150"
+                                        >
+                                          <Plus className="h-3.5 w-3.5" />
+                                          Add Item to this Group
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleFieldChange((c) => {
+                                            const nextSr = c.lowSide.items.length > 0 ? Math.max(...c.lowSide.items.map(it => it.srNo)) + 1 : 1;
+                                            c.lowSide.items.push({
+                                              srNo: nextSr,
+                                              group: groupName,
+                                              description: "",
+                                              qty: 0,
+                                              unit: "",
+                                              materialRate: 0,
+                                              labourRate: 0,
+                                              stdRate: 0,
+                                              rateUnit: "Flat",
+                                              isDescriptionOnly: true
+                                            });
+                                          })}
+                                          className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded border border-dashed border-slate-350 text-slate-700 hover:bg-slate-50 transition duration-150"
+                                        >
+                                          <Plus className="h-3.5 w-3.5" />
+                                          Add Description Row to this Group
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </React.Fragment>
+                              );
+                            });
+                          })()}
                         </tbody>
                         <tfoot>
                           <tr className="bg-slate-100/80 border-t-2 border-b-2 border-slate-300 font-extrabold text-slate-800 text-xs">
@@ -1753,25 +1927,28 @@ export function CostingTab({ enquiry }: CostingTabProps) {
                       </table>
                     </div>
  
-                    <div className="mt-2 flex justify-start">
+                    <div className="mt-4 flex gap-3">
                       <button
+                        type="button"
                         onClick={() => handleFieldChange((c) => {
                           const nextSr = c.lowSide.items.length > 0 ? Math.max(...c.lowSide.items.map(item => item.srNo)) + 1 : 1;
                           c.lowSide.items.push({
                             srNo: nextSr,
+                            group: "New Category Group",
                             description: "",
                             qty: 1,
                             unit: "Nos",
                             materialRate: 0,
                             labourRate: 0,
                             stdRate: 0,
-                            rateUnit: "Flat"
+                            rateUnit: "Flat",
+                            isDescriptionOnly: false
                           });
                         })}
-                        className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-dashed border-slate-300 text-slate-700 hover:bg-slate-50 transition duration-200"
+                        className="flex items-center gap-1.5 text-xs font-bold px-4 h-9 rounded-lg border border-dashed border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition duration-200"
                       >
                         <Plus className="h-4 w-4" />
-                        Add Work Item
+                        Create New Group
                       </button>
                     </div>
                   </>

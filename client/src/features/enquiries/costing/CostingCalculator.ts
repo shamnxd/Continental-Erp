@@ -429,6 +429,14 @@ export function calculateCosting(costing: ICosting): ICosting {
   const pipeLen = est.refPiping.copperPipes.reduce((sum, p) => sum + p.qty, 0) / 2 || 0;
 
   lowItems.forEach((item) => {
+    if (item.isDescriptionOnly) {
+      item.materialRate = 0;
+      item.labourRate = 0;
+      item.stdRate = 0;
+      item.cpfRate = 0;
+      item.qRate = 0;
+      return;
+    }
     const desc = (item.description || "").toLowerCase();
 
     if (desc.includes("installation")) {
@@ -740,17 +748,20 @@ export function createDefaultCosting(
 // ---------------------------------------------------------------------------
 export function getHvacTemplateItems(): ILowSideItem[] {
   return [
-    { srNo: 1, description: "Installation of ductable AC Unit", qty: 0, unit: "No.", materialRate: 0, labourRate: 0, stdRate: 1600, rateUnit: "per TR" },
-    { srNo: 2, description: "Testing & Commissioning of AC Unit", qty: 0, unit: "No.", materialRate: 0, labourRate: 0, stdRate: 0, rateUnit: "Flat" },
-    { srNo: 3, description: "Ref. Piping", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 2100, rateUnit: "per RMT" },
-    { srNo: 4, description: "Control Cabling", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 350, rateUnit: "per RMT" },
-    { srNo: 5, description: "Power Cabling", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 350, rateUnit: "per RMT" },
-    { srNo: 6, description: "Drain Piping", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 250, rateUnit: "per RMT" },
-    { srNo: 7, description: "R32 Gas charging", qty: 0, unit: "Kg", materialRate: 0, labourRate: 0, stdRate: 1300, rateUnit: "per kg" },
-    { srNo: 8, description: "GSS Ducting with thermal, Acoustic insulation & canvas connection", qty: 0, unit: "Sq.mtr", materialRate: 0, labourRate: 0, stdRate: 1700, rateUnit: "per sq.mtr" },
-    { srNo: 9, description: "Air terminals", qty: 0, unit: "Sq. mtr", materialRate: 0, labourRate: 0, stdRate: 10000, rateUnit: "per sq.mtr" },
-    { srNo: 10, description: "ODU Stand", qty: 0, unit: "Nos", materialRate: 0, labourRate: 0, stdRate: 450, rateUnit: "Flat" },
-    { srNo: 11, description: "PVC Casing Cap", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 800, rateUnit: "per RMT" },
+    { srNo: 1, group: "Installation, Testing & Commissioning & Handing over of the following", description: "Installation of ductable AC Unit", qty: 0, unit: "No.", materialRate: 0, labourRate: 0, stdRate: 1600, rateUnit: "per TR", isDescriptionOnly: false },
+    { srNo: 2, group: "Installation, Testing & Commissioning & Handing over of the following", description: "Testing & Commissioning of AC Unit", qty: 0, unit: "No.", materialRate: 0, labourRate: 0, stdRate: 0, rateUnit: "Flat", isDescriptionOnly: false },
+    { srNo: 3, group: "Refrigerant Copper Piping", description: "Ref. Piping", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 2100, rateUnit: "per RMT", isDescriptionOnly: false },
+    { srNo: 4, group: "Communication Cabling works", description: "Control Cabling", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 350, rateUnit: "per RMT", isDescriptionOnly: false },
+    { srNo: 5, group: "Communication Cabling works", description: "Power Cabling", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 350, rateUnit: "per RMT", isDescriptionOnly: false },
+    { srNo: 6, group: "Drain Piping", description: "Drain Piping", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 250, rateUnit: "per RMT", isDescriptionOnly: false },
+    { srNo: 7, group: "R32 Gas charging", description: "R32 Gas charging", qty: 0, unit: "Kg", materialRate: 0, labourRate: 0, stdRate: 1300, rateUnit: "per kg", isDescriptionOnly: false },
+    { srNo: 8, group: "Sheet Metal Works", description: "Supply, erection of fabricated GSS ducting as per drawing complete with all fittings", qty: 0, unit: "", materialRate: 0, labourRate: 0, stdRate: 0, rateUnit: "Flat", isDescriptionOnly: true },
+    { srNo: 9, group: "Sheet Metal Works", description: "GSS Ducting (Gauge-based estimates)", qty: 0, unit: "Sq.mtr", materialRate: 0, labourRate: 0, stdRate: 1700, rateUnit: "per sq.mtr", isDescriptionOnly: false },
+    { srNo: 10, group: "Duct Insulation & Lining", description: "Thermal Insulation for GSS Ducting", qty: 0, unit: "Sqm", materialRate: 0, labourRate: 0, stdRate: 130, rateUnit: "per sq.mtr", isDescriptionOnly: false },
+    { srNo: 11, group: "Duct Insulation & Lining", description: "Acoustic Insulation for GSS Ducting", qty: 0, unit: "Sqm", materialRate: 0, labourRate: 0, stdRate: 300, rateUnit: "per sq.mtr", isDescriptionOnly: false },
+    { srNo: 12, group: "Grilles/Diffusers", description: "Air terminals", qty: 0, unit: "Sq. mtr", materialRate: 0, labourRate: 0, stdRate: 10000, rateUnit: "per sq.mtr", isDescriptionOnly: false },
+    { srNo: 13, group: "ODU Stand", description: "ODU Stand", qty: 0, unit: "Nos", materialRate: 0, labourRate: 0, stdRate: 450, rateUnit: "Flat", isDescriptionOnly: false },
+    { srNo: 14, group: "PVC Casing Cap", description: "PVC Casing Cap", qty: 0, unit: "Rmt", materialRate: 0, labourRate: 0, stdRate: 800, rateUnit: "per RMT", isDescriptionOnly: false },
   ];
 }
 
@@ -877,6 +888,15 @@ export function syncEstimatesToLowSide(costing: ICosting): ICosting {
   });
 
   finalItems.forEach((item) => {
+    if (item.isDescriptionOnly) {
+      item.qty = 0;
+      item.materialRate = 0;
+      item.labourRate = 0;
+      item.stdRate = 0;
+      item.cpfRate = 0;
+      item.qRate = 0;
+      return;
+    }
     const desc = (item.description || "").toLowerCase();
 
     if (desc.includes("installation")) {
@@ -959,6 +979,11 @@ export function syncEstimatesToLowSide(costing: ICosting): ICosting {
 
   // Calculate client cost totals for Low Side items
   result.lowSide.items.forEach((item) => {
+    if (item.isDescriptionOnly) {
+      item.cpfRate = 0;
+      item.qRate = 0;
+      return;
+    }
     if (item.rateUnit === "per TR") {
       item.cpfRate = tr * (item.stdRate || 0);
     } else {

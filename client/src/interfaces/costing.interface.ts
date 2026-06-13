@@ -4,6 +4,7 @@ export interface IHighSideEquipment {
   unitRate: number;
   cpf?: number;
   cpfMarkupPercent?: number; // per-item CPF markup %, e.g. 16 means ×1.16
+  group?: string;
 }
 
 export interface IHighSideCosting {
@@ -159,6 +160,8 @@ export interface ILowSideItem {
   rateUnit: string;
   cpfRate?: number;
   qRate?: number;
+  group?: string;
+  isDescriptionOnly?: boolean;
 }
 
 export interface ILowSideCosting {

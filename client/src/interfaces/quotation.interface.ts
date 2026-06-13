@@ -12,6 +12,8 @@ export interface QuotationLineItem {
   total: number;
   section?: "machine_side" | "low_side";
   unit?: string;
+  group?: string;
+  isDescriptionOnly?: boolean;
 }
 
 export interface QuotationRemark {
@@ -32,6 +34,8 @@ export interface Quotation {
   enquiryNo?: string;
   amount: number;
   gstPercent: number;
+  machineGstPercent?: number;
+  lowSideGstPercent?: number;
   gst: number;
   total: number;
   status: QuotationStatus;
@@ -41,6 +45,12 @@ export interface Quotation {
   revision?: number;
   isActive?: boolean;
   costingId?: string;
+  costingRevision?: number;
+  clonedFromQuotationRevision?: number;
   createdAt?: string;
   updatedAt?: string;
+  panNo?: string;
+  serviceTaxNo?: string;
+  gstin?: string;
+  clientAddress?: string;
 }

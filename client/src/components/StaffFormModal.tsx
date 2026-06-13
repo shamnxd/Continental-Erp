@@ -89,6 +89,8 @@ export function StaffFormModal({ isOpen, onClose, onSuccess, staff = null }: Sta
         customRole: form.role === "Custom" ? form.customRole.trim() : "",
         employmentType: form.employmentType,
         specialization: form.specialization.trim(),
+        status: (staff ? staff.status : "Available") as any,
+        isActive: staff ? staff.isActive : true,
       };
 
       if (staff?.id) {

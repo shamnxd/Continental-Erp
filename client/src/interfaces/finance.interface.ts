@@ -86,6 +86,13 @@ export interface ClientInvoice {
   paymentState: PaymentState;
   notes?: string;
   terms?: string;
+  companyAddress?: string;
+  gstNumber?: string;
+  advancePaid?: number;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  referenceNo?: string;
 }
 
 export interface VendorBill {

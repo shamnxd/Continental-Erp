@@ -11,4 +11,6 @@ export interface Client {
   amcStatus: "Active" | "Inactive" | "Expired";
   createdAt?: string;
   updatedAt?: string;
+  activeComplaintsCount?: number;
+  activeEnquiriesCount?: number;
 }

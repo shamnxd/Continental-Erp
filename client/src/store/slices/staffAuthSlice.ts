@@ -45,7 +45,7 @@ export const restoreStaffSession = createAsyncThunk(
   async (_, { dispatch }) => {
     dispatch(setLoading(true));
     try {
-      const response = await staffApi.post("/staff/auth/refresh");
+      const response: any = await staffApi.post("/staff/auth/refresh");
       const token = response.accessToken;
       const decodedStaff = decodeStaffJwt(token);
       if (decodedStaff) {

@@ -38,7 +38,6 @@ import { MinorJobs } from "./features/minor-jobs/MinorJobs";
 import { MinorJobDetail } from "./features/minor-jobs/MinorJobDetail";
 import { Projects } from "./features/projects/Projects";
 import { ProjectDetail } from "./features/projects/ProjectDetail";
-import { CustomerComplaints } from "./features/customer-complaints/CustomerComplaints";
 import { LeaveManagement } from "./features/leave-management/LeaveManagement";
 import { AuditLogs } from "./features/audit-logs/AuditLogs";
 import { WarrantyManagement } from "./features/warranty/WarrantyManagement";

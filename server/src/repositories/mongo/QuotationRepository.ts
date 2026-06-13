@@ -21,6 +21,8 @@ export class QuotationRepository
   protected toDomain(doc: IQuotationDocument): IQuotation {
     const client = (doc as unknown as { clientRef?: any }).clientRef;
     const clientName = client?.companyName ?? doc.clientName;
+    const clientAddress = client?.address;
+    const gstin = client?.gst;
 
     return {
       id: doc._id.toString(),
@@ -29,6 +31,8 @@ export class QuotationRepository
       validUntil: doc.validUntil,
       clientId: doc.clientId,
       clientName,
+      clientAddress,
+      gstin,
       enquiryId: doc.enquiryId || undefined,
       enquiryNo: doc.enquiryNo || undefined,
       amount: doc.amount,
@@ -43,6 +47,8 @@ export class QuotationRepository
         total: i.total,
         section: i.section,
         unit: i.unit,
+        group: i.group,
+        isDescriptionOnly: i.isDescriptionOnly,
       })),
       remarks: (doc.remarks ?? []).map((r) => ({
         id: (r as { _id?: { toString(): string } })._id?.toString(),
@@ -54,6 +60,8 @@ export class QuotationRepository
       revision: doc.revision,
       isActive: doc.isActive,
       costingId: doc.costingId,
+      costingRevision: doc.costingRevision,
+      clonedFromQuotationRevision: doc.clonedFromQuotationRevision,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -68,14 +76,35 @@ export class QuotationRepository
       quotationNo = `QUO-${year}-${pad}`;
     }
 
+    const { clientName, ...rest } = item;
+
     const createdDoc = new this.model({
-      ...item,
+      ...rest,
+      clientName: clientName || "",
       quotationNo,
       clientRef: item.clientId && Types.ObjectId.isValid(item.clientId) ? new Types.ObjectId(item.clientId) : null,
     });
 
     const savedDoc = await createdDoc.save();
+    await savedDoc.populate("clientRef");
     return this.toDomain(savedDoc);
+  }
+
+  public override async update(id: string, item: Partial<IQuotation>): Promise<IQuotation | null> {
+    const updateData: any = { ...item };
+    if (item.clientId && Types.ObjectId.isValid(item.clientId)) {
+      updateData.clientRef = new Types.ObjectId(item.clientId);
+    }
+    
+    delete updateData.clientName;
+
+    const updatedDoc = await this.model.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    ).populate("clientRef").exec();
+
+    return updatedDoc ? this.toDomain(updatedDoc) : null;
   }
 
   public override async findById(id: string): Promise<IQuotation | null> {
@@ -84,11 +113,13 @@ export class QuotationRepository
   }
 
   public async findPaginated(query: GetQuotationsQuery): Promise<PaginatedQuotations> {
-    const { search, page = 1, limit = 10, status, clientId, enquiryId, quotationNo } = query;
+    const { search, page = 1, limit = 10, status, clientId, enquiryId, quotationNo, allRevisions } = query;
     const mongoFilter: Record<string, unknown> = {};
 
     if (quotationNo) {
       mongoFilter.quotationNo = quotationNo;
+    } else if (allRevisions === true || allRevisions === "true") {
+      // Do not filter by isActive, return all revisions
     } else {
       mongoFilter.isActive = true;
     }
@@ -127,10 +158,15 @@ export class QuotationRepository
 
   public async getNextRevisionNumber(quotationNo: string): Promise<number> {
     const latest = await this.model.findOne({ quotationNo }).sort({ revision: -1 }).exec();
-    return latest ? latest.revision + 1 : 0;
+    if (!latest) return 0;
+    return (latest.revision ?? 0) + 1;
   }
 
-  public async deactivateAllForNo(quotationNo: string): Promise<void> {
-    await this.model.updateMany({ quotationNo }, { isActive: false }).exec();
+  public async deactivateAllForNo(quotationNo: string, excludeId?: string): Promise<void> {
+    const filter: any = { quotationNo };
+    if (excludeId) {
+      filter._id = { $ne: excludeId };
+    }
+    await this.model.updateMany(filter, { isActive: false }).exec();
   }
 }

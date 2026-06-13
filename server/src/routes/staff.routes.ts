@@ -10,6 +10,7 @@ const controller = new StaffController();
 router.use(requireAuth);
 
 router.post("/", validateDto(CreateStaffSchema), controller.create);
+router.get("/stats", controller.getStats);
 router.get("/", controller.getAll);
 router.get("/:id/work-history", controller.getWorkHistory);
 router.get("/:id/schedules", controller.getSchedules);

@@ -10,6 +10,7 @@ router.post("/public", controller.submitPublicComplaint);
 
 // Admin-only protected routes
 router.use(requireAuth);
+router.get("/stats", controller.getStats);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);
 router.put("/:id/reject", controller.reject);

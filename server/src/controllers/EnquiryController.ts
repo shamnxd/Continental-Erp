@@ -13,6 +13,7 @@ import {
   AddEnquiryDrawingInput,
   persistUploadedFile,
 } from "../usecases/enquiries/AddEnquiryDrawingUseCase";
+import { EnquiryModel } from "../models/Enquiry";
 
 @autoInjectable()
 export class EnquiryController {
@@ -43,6 +44,33 @@ export class EnquiryController {
       IEnquiry | null
     >,
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, siteVisit, quotation, followUp, converted, closed] = await Promise.all([
+        EnquiryModel.countDocuments({}),
+        EnquiryModel.countDocuments({ status: "Site Visit Scheduled" }),
+        EnquiryModel.countDocuments({ status: "Quotation Prepared" }),
+        EnquiryModel.countDocuments({ status: "Follow-up Required" }),
+        EnquiryModel.countDocuments({ status: "Converted to Project" }),
+        EnquiryModel.countDocuments({ status: "Closed" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          siteVisit,
+          quotation,
+          followUp,
+          converted,
+          closed,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

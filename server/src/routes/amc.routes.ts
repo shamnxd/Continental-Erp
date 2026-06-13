@@ -12,6 +12,7 @@ const controller = new AmcController();
 router.use(requireAuth);
 
 router.post("/", validateDto(CreateAmcSchema), controller.create);
+router.get("/stats", controller.getStats);
 router.get("/", controller.getAll);
 router.post("/:id/remarks", validateDto(AddAmcRemarkSchema), controller.addRemark);
 router.put("/:id/remarks/:remarkId", validateDto(EditEnquiryRemarkSchema), controller.editRemark);

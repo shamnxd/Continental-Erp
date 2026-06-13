@@ -9,6 +9,29 @@ import { AppError } from "../errors/AppError";
 import { AuditLogger } from "../utils/AuditLogger";
 
 export class ComplaintRequestController {
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, pending, converted, rejected] = await Promise.all([
+        ComplaintRequestModel.countDocuments({}),
+        ComplaintRequestModel.countDocuments({ status: "Pending" }),
+        ComplaintRequestModel.countDocuments({ status: "Converted" }),
+        ComplaintRequestModel.countDocuments({ status: "Rejected" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          pending,
+          converted,
+          rejected,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   /** POST /api/v1/public/complaint-requests */
   public submitPublicComplaint = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

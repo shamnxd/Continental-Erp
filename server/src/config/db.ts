@@ -51,6 +51,20 @@ export const connectDatabase = async (): Promise<void> => {
     });
 
     await mongoose.connect(env.MONGO_URI);
+
+    // Drop incorrect legacy unique index on quotations if it exists to allow revision cloning
+    try {
+      const db = mongoose.connection.db;
+      if (db) {
+        await db.collection("quotations").dropIndex("quotationNo_1");
+        Logger.info("Successfully dropped legacy unique index 'quotationNo_1' from quotations collection.");
+      }
+    } catch (err: any) {
+      if (err.code !== 27 && err.codeName !== "IndexNotFound") {
+        Logger.warn(`Could not drop legacy unique index 'quotationNo_1': ${err.message}`);
+      }
+    }
+
     await seedCopperPipeRates();
   } catch (error) {
     Logger.error("Critical: Failed to connect to MongoDB", error);

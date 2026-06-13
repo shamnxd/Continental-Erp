@@ -8,6 +8,7 @@ import { GetQuotationsQuery, PaginatedQuotations } from "../interfaces/repositor
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
 import { AuditLogger } from "../utils/AuditLogger";
+import { QuotationModel } from "../models/Quotation";
 
 @autoInjectable()
 export class QuotationController {
@@ -35,6 +36,31 @@ export class QuotationController {
       IQuotation | null
     >,
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, pending, approved, rejected, draft] = await Promise.all([
+        QuotationModel.countDocuments({}),
+        QuotationModel.countDocuments({ status: "Pending Approval" }),
+        QuotationModel.countDocuments({ status: "Approved" }),
+        QuotationModel.countDocuments({ status: "Rejected" }),
+        QuotationModel.countDocuments({ status: "Draft" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          pending,
+          approved,
+          rejected,
+          draft,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -83,6 +109,8 @@ export class QuotationController {
         status: req.query.status as string | undefined,
         clientId: req.query.clientId as string | undefined,
         enquiryId: req.query.enquiryId as string | undefined,
+        quotationNo: req.query.quotationNo as string | undefined,
+        allRevisions: req.query.allRevisions as string | undefined,
       };
       const result = await this._getQuotationsUseCase!.execute(query);
       res.status(StatusCode.OK).json({ success: true, ...result });

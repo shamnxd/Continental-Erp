@@ -16,9 +16,17 @@ export class CreateQuotationUseCase implements IUseCase<CreateQuotationDto, IQuo
   public async execute(dto: CreateQuotationDto): Promise<IQuotation> {
     const items = normalizeLineItems(dto.items);
     const gstPercent = dto.gstPercent ?? 18;
-    const { amount, gst, total } = computeQuotationTotals(items, gstPercent);
+    const machineGstPercent = dto.machineGstPercent ?? 28;
+    const lowSideGstPercent = dto.lowSideGstPercent ?? 18;
+    const { amount, gst, total } = computeQuotationTotals(items, gstPercent, machineGstPercent, lowSideGstPercent);
+
+    let revision = dto.revision ?? 0;
+    if (dto.quotationNo?.trim()) {
+      revision = await this._quotationRepository.getNextRevisionNumber(dto.quotationNo.trim());
+    }
 
     const quotation = await this._quotationRepository.create({
+      quotationNo: dto.quotationNo?.trim() || undefined,
       date: dto.date,
       validUntil: dto.validUntil,
       clientId: dto.clientId,
@@ -27,6 +35,8 @@ export class CreateQuotationUseCase implements IUseCase<CreateQuotationDto, IQuo
       enquiryNo: dto.enquiryNo?.trim() || undefined,
       amount,
       gstPercent,
+      machineGstPercent,
+      lowSideGstPercent,
       gst,
       total,
       status: dto.status ?? "Pending Approval",
@@ -34,9 +44,15 @@ export class CreateQuotationUseCase implements IUseCase<CreateQuotationDto, IQuo
       remarks: [],
       notes: dto.notes ?? "",
       costingId: dto.costingId || undefined,
-      revision: dto.revision ?? 0,
+      costingRevision: dto.costingRevision,
+      clonedFromQuotationRevision: dto.clonedFromQuotationRevision,
+      revision,
       isActive: dto.isActive ?? true,
     });
+
+    if (dto.quotationNo?.trim() && quotation.id) {
+      await this._quotationRepository.deactivateAllForNo(dto.quotationNo.trim(), quotation.id);
+    }
 
     if (dto.enquiryId?.trim()) {
       await this._enquiryRepository.update(dto.enquiryId, { status: "Quotation Prepared" });

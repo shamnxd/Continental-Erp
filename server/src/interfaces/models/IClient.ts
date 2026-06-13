@@ -11,4 +11,6 @@ export interface IClient {
   amcStatus: "Active" | "Inactive" | "Expired";
   createdAt?: Date;
   updatedAt?: Date;
+  activeComplaintsCount?: number;
+  activeEnquiriesCount?: number;
 }

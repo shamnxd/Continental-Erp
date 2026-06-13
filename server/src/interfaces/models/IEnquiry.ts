@@ -31,6 +31,7 @@ export interface IEnquiry {
   contactPerson: string;
   phone: string;
   email: string;
+  clientLocation?: string;
   requirement: string;
   description: string;
   status: EnquiryStatus;

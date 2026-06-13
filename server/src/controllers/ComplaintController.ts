@@ -7,6 +7,7 @@ import { GetComplaintsQuery, PaginatedComplaints } from "../interfaces/repositor
 import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
+import { ComplaintModel } from "../models/Complaint";
 
 @autoInjectable()
 export class ComplaintController {
@@ -22,6 +23,31 @@ export class ComplaintController {
     @inject("DeleteComplaintUseCase")
     private _deleteComplaintUseCase?: IUseCase<string, boolean>
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, pending, inProgress, resolved, critical] = await Promise.all([
+        ComplaintModel.countDocuments({}),
+        ComplaintModel.countDocuments({ status: "Pending" }),
+        ComplaintModel.countDocuments({ status: "In Progress" }),
+        ComplaintModel.countDocuments({ status: "Resolved" }),
+        ComplaintModel.countDocuments({ priority: "Critical" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          pending,
+          inProgress,
+          resolved,
+          critical,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

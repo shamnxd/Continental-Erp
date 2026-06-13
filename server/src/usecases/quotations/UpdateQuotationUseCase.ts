@@ -15,24 +15,33 @@ export class UpdateQuotationUseCase
     const existing = await this._quotationRepository.findById(input.id);
     if (!existing) return null;
 
-    const { items: itemsInput, gstPercent: gstInput, ...scalarFields } = input.data;
+    const { items: itemsInput, gstPercent: gstInput, machineGstPercent: machineGstInput, lowSideGstPercent: lowSideGstInput, ...scalarFields } = input.data;
     const patch: Partial<IQuotation> = { ...scalarFields };
 
     if (itemsInput) {
       const items = normalizeLineItems(itemsInput);
       const gstPercent = gstInput ?? existing.gstPercent;
-      const totals = computeQuotationTotals(items, gstPercent);
+      const machineGstPercent = machineGstInput ?? existing.machineGstPercent ?? 28;
+      const lowSideGstPercent = lowSideGstInput ?? existing.lowSideGstPercent ?? 18;
+      const totals = computeQuotationTotals(items, gstPercent, machineGstPercent, lowSideGstPercent);
       patch.items = items;
       patch.amount = totals.amount;
       patch.gst = totals.gst;
       patch.total = totals.total;
       patch.gstPercent = gstPercent;
-    } else if (gstInput != null) {
-      const totals = computeQuotationTotals(existing.items, gstInput);
+      patch.machineGstPercent = machineGstPercent;
+      patch.lowSideGstPercent = lowSideGstPercent;
+    } else if (gstInput != null || machineGstInput != null || lowSideGstInput != null) {
+      const gstPercent = gstInput ?? existing.gstPercent;
+      const machineGstPercent = machineGstInput ?? existing.machineGstPercent ?? 28;
+      const lowSideGstPercent = lowSideGstInput ?? existing.lowSideGstPercent ?? 18;
+      const totals = computeQuotationTotals(existing.items, gstPercent, machineGstPercent, lowSideGstPercent);
       patch.amount = totals.amount;
       patch.gst = totals.gst;
       patch.total = totals.total;
-      patch.gstPercent = gstInput;
+      patch.gstPercent = gstPercent;
+      patch.machineGstPercent = machineGstPercent;
+      patch.lowSideGstPercent = lowSideGstPercent;
     }
 
     return await this._quotationRepository.update(input.id, patch);

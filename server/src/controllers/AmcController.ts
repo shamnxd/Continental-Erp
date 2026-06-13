@@ -11,6 +11,7 @@ import { ISMRRepository } from "../interfaces/repositories/ISMRRepository";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { StatusCode } from "../constants/statusCodes";
 import { AuditLogger } from "../utils/AuditLogger";
+import { AmcModel } from "../models/Amc";
 
 @autoInjectable()
 export class AmcController {
@@ -37,6 +38,29 @@ export class AmcController {
       IAmc | null
     >,
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, active, renewal, expired] = await Promise.all([
+        AmcModel.countDocuments({}),
+        AmcModel.countDocuments({ status: "Active" }),
+        AmcModel.countDocuments({ status: "Due for Renewal" }),
+        AmcModel.countDocuments({ status: "Expired" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          active,
+          renewal,
+          expired,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

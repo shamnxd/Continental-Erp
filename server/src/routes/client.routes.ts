@@ -11,6 +11,7 @@ const controller = new ClientController();
 router.use(requireAuth);
 
 router.post("/", validateDto(CreateClientSchema), controller.create);
+router.get("/stats", controller.getStats);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateClientSchema), controller.update);

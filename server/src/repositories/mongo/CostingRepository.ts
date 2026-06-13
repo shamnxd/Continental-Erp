@@ -278,7 +278,8 @@ export class CostingRepository extends BaseRepository<ICostingDocument, ICosting
 
   public async getNextRevisionNumber(enquiryId: string): Promise<number> {
     const latest = await this.model.findOne({ enquiryId }).sort({ revision: -1 }).exec();
-    return latest ? latest.revision + 1 : 0;
+    if (!latest) return 0;
+    return (latest.revision ?? 0) + 1;
   }
 
   public async deactivateAllForEnquiry(enquiryId: string): Promise<void> {

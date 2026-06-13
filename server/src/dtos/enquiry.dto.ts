@@ -14,9 +14,9 @@ const drawingSchema = z.object({
 export const CreateEnquirySchema = z.object({
   date: z.string().transform((val) => new Date(val)).or(z.date()).optional().default(() => new Date()),
   clientId: z.string().min(1, "Client ID is required"),
-  clientName: z.string().min(1, "Client name is required"),
-  contactPerson: z.string().min(1, "Contact person is required"),
-  phone: z.string().min(1, "Phone is required"),
+  clientName: z.string().optional().default(""),
+  contactPerson: z.string().optional().default(""),
+  phone: z.string().optional().default(""),
   email: z.union([z.string().email(), z.literal("")]).optional().default(""),
   requirement: z.string().min(1, "Requirement is required"),
   description: z.string().min(1, "Description is required"),

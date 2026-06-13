@@ -3,6 +3,8 @@ import { BaseRepository } from "./BaseRepository";
 import { IClientRepository, GetClientsQuery, PaginatedClients } from "../../interfaces/repositories/IClientRepository";
 import { IClient } from "../../interfaces/models/IClient";
 import { ClientModel, IClientDocument } from "../../models/Client";
+import { ComplaintModel } from "../../models/Complaint";
+import { EnquiryModel } from "../../models/Enquiry";
 
 @injectable()
 export class ClientRepository extends BaseRepository<IClientDocument, IClient> implements IClientRepository {
@@ -49,14 +51,18 @@ export class ClientRepository extends BaseRepository<IClientDocument, IClient> i
       mongoFilter["amcStatus"] = "Active";
     } else if (filter === "expired-amc") {
       mongoFilter["amcStatus"] = "Expired";
-    }
-
-    // Complaints / Enquiries filter — match by company names list from frontend
-    if ((filter === "active-complaints" || filter === "active-enquiries") && companyNames && companyNames.length > 0) {
-      mongoFilter["companyName"] = { $in: companyNames };
-    } else if ((filter === "active-complaints" || filter === "active-enquiries") && (!companyNames || companyNames.length === 0)) {
-      // No companies match, return empty result
-      return { data: [], total: 0, page, limit, totalPages: 0 };
+    } else if (filter === "active-complaints") {
+      const activeComplaints = await ComplaintModel.find({
+        status: { $in: ["Pending", "In Progress"] }
+      }).select("clientName").exec();
+      const names = activeComplaints.map(c => c.clientName?.trim()).filter(Boolean);
+      mongoFilter["companyName"] = { $in: names };
+    } else if (filter === "active-enquiries") {
+      const activeEnquiries = await EnquiryModel.find({
+        status: { $in: ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] }
+      }).select("clientName").exec();
+      const names = activeEnquiries.map(e => e.clientName?.trim()).filter(Boolean);
+      mongoFilter["companyName"] = { $in: names };
     }
 
     const skip = (page - 1) * limit;
@@ -66,8 +72,29 @@ export class ClientRepository extends BaseRepository<IClientDocument, IClient> i
       this.model.countDocuments(mongoFilter).exec(),
     ]);
 
+    const data = await Promise.all(
+      docs.map(async (doc) => {
+        const [complaintsCount, enquiriesCount] = await Promise.all([
+          ComplaintModel.countDocuments({
+            $or: [{ clientId: doc._id.toString() }, { clientName: doc.companyName }],
+            status: { $in: ["Pending", "In Progress"] }
+          }),
+          EnquiryModel.countDocuments({
+            $or: [{ clientId: doc._id.toString() }, { clientName: doc.companyName }],
+            status: { $in: ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] }
+          })
+        ]);
+        
+        return {
+          ...this.toDomain(doc),
+          activeComplaintsCount: complaintsCount,
+          activeEnquiriesCount: enquiriesCount
+        };
+      })
+    );
+
     return {
-      data: docs.map((doc) => this.toDomain(doc)),
+      data,
       total,
       page,
       limit,

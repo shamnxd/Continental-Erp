@@ -9,6 +9,7 @@ export interface GetQuotationsQuery {
   clientId?: string;
   enquiryId?: string;
   quotationNo?: string;
+  allRevisions?: boolean | string;
 }
 
 export interface PaginatedQuotations {
@@ -22,5 +23,5 @@ export interface PaginatedQuotations {
 export interface IQuotationRepository extends IBaseRepository<IQuotation> {
   findPaginated(query: GetQuotationsQuery): Promise<PaginatedQuotations>;
   getNextRevisionNumber(quotationNo: string): Promise<number>;
-  deactivateAllForNo(quotationNo: string): Promise<void>;
+  deactivateAllForNo(quotationNo: string, excludeId?: string): Promise<void>;
 }

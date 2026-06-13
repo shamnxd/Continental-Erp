@@ -7,6 +7,9 @@ import { GetClientsQuery, PaginatedClients } from "../interfaces/repositories/IC
 import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
+import { ClientModel } from "../models/Client";
+import { ComplaintModel } from "../models/Complaint";
+import { EnquiryModel } from "../models/Enquiry";
 
 @autoInjectable()
 export class ClientController {
@@ -22,6 +25,39 @@ export class ClientController {
     @inject("DeleteClientUseCase")
     private _deleteClientUseCase?: IUseCase<string, boolean>
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [activeComplaintsList, activeEnquiriesList] = await Promise.all([
+        ComplaintModel.find({ status: { $in: ["Pending", "In Progress"] } }).select("clientName").exec(),
+        EnquiryModel.find({ status: { $in: ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] } }).select("clientName").exec(),
+      ]);
+
+      const complaintNames = Array.from(new Set(activeComplaintsList.map(c => c.clientName?.trim()).filter(Boolean)));
+      const enquiryNames = Array.from(new Set(activeEnquiriesList.map(e => e.clientName?.trim()).filter(Boolean)));
+
+      const [total, activeAmc, expiredAmc, activeComplaintsCount, activeEnquiriesCount] = await Promise.all([
+        ClientModel.countDocuments({}),
+        ClientModel.countDocuments({ amcStatus: "Active" }),
+        ClientModel.countDocuments({ amcStatus: "Expired" }),
+        ClientModel.countDocuments({ companyName: { $in: complaintNames } }),
+        ClientModel.countDocuments({ companyName: { $in: enquiryNames } }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          activeAmc,
+          expiredAmc,
+          activeComplaints: activeComplaintsCount,
+          activeEnquiries: activeEnquiriesCount,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

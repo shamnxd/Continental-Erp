@@ -96,6 +96,8 @@ const lowSideItemSchema = new Schema(
     rateUnit: { type: String, required: true },
     cpfRate: { type: Number, default: 0 },
     qRate: { type: Number, default: 0 },
+    group: { type: String, trim: true },
+    isDescriptionOnly: { type: Boolean, default: false },
   },
   { _id: false }
 );

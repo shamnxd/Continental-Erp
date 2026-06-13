@@ -60,6 +60,8 @@ const lowSideItemSchema = z.object({
   rateUnit: z.string(),
   cpfRate: z.number().optional().default(0),
   qRate: z.number().optional().default(0),
+  group: z.string().optional(),
+  isDescriptionOnly: z.boolean().optional(),
 });
 
 const materialEstimateSchema = z.object({

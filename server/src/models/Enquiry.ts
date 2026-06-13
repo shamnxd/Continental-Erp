@@ -57,9 +57,9 @@ const enquirySchema = new Schema<IEnquiryDocument>(
     // New: proper reference for populate.
     clientRef: { type: Schema.Types.ObjectId, ref: "Client", default: null, index: true },
     // Legacy snapshot fields.
-    clientName: { type: String, required: true, trim: true },
-    contactPerson: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+    clientName: { type: String, trim: true, default: "" },
+    contactPerson: { type: String, trim: true, default: "" },
+    phone: { type: String, trim: true, default: "" },
     email: { type: String, trim: true, default: "" },
     requirement: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },

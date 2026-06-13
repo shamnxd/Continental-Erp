@@ -16,9 +16,6 @@ export class CreateQuotationRevisionUseCase implements IUseCase<{ id: string }, 
       throw new Error("Quotation not found");
     }
 
-    // Deactivate previous revisions first
-    await this._quotationRepository.deactivateAllForNo(existing.quotationNo);
-
     // Get next revision number
     const revision = await this._quotationRepository.getNextRevisionNumber(existing.quotationNo);
 
@@ -33,6 +30,8 @@ export class CreateQuotationRevisionUseCase implements IUseCase<{ id: string }, 
       enquiryNo: existing.enquiryNo || undefined,
       amount: existing.amount,
       gstPercent: existing.gstPercent,
+      machineGstPercent: existing.machineGstPercent,
+      lowSideGstPercent: existing.lowSideGstPercent,
       gst: existing.gst,
       total: existing.total,
       status: "Pending Approval", // Re-submit for approval
@@ -40,9 +39,16 @@ export class CreateQuotationRevisionUseCase implements IUseCase<{ id: string }, 
       remarks: [],
       notes: existing.notes || "",
       costingId: existing.costingId || undefined,
+      costingRevision: existing.costingRevision,
+      clonedFromQuotationRevision: existing.revision,
       revision,
       isActive: true,
     });
+
+    // Deactivate previous revisions, excluding the new one
+    if (quotation.id) {
+      await this._quotationRepository.deactivateAllForNo(existing.quotationNo, quotation.id);
+    }
 
     return quotation;
   }

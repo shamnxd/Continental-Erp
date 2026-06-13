@@ -20,6 +20,8 @@ const lineItemSchema = new Schema(
     total: { type: Number, required: true, min: 0 },
     section: { type: String, enum: ["machine_side", "low_side"], default: "machine_side" },
     unit: { type: String, default: "" },
+    group: { type: String, default: "", trim: true },
+    isDescriptionOnly: { type: Boolean, default: false },
   },
   { _id: false },
 );
@@ -34,11 +36,13 @@ const quotationSchema = new Schema<IQuotationDocument>(
     // New: proper reference for populate.
     clientRef: { type: Schema.Types.ObjectId, ref: "Client", default: null, index: true },
     // Legacy snapshot field.
-    clientName: { type: String, required: true, trim: true },
+    clientName: { type: String, trim: true, default: "" },
     enquiryId: { type: String, default: "" },
     enquiryNo: { type: String, default: "", trim: true },
     amount: { type: Number, required: true, min: 0 },
     gstPercent: { type: Number, required: true, default: 18, min: 0, max: 100 },
+    machineGstPercent: { type: Number, min: 0, max: 100 },
+    lowSideGstPercent: { type: Number, min: 0, max: 100 },
     gst: { type: Number, required: true, min: 0 },
     total: { type: Number, required: true, min: 0 },
     status: {
@@ -53,6 +57,8 @@ const quotationSchema = new Schema<IQuotationDocument>(
     revision: { type: Number, required: true, default: 0 },
     isActive: { type: Boolean, required: true, default: true },
     costingId: { type: String, default: "" },
+    costingRevision: { type: Number },
+    clonedFromQuotationRevision: { type: Number },
   },
   { timestamps: true },
 );

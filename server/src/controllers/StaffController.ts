@@ -12,6 +12,7 @@ import { AppError } from "../errors/AppError";
 import mongoose from "mongoose";
 import { ComplaintModel } from "../models/Complaint";
 import { ScheduleModel } from "../models/Schedule";
+import { StaffModel } from "../models/Staff";
 
 @autoInjectable()
 export class StaffController {
@@ -29,6 +30,27 @@ export class StaffController {
     @inject("GetStaffWorkHistoryUseCase")
     private _getStaffWorkHistoryUseCase?: IUseCase<string, StaffWorkHistoryItem[]>
   ) {}
+
+  public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const [total, permanent, temporary] = await Promise.all([
+        StaffModel.countDocuments({}),
+        StaffModel.countDocuments({ employmentType: "Permanent" }),
+        StaffModel.countDocuments({ employmentType: "Temporary" }),
+      ]);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          total,
+          permanent,
+          temporary,
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

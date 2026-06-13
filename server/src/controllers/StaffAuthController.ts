@@ -53,7 +53,7 @@ export class StaffAuthController {
       res.cookie(env.COOKIE_NAME_REFRESH + "_staff", refreshToken, {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
@@ -136,7 +136,11 @@ export class StaffAuthController {
           }
         } catch {}
       }
-      res.clearCookie(env.COOKIE_NAME_REFRESH + "_staff");
+      res.clearCookie(env.COOKIE_NAME_REFRESH + "_staff", {
+        httpOnly: true,
+        secure: env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
       res.status(StatusCode.OK).json({ success: true, message: "Logged out successfully" });
     } catch (error) {
       next(error);

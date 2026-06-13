@@ -21,6 +21,7 @@ export class EnquiryRepository extends BaseRepository<IEnquiryDocument, IEnquiry
     const contactPerson = client?.contactPerson ?? doc.contactPerson;
     const phone = client?.phone ?? doc.phone;
     const email = client?.email ?? doc.email;
+    const clientLocation = client ? (client.city + (client.address ? `, ${client.address}` : "")) : undefined;
 
     return {
       id: doc._id.toString(),
@@ -31,6 +32,7 @@ export class EnquiryRepository extends BaseRepository<IEnquiryDocument, IEnquiry
       contactPerson,
       phone,
       email,
+      clientLocation,
       requirement: doc.requirement,
       description: doc.description,
       status: doc.status,
@@ -70,14 +72,37 @@ export class EnquiryRepository extends BaseRepository<IEnquiryDocument, IEnquiry
     const pad = String(count + 1).padStart(3, "0");
     const enquiryNo = `ENQ-${year}-${pad}`;
 
+    const { clientName, contactPerson, phone, email, ...rest } = item;
+
     const createdDoc = new this.model({
-      ...item,
+      ...rest,
       enquiryNo,
       clientRef: item.clientId && Types.ObjectId.isValid(item.clientId) ? new Types.ObjectId(item.clientId) : null,
     });
 
     const savedDoc = await createdDoc.save();
+    await savedDoc.populate("clientRef");
     return this.toDomain(savedDoc);
+  }
+
+  public override async update(id: string, item: Partial<IEnquiry>): Promise<IEnquiry | null> {
+    const updateData: any = { ...item };
+    if (item.clientId && Types.ObjectId.isValid(item.clientId)) {
+      updateData.clientRef = new Types.ObjectId(item.clientId);
+    }
+    
+    delete updateData.clientName;
+    delete updateData.contactPerson;
+    delete updateData.phone;
+    delete updateData.email;
+
+    const updatedDoc = await this.model.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    ).populate("clientRef").exec();
+
+    return updatedDoc ? this.toDomain(updatedDoc) : null;
   }
 
   public override async findById(id: string): Promise<IEnquiry | null> {

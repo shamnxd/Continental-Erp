@@ -9,6 +9,8 @@ export interface IQuotationLineItem {
   total: number;
   section: "machine_side" | "low_side";
   unit?: string;
+  group?: string;
+  isDescriptionOnly?: boolean;
 }
 
 export interface IQuotation {
@@ -19,10 +21,14 @@ export interface IQuotation {
   clientId: string;
   clientRef?: string;
   clientName: string;
+  clientAddress?: string;
+  gstin?: string;
   enquiryId?: string;
   enquiryNo?: string;
   amount: number;
   gstPercent: number;
+  machineGstPercent?: number;
+  lowSideGstPercent?: number;
   gst: number;
   total: number;
   status: QuotationStatus;
@@ -32,6 +38,8 @@ export interface IQuotation {
   revision?: number;
   isActive?: boolean;
   costingId?: string;
+  costingRevision?: number;
+  clonedFromQuotationRevision?: number;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

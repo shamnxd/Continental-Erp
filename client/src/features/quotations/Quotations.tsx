@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Eye, Edit, Trash2, Calendar, MoreVertical } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -18,12 +18,13 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "../../components/ui/alert-dialog";
-import { getQuotationsApi, deleteQuotationApi } from "../../api/quotation.api";
+import { getQuotationsApi, deleteQuotationApi, getQuotationsStatsApi } from "../../api/quotation.api";
 import { Quotation, QuotationStatus } from "../../interfaces/quotation.interface";
 import { AppRoute } from "../../constants/routes.enum";
 import { toast } from "sonner";
 import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
+import { SelectCostingDialog } from "../../components/SelectCostingDialog";
 
 type StatusFilter = "all" | QuotationStatus;
 
@@ -65,6 +66,7 @@ export function Quotations() {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isSelectCostingOpen, setIsSelectCostingOpen] = useState(false);
 
   const [stats, setStats] = useState({
     total: 0,
@@ -74,22 +76,20 @@ export function Quotations() {
     draft: 0,
   });
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
+
   const fetchStats = useCallback(async () => {
     try {
-      const [allRes, pendingRes, approvedRes, rejectedRes, draftRes] = await Promise.all([
-        getQuotationsApi({ page: 1, limit: 1 }),
-        getQuotationsApi({ page: 1, limit: 1, status: "Pending Approval" }),
-        getQuotationsApi({ page: 1, limit: 1, status: "Approved" }),
-        getQuotationsApi({ page: 1, limit: 1, status: "Rejected" }),
-        getQuotationsApi({ page: 1, limit: 1, status: "Draft" }),
-      ]);
-      setStats({
-        total: allRes.total ?? 0,
-        pending: pendingRes.total ?? 0,
-        approved: approvedRes.total ?? 0,
-        rejected: rejectedRes.total ?? 0,
-        draft: draftRes.total ?? 0,
-      });
+      const response = await getQuotationsStatsApi();
+      if (response.success) {
+        setStats({
+          total: response.data.total ?? 0,
+          pending: response.data.pending ?? 0,
+          approved: response.data.approved ?? 0,
+          rejected: response.data.rejected ?? 0,
+          draft: response.data.draft ?? 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch quotation stats:", err);
     }
@@ -127,12 +127,18 @@ export function Quotations() {
   }, [fetchStats]);
 
   useEffect(() => {
-    fetchQuotations(currentPage, debouncedSearch, activeFilter);
-  }, [currentPage, debouncedSearch, activeFilter, fetchQuotations]);
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || activeFilter !== lastFetchRef.current.filter;
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeFilter]);
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return;
+      }
+    }
+
+    fetchQuotations(currentPage, debouncedSearch, activeFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: activeFilter };
+  }, [currentPage, debouncedSearch, activeFilter, fetchQuotations]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -241,13 +247,6 @@ export function Quotations() {
       className: "px-4 py-4 w-[120px]",
     },
     {
-      header: "Amount",
-      accessor: (row: Quotation) => (
-        <span className="text-sm font-semibold text-foreground whitespace-nowrap">{formatInr(row.total)}</span>
-      ),
-      className: "px-4 py-4 w-[110px]",
-    },
-    {
       header: "Valid Until",
       accessor: (row: Quotation) => (
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground whitespace-nowrap">
@@ -276,7 +275,7 @@ export function Quotations() {
         subtitle="Create and track customer quotations"
         headerAction={
           <Button
-            onClick={() => navigate(AppRoute.QUOTATION_CREATE)}
+            onClick={() => setIsSelectCostingOpen(true)}
             className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-800 text-white font-semibold"
           >
             <Plus className="h-4 w-4" />
@@ -317,6 +316,11 @@ export function Quotations() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SelectCostingDialog
+        isOpen={isSelectCostingOpen}
+        onClose={() => setIsSelectCostingOpen(false)}
+      />
     </>
   );
 }

@@ -112,3 +112,15 @@ export async function getAmcVisitSmrApi(
 ): Promise<{ success: boolean; data: import("../interfaces/smr.interface").SMR }> {
   return await api.get(`${ApiRoute.AMC}/${amcId}/visits/${visitId}/smr`);
 }
+
+export async function getAmcStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    active: number;
+    renewal: number;
+    expired: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.AMC}/stats`);
+}

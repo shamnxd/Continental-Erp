@@ -55,4 +55,17 @@ export async function getClientByIdApi(id: string): Promise<ClientResponse> {
   return await api.get(`${ApiRoute.CLIENTS}/${id}`);
 }
 
+export async function getClientsStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    activeAmc: number;
+    expiredAmc: number;
+    activeComplaints: number;
+    activeEnquiries: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.CLIENTS}/stats`);
+}
+
 

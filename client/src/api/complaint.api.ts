@@ -54,3 +54,16 @@ export async function deleteComplaintApi(id: string): Promise<{ success: boolean
 export async function getComplaintByIdApi(id: string): Promise<ComplaintResponse> {
   return await api.get(`${ApiRoute.COMPLAINTS}/${id}`);
 }
+
+export async function getComplaintsStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    pending: number;
+    inProgress: number;
+    resolved: number;
+    critical: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.COMPLAINTS}/stats`);
+}

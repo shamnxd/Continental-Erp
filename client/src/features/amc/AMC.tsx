@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   Plus,
@@ -32,7 +32,7 @@ import {
   AlertDialogAction,
 } from "../../components/ui/alert-dialog";
 import type { AmcContract } from "../../interfaces/amc.interface";
-import { getAmcApi, deleteAmcApi } from "../../api/amc.api";
+import { getAmcApi, deleteAmcApi, getAmcStatsApi } from "../../api/amc.api";
 import { AmcFormModal } from "../../components/AmcFormModal";
 import { canRenewAmc } from "../../utils/amcRenewal";
 import { RefreshCw } from "lucide-react";
@@ -81,20 +81,19 @@ export function AMC() {
   const [renewContract, setRenewContract] = useState<AmcContract | null>(null);
   const [stats, setStats] = useState({ total: 0, active: 0, renewal: 0, expired: 0 });
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
+
   const fetchStats = useCallback(async () => {
     try {
-      const [all, active, renewal, expired] = await Promise.all([
-        getAmcApi({ page: 1, limit: 1 }),
-        getAmcApi({ page: 1, limit: 1, status: "Active" }),
-        getAmcApi({ page: 1, limit: 1, status: "Due for Renewal" }),
-        getAmcApi({ page: 1, limit: 1, status: "Expired" }),
-      ]);
-      setStats({
-        total: all.total ?? 0,
-        active: active.total ?? 0,
-        renewal: renewal.total ?? 0,
-        expired: expired.total ?? 0,
-      });
+      const response = await getAmcStatsApi();
+      if (response.success) {
+        setStats({
+          total: response.data.total ?? 0,
+          active: response.data.active ?? 0,
+          renewal: response.data.renewal ?? 0,
+          expired: response.data.expired ?? 0,
+        });
+      }
     } catch (err) {
       console.error(err);
     }
@@ -130,11 +129,17 @@ export function AMC() {
   }, [fetchStats]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, statusFilter]);
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || statusFilter !== lastFetchRef.current.filter;
 
-  useEffect(() => {
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
     fetchContracts(currentPage, debouncedSearch, statusFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: statusFilter };
   }, [currentPage, debouncedSearch, statusFilter, fetchContracts]);
 
   const statusColor = (status: string) => {

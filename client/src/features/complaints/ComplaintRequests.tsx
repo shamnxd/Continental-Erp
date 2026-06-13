@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
-import { getComplaintRequestsApi, ComplaintRequest } from "../../api/complaintRequest.api";
+import { getComplaintRequestsApi, getComplaintRequestsStatsApi, ComplaintRequest } from "../../api/complaintRequest.api";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
 import {
@@ -39,34 +39,33 @@ export function ComplaintRequests() {
     Rejected: 0,
   });
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "Pending" });
+
   // Fetch counts for all statuses
   const fetchStats = useCallback(async () => {
     try {
-      const [allRes, pendingRes, convertedRes, rejectedRes] = await Promise.all([
-        getComplaintRequestsApi({ page: 1, limit: 1 }),
-        getComplaintRequestsApi({ page: 1, limit: 1, status: "Pending" }),
-        getComplaintRequestsApi({ page: 1, limit: 1, status: "Converted" }),
-        getComplaintRequestsApi({ page: 1, limit: 1, status: "Rejected" }),
-      ]);
-      setStats({
-        all: allRes.pagination.total,
-        Pending: pendingRes.pagination.total,
-        Converted: convertedRes.pagination.total,
-        Rejected: rejectedRes.pagination.total,
-      });
+      const response = await getComplaintRequestsStatsApi();
+      if (response.success) {
+        setStats({
+          all: response.data.total ?? 0,
+          Pending: response.data.pending ?? 0,
+          Converted: response.data.converted ?? 0,
+          Rejected: response.data.rejected ?? 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch complaint request counts:", err);
     }
   }, []);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async (page: number, search: string, filter: string) => {
     setIsLoading(true);
     try {
       const response = await getComplaintRequestsApi({
-        page: currentPage,
+        page,
         limit: PAGE_SIZE,
-        search: debouncedSearch,
-        status: statusFilter,
+        search,
+        status: filter,
       });
       if (response.success) {
         setRequests(response.data);
@@ -78,12 +77,25 @@ export function ComplaintRequests() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, debouncedSearch, statusFilter]);
+  }, []);
 
   useEffect(() => {
-    fetchRequests();
     fetchStats();
-  }, [fetchRequests, fetchStats]);
+  }, [fetchStats]);
+
+  useEffect(() => {
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || statusFilter !== lastFetchRef.current.filter;
+
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
+    fetchRequests(currentPage, debouncedSearch, statusFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: statusFilter };
+  }, [currentPage, debouncedSearch, statusFilter, fetchRequests]);
 
   const columns: Column<ComplaintRequest>[] = [
     {

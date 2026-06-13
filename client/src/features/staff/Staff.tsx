@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Edit, Trash2, Eye, MapPin, Phone, Mail, MoreVertical, UserX, UserCheck, KeyRound } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -21,7 +21,7 @@ import {
 } from "../../components/ui/alert-dialog";
 import type { Staff as StaffRecord } from "../../interfaces/staff.interface";
 import { getStaffDisplayRole, getStaffStatusLabel } from "../../interfaces/staff.interface";
-import { getStaffApi, deleteStaffApi, updateStaffApi, changeStaffPasswordApi } from "../../api/staff.api";
+import { getStaffApi, deleteStaffApi, updateStaffApi, changeStaffPasswordApi, getStaffStatsApi } from "../../api/staff.api";
 import { StaffFormModal } from "../../components/StaffFormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -55,18 +55,18 @@ export function Staff() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [stats, setStats] = useState({ total: 0, permanent: 0, temporary: 0 });
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
+
   const fetchStats = useCallback(async () => {
     try {
-      const [all, perm, temp] = await Promise.all([
-        getStaffApi({ page: 1, limit: 1, activeOnly: false }),
-        getStaffApi({ page: 1, limit: 1, employmentType: "Permanent", activeOnly: false }),
-        getStaffApi({ page: 1, limit: 1, employmentType: "Temporary", activeOnly: false }),
-      ]);
-      setStats({
-        total: all.total ?? 0,
-        permanent: perm.total ?? 0,
-        temporary: temp.total ?? 0,
-      });
+      const response = await getStaffStatsApi();
+      if (response.success) {
+        setStats({
+          total: response.data.total ?? 0,
+          permanent: response.data.permanent ?? 0,
+          temporary: response.data.temporary ?? 0,
+        });
+      }
     } catch (err) {
       console.error(err);
     }
@@ -100,11 +100,17 @@ export function Staff() {
   }, [fetchStats]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, employmentFilter]);
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || employmentFilter !== lastFetchRef.current.filter;
 
-  useEffect(() => {
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
     fetchStaff(currentPage, debouncedSearch, employmentFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: employmentFilter };
   }, [currentPage, debouncedSearch, employmentFilter, fetchStaff]);
 
   const statusColor = (label: string) => {

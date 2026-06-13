@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   Plus, Search, Eye, AlertCircle, Calendar, MapPin,
@@ -29,7 +29,7 @@ import {
   DropdownMenuItem,
 } from "../../components/ui/dropdown-menu";
 import { Textarea } from "../../components/ui/textarea";
-import { getComplaintsApi, createComplaintApi } from "../../api/complaint.api";
+import { getComplaintsApi, createComplaintApi, getComplaintsStatsApi } from "../../api/complaint.api";
 import { getClientsApi } from "../../api/client.api";
 import { Complaint } from "../../interfaces/complaint.interface";
 import { Client } from "../../interfaces/client.interface";
@@ -92,23 +92,21 @@ export function Complaints() {
   // Add New Client modal
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
+
   // ── Fetch Stat Counts ─────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
     try {
-      const [allRes, pendingRes, inProgressRes, resolvedRes, criticalRes] = await Promise.all([
-        getComplaintsApi({ page: 1, limit: 1 }),
-        getComplaintsApi({ page: 1, limit: 1, status: "Pending" }),
-        getComplaintsApi({ page: 1, limit: 1, status: "In Progress" }),
-        getComplaintsApi({ page: 1, limit: 1, status: "Resolved" }),
-        getComplaintsApi({ page: 1, limit: 1, priority: "Critical" }),
-      ]);
-      setStats({
-        total: allRes.total ?? 0,
-        pending: pendingRes.total ?? 0,
-        inProgress: inProgressRes.total ?? 0,
-        resolved: resolvedRes.total ?? 0,
-        critical: criticalRes.total ?? 0,
-      });
+      const response = await getComplaintsStatsApi();
+      if (response.success) {
+        setStats({
+          total: response.data.total ?? 0,
+          pending: response.data.pending ?? 0,
+          inProgress: response.data.inProgress ?? 0,
+          resolved: response.data.resolved ?? 0,
+          critical: response.data.critical ?? 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch complaint stats:", err);
     }
@@ -157,17 +155,27 @@ export function Complaints() {
 
   useEffect(() => {
     fetchStats();
-    fetchClients();
-  }, [fetchStats, fetchClients]);
+  }, [fetchStats]);
 
   useEffect(() => {
+    if (isAddDialogOpen) {
+      fetchClients();
+    }
+  }, [isAddDialogOpen, fetchClients]);
+
+  useEffect(() => {
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || activeFilter !== lastFetchRef.current.filter;
+
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
     fetchComplaints(currentPage, debouncedSearch, activeFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: activeFilter };
   }, [currentPage, debouncedSearch, activeFilter, fetchComplaints]);
-
-  // Reset to page 1 on search or filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeFilter]);
 
   // Auto-populate location from selected client
   useEffect(() => {

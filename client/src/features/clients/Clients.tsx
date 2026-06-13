@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Plus, Edit, Trash2, Eye, MapPin, Phone, Mail, MoreVertical } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -19,9 +19,7 @@ import {
   AlertDialogAction,
 } from "../../components/ui/alert-dialog";
 import { Client } from "../../interfaces/client.interface";
-import { getClientsApi, deleteClientApi } from "../../api/client.api";
-import { getComplaintsApi } from "../../api/complaint.api";
-import { getEnquiriesApi } from "../../api/enquiry.api";
+import { getClientsApi, deleteClientApi, getClientsStatsApi } from "../../api/client.api";
 import { ClientFormModal } from "./ClientFormModal";
 import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -49,13 +47,6 @@ export function Clients() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
 
-  const [activeComplaintCompanies, setActiveComplaintCompanies] = useState<string[]>([]);
-  const [activeEnquiryCompanies, setActiveEnquiryCompanies] = useState<string[]>([]);
-  const [complaintCountsByClientId, setComplaintCountsByClientId] = useState<Record<string, number>>({});
-  const [complaintCountsByCompanyName, setComplaintCountsByCompanyName] = useState<Record<string, number>>({});
-  const [enquiryCountsByClientId, setEnquiryCountsByClientId] = useState<Record<string, number>>({});
-  const [enquiryCountsByCompanyName, setEnquiryCountsByCompanyName] = useState<Record<string, number>>({});
-
   // Stat counts (fetched separately without pagination)
   const [statCounts, setStatCounts] = useState({
     total: 0,
@@ -65,122 +56,33 @@ export function Clients() {
     activeEnquiries: 0,
   });
 
-  const loadActiveComplaintData = useCallback(async (): Promise<number> => {
-    try {
-      const [pendingRes, inProgressRes] = await Promise.all([
-        getComplaintsApi({ status: "Pending", page: 1, limit: 500 }),
-        getComplaintsApi({ status: "In Progress", page: 1, limit: 500 }),
-      ]);
-
-      const active = [
-        ...(pendingRes.success ? pendingRes.data : []),
-        ...(inProgressRes.success ? inProgressRes.data : []),
-      ];
-
-      const byClientId: Record<string, number> = {};
-      const byCompanyName: Record<string, number> = {};
-      const companyNames = new Set<string>();
-
-      for (const c of active) {
-        if (c.clientId) {
-          byClientId[c.clientId] = (byClientId[c.clientId] ?? 0) + 1;
-        }
-        const nameKey = c.clientName?.trim().toLowerCase();
-        if (nameKey) {
-          byCompanyName[nameKey] = (byCompanyName[nameKey] ?? 0) + 1;
-          companyNames.add(c.clientName);
-        }
-      }
-
-      setComplaintCountsByClientId(byClientId);
-      setComplaintCountsByCompanyName(byCompanyName);
-      setActiveComplaintCompanies([...companyNames]);
-      return companyNames.size;
-    } catch (err) {
-      console.error("Failed to fetch active complaints:", err);
-      setComplaintCountsByClientId({});
-      setComplaintCountsByCompanyName({});
-      setActiveComplaintCompanies([]);
-      return 0;
-    }
-  }, []);
-
-  const loadActiveEnquiryData = useCallback(async (): Promise<number> => {
-    try {
-      const statuses = ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] as const;
-      const responses = await Promise.all(
-        statuses.map((status) => getEnquiriesApi({ status, page: 1, limit: 500 })),
-      );
-
-      const byClientId: Record<string, number> = {};
-      const byCompanyName: Record<string, number> = {};
-      const companyNames = new Set<string>();
-
-      for (const res of responses) {
-        if (!res.success) continue;
-        for (const e of res.data) {
-          if (e.clientId) {
-            byClientId[e.clientId] = (byClientId[e.clientId] ?? 0) + 1;
-          }
-          const nameKey = e.clientName?.trim().toLowerCase();
-          if (nameKey) {
-            byCompanyName[nameKey] = (byCompanyName[nameKey] ?? 0) + 1;
-            companyNames.add(e.clientName);
-          }
-        }
-      }
-
-      setEnquiryCountsByClientId(byClientId);
-      setEnquiryCountsByCompanyName(byCompanyName);
-      setActiveEnquiryCompanies([...companyNames]);
-      return companyNames.size;
-    } catch (err) {
-      console.error("Failed to fetch active enquiries:", err);
-      setEnquiryCountsByClientId({});
-      setEnquiryCountsByCompanyName({});
-      setActiveEnquiryCompanies([]);
-      return 0;
-    }
-  }, []);
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
 
   const fetchStatCounts = useCallback(async () => {
     try {
-      const [allRes, activeAmcRes, expiredAmcRes, activeComplaintClientCount, activeEnquiryClientCount] =
-        await Promise.all([
-          getClientsApi({ page: 1, limit: 1 }),
-          getClientsApi({ page: 1, limit: 1, filter: "active-amc" }),
-          getClientsApi({ page: 1, limit: 1, filter: "expired-amc" }),
-          loadActiveComplaintData(),
-          loadActiveEnquiryData(),
-        ]);
-      setStatCounts({
-        total: allRes.total ?? 0,
-        activeAmc: activeAmcRes.total ?? 0,
-        expiredAmc: expiredAmcRes.total ?? 0,
-        activeComplaints: activeComplaintClientCount,
-        activeEnquiries: activeEnquiryClientCount,
-      });
+      const response = await getClientsStatsApi();
+      if (response.success) {
+        setStatCounts({
+          total: response.data.total ?? 0,
+          activeAmc: response.data.activeAmc ?? 0,
+          expiredAmc: response.data.expiredAmc ?? 0,
+          activeComplaints: response.data.activeComplaints ?? 0,
+          activeEnquiries: response.data.activeEnquiries ?? 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch stat counts:", err);
     }
-  }, [loadActiveComplaintData, loadActiveEnquiryData]);
+  }, []);
 
   const fetchClients = useCallback(async (page: number, search: string, filter: FilterType) => {
     setIsLoading(true);
     try {
-      const companyNames =
-        filter === "active-complaints"
-          ? activeComplaintCompanies
-          : filter === "active-enquiries"
-          ? activeEnquiryCompanies
-          : undefined;
-
       const response = await getClientsApi({
         search: search || undefined,
         page,
         limit: PAGE_SIZE,
         filter: filter === "all" ? undefined : filter,
-        companyNames,
       });
 
       if (response.success) {
@@ -193,17 +95,22 @@ export function Clients() {
     } finally {
       setIsLoading(false);
     }
-  }, [activeComplaintCompanies, activeEnquiryCompanies]);
+  }, []);
 
   // Re-fetch whenever debounced search, filter, or page changes
   useEffect(() => {
-    fetchClients(currentPage, debouncedSearch, activeFilter);
-  }, [currentPage, debouncedSearch, activeFilter, fetchClients]);
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || activeFilter !== lastFetchRef.current.filter;
 
-  // Reset to page 1 on search or filter change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeFilter]);
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
+    fetchClients(currentPage, debouncedSearch, activeFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: activeFilter };
+  }, [currentPage, debouncedSearch, activeFilter, fetchClients]);
 
   useEffect(() => {
     fetchStatCounts();
@@ -243,20 +150,6 @@ export function Clients() {
       setIsDeleteDialogOpen(false);
       setClientToDelete(null);
     }
-  };
-
-  const getActiveComplaintsCount = (client: Client) => {
-    if (client.id && complaintCountsByClientId[client.id] != null) {
-      return complaintCountsByClientId[client.id];
-    }
-    return complaintCountsByCompanyName[client.companyName.trim().toLowerCase()] ?? 0;
-  };
-
-  const getActiveEnquiriesCount = (client: Client) => {
-    if (client.id && enquiryCountsByClientId[client.id] != null) {
-      return enquiryCountsByClientId[client.id];
-    }
-    return enquiryCountsByCompanyName[client.companyName.trim().toLowerCase()] ?? 0;
   };
 
   const filterChips = [
@@ -321,7 +214,7 @@ export function Clients() {
     {
       header: "Active Complaints",
       accessor: (client: Client) => {
-        const count = getActiveComplaintsCount(client);
+        const count = client.activeComplaintsCount ?? 0;
         return count > 0 ? (
           <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/10 text-orange-500">
             {count}

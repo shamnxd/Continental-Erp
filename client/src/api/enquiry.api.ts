@@ -74,3 +74,17 @@ export async function uploadEnquiryDrawingApi(id: string, file: File): Promise<E
   formData.append("file", file);
   return await api.post(`${ApiRoute.ENQUIRIES}/${id}/drawings`, formData);
 }
+
+export async function getEnquiriesStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    siteVisit: number;
+    quotation: number;
+    followUp: number;
+    converted: number;
+    closed: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.ENQUIRIES}/stats`);
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   Plus,
@@ -26,7 +26,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "../../components/ui/alert-dialog";
-import { getEnquiriesApi, deleteEnquiryApi, updateEnquiryApi } from "../../api/enquiry.api";
+import { getEnquiriesApi, deleteEnquiryApi, updateEnquiryApi, getEnquiriesStatsApi } from "../../api/enquiry.api";
 import { getClientsApi } from "../../api/client.api";
 import { Enquiry, EnquiryStatus } from "../../interfaces/enquiry.interface";
 import { Client } from "../../interfaces/client.interface";
@@ -67,24 +67,21 @@ export function Enquiries() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [closeId, setCloseId] = useState<string | null>(null);
 
+  const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
+
   const fetchStats = useCallback(async () => {
     try {
-      const [allRes, siteRes, quoteRes, followRes, convertedRes, closedRes] = await Promise.all([
-        getEnquiriesApi({ page: 1, limit: 1 }),
-        getEnquiriesApi({ page: 1, limit: 1, status: "Site Visit Scheduled" }),
-        getEnquiriesApi({ page: 1, limit: 1, status: "Quotation Prepared" }),
-        getEnquiriesApi({ page: 1, limit: 1, status: "Follow-up Required" }),
-        getEnquiriesApi({ page: 1, limit: 1, status: "Converted to Project" }),
-        getEnquiriesApi({ page: 1, limit: 1, status: "Closed" }),
-      ]);
-      setStats({
-        total: allRes.total ?? 0,
-        siteVisit: siteRes.total ?? 0,
-        quotation: quoteRes.total ?? 0,
-        followUp: followRes.total ?? 0,
-        converted: convertedRes.total ?? 0,
-        closed: closedRes.total ?? 0,
-      });
+      const response = await getEnquiriesStatsApi();
+      if (response.success) {
+        setStats({
+          total: response.data.total ?? 0,
+          siteVisit: response.data.siteVisit ?? 0,
+          quotation: response.data.quotation ?? 0,
+          followUp: response.data.followUp ?? 0,
+          converted: response.data.converted ?? 0,
+          closed: response.data.closed ?? 0,
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch enquiry stats:", err);
     }
@@ -128,16 +125,27 @@ export function Enquiries() {
 
   useEffect(() => {
     fetchStats();
-    fetchClients();
-  }, [fetchStats, fetchClients]);
+  }, [fetchStats]);
 
   useEffect(() => {
+    if (isFormOpen) {
+      fetchClients();
+    }
+  }, [isFormOpen, fetchClients]);
+
+  useEffect(() => {
+    const isSearchFilterChange = debouncedSearch !== lastFetchRef.current.search || activeFilter !== lastFetchRef.current.filter;
+
+    if (isSearchFilterChange) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+        return; // Page change effect will handle the load
+      }
+    }
+
     fetchEnquiries(currentPage, debouncedSearch, activeFilter);
+    lastFetchRef.current = { page: currentPage, search: debouncedSearch, filter: activeFilter };
   }, [currentPage, debouncedSearch, activeFilter, fetchEnquiries]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeFilter]);
 
   const handleClose = async () => {
     if (!closeId) return;
@@ -300,7 +308,9 @@ export function Enquiries() {
           </div>
           <div className="min-w-0">
             <p className="font-medium text-foreground leading-tight truncate max-w-[120px]">{row.clientName}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[120px]">{row.contactPerson}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[120px]">
+              {row.contactPerson} {row.clientLocation ? ` · ${row.clientLocation}` : ""}
+            </p>
           </div>
         </div>
       ),

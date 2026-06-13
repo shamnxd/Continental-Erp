@@ -84,3 +84,15 @@ export async function getComplaintRequestByIdApi(id: string): Promise<{ success:
 export async function addComplaintRequestRemarkApi(id: string, text: string): Promise<{ success: boolean; data: ComplaintRequest }> {
   return await api.put(`${ApiRoute.COMPLAINT_REQUESTS}/${id}/remarks`, { text });
 }
+
+export async function getComplaintRequestsStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    pending: number;
+    converted: number;
+    rejected: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.COMPLAINT_REQUESTS}/stats`);
+}

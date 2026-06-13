@@ -80,3 +80,14 @@ export async function getStaffSchedulesApi(
 ): Promise<{ success: boolean; data: { complaints: any[]; amcVisits: any[] } }> {
   return await api.get(`${ApiRoute.STAFF}/${id}/schedules`);
 }
+
+export async function getStaffStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    permanent: number;
+    temporary: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.STAFF}/stats`);
+}

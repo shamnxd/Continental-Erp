@@ -10,6 +10,7 @@ export interface GetQuotationsQuery {
   clientId?: string;
   enquiryId?: string;
   quotationNo?: string;
+  allRevisions?: boolean;
 }
 
 export interface GetQuotationsResponse {
@@ -35,6 +36,7 @@ export async function getQuotationsApi(query?: GetQuotationsQuery): Promise<GetQ
   if (query?.clientId) params.set("clientId", query.clientId);
   if (query?.enquiryId) params.set("enquiryId", query.enquiryId);
   if (query?.quotationNo) params.set("quotationNo", query.quotationNo);
+  if (query?.allRevisions) params.set("allRevisions", String(query.allRevisions));
 
   const queryString = params.toString();
   const url = queryString ? `${ApiRoute.QUOTATIONS}?${queryString}` : ApiRoute.QUOTATIONS;
@@ -77,4 +79,17 @@ export async function updateQuotationRemarkApi(
   text: string,
 ): Promise<QuotationResponse> {
   return await api.put(`${ApiRoute.QUOTATIONS}/${quotationId}/remarks/${remarkKey}`, { text });
+}
+
+export async function getQuotationsStatsApi(): Promise<{
+  success: boolean;
+  data: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    draft: number;
+  };
+}> {
+  return await api.get(`${ApiRoute.QUOTATIONS}/stats`);
 }

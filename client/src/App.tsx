@@ -6,6 +6,7 @@ import { store } from "./store";
 import { useAppDispatch } from "./store/hooks";
 import { restoreSession } from "./store/slices/authSlice";
 import { restoreStaffSession } from "./store/slices/staffAuthSlice";
+import { Toaster } from "./components/ui/sonner";
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -25,6 +26,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <AppContent />
+      <Toaster />
     </Provider>
   );
-}
+}

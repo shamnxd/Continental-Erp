@@ -179,31 +179,46 @@
     line-height: 1.5;
   }
 
-  /* Custom scrollbar styles */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  /* Custom global scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 116, 139, 0.25);
+    border-radius: 9999px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.45);
   }
 
-  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.15);
   }
 
-  .scrollbar-track-gray-100::-webkit-scrollbar-track {
-    background: #f3f4f6;
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+
+  /* Support for Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 116, 139, 0.25) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  }
+
+  /* Disable outer page scrolling when remarks chat is open to ensure only the chat scrolls */
+  main:has(.remarks-chat-container),
+  div[data-slot="scroll-area-viewport"]:has(.remarks-chat-container) {
+    overflow: hidden !important;
   }
 }

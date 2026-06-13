@@ -120,7 +120,7 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
   const remarkById = (id: string) => remarks.find((r) => r.id === id);
 
   return (
-    <div className="flex gap-0 h-[600px] rounded-xl border border-border overflow-hidden bg-card">
+    <div className="remarks-chat-container flex gap-0 h-[calc(100vh-18rem)] lg:h-[calc(100vh-16rem)] min-h-[400px] rounded-xl border border-border overflow-hidden bg-card">
       {/* ── Left: Chat timeline ── */}
       <div className="flex-1 flex flex-col min-w-0 border-r border-border">
         <div className="px-5 py-3 border-b border-border bg-muted/40 shrink-0">

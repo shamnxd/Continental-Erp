@@ -92,14 +92,24 @@ export function ReusableTable<T>({
         </TableHeader>
         <TableBody className="divide-y divide-border">
           {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={colCount} className="h-32 text-center align-middle">
-                <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <span className="text-sm">Loading data...</span>
-                </div>
-              </TableCell>
-            </TableRow>
+            [...Array(5)].map((_, rowIdx) => (
+              <TableRow key={rowIdx} className="hover:bg-transparent">
+                {showRowNumber && (
+                  <TableCell className={rowNumberCellClass}>
+                    <div className="h-4 w-6 bg-slate-100 dark:bg-slate-800/80 rounded animate-pulse mx-auto" />
+                  </TableCell>
+                )}
+                {columns.map((column, colIdx) => {
+                  const widths = ["w-2/3", "w-11/12", "w-3/4", "w-1/2", "w-5/6", "w-1/3"];
+                  const widthClass = widths[(rowIdx + colIdx) % widths.length];
+                  return (
+                    <TableCell key={column.key ?? colIdx} className={column.className}>
+                      <div className={`h-4 bg-slate-100 dark:bg-slate-800/80 rounded animate-pulse ${widthClass}`} />
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))
           ) : isEmpty ? (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={colCount} className="p-0 align-middle border-0">

@@ -7,6 +7,7 @@ import { PaginatedSchedules } from "../interfaces/repositories/IScheduleReposito
 import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
+import { IScheduleRepository } from "../interfaces/repositories/IScheduleRepository";
 
 @autoInjectable()
 export class ScheduleController {
@@ -18,7 +19,9 @@ export class ScheduleController {
     @inject("UpdateScheduleUseCase")
     private _updateScheduleUseCase?: IUseCase<{ id: string; data: UpdateScheduleDto; user: string }, ISchedule | null>,
     @inject("DeleteScheduleUseCase")
-    private _deleteScheduleUseCase?: IUseCase<{ id: string; user: string }, boolean>
+    private _deleteScheduleUseCase?: IUseCase<{ id: string; user: string }, boolean>,
+    @inject("ScheduleRepository")
+    private _scheduleRepository?: IScheduleRepository
   ) {}
 
   public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -52,13 +55,27 @@ export class ScheduleController {
         endDate: req.query.endDate as string | undefined,
         search: req.query.search as string | undefined,
         page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 1000 // default to high limit to return all for details page
+        limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 1000
       };
       const result = await this._getSchedulesUseCase!.execute(query);
       res.status(StatusCode.OK).json({
         success: true,
         ...result
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const schedule = await this._scheduleRepository!.findById(id);
+      if (!schedule) {
+        res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Schedule not found" });
+        return;
+      }
+      res.status(StatusCode.OK).json({ success: true, data: schedule });
     } catch (error) {
       next(error);
     }

@@ -11,6 +11,7 @@ router.use(requireAuth);
 
 router.post("/", validateDto(CreateScheduleSchema), controller.create);
 router.get("/", controller.getAll);
+router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateScheduleSchema), controller.update);
 router.delete("/:id", controller.delete);
 

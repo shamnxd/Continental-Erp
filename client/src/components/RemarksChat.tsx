@@ -9,6 +9,7 @@ interface Props {
   entityType: RemarkEntityType;
   entityId: string;
   disabled?: boolean;
+  layout?: "split" | "stacked";
 }
 
 function initials(name: string): string {
@@ -57,7 +58,8 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
+export function RemarksChat({ entityType, entityId, disabled = false, layout = "split" }: Props) {
+  const isSplit = layout === "split";
   const [remarks, setRemarks] = useState<Remark[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -65,7 +67,8 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
   const [replyTo, setReplyTo] = useState<Remark | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const remarksLengthRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadRemarks = useCallback(async () => {
@@ -86,8 +89,13 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
   }, [loadRemarks]);
 
   useEffect(() => {
-    if (!loading) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!loading && scrollContainerRef.current) {
+      const isInitial = remarksLengthRef.current === 0;
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: isInitial ? "auto" : "smooth"
+      });
+      remarksLengthRef.current = remarks.length;
     }
   }, [remarks, loading]);
 
@@ -120,9 +128,9 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
   const remarkById = (id: string) => remarks.find((r) => r.id === id);
 
   return (
-    <div className="remarks-chat-container flex gap-0 h-[calc(100vh-18rem)] lg:h-[calc(100vh-16rem)] min-h-[400px] rounded-xl border border-border overflow-hidden bg-card">
-      {/* ── Left: Chat timeline ── */}
-      <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+    <div className={`remarks-chat-container flex flex-col ${isSplit ? "xl:flex-row" : ""} gap-0 h-[calc(100vh-18rem)] ${isSplit ? "xl:h-[calc(100vh-16rem)]" : ""} min-h-[450px] rounded-xl border border-border overflow-hidden bg-card`}>
+      {/* ── Chat Timeline (Left Panel on Desktop / Top Scrollable on Mobile) ── */}
+      <div className={`flex-1 flex flex-col min-w-0 ${isSplit ? "xl:w-2/3 xl:border-r xl:border-border" : ""}`}>
         <div className="px-5 py-3 border-b border-border bg-muted/40 shrink-0">
           <p className="text-sm font-semibold text-foreground">
             Remarks
@@ -134,7 +142,7 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-sm text-muted-foreground animate-pulse">Loading…</div>
@@ -216,23 +224,26 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
               );
             })
           )}
-          <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* ── Right: Compose area ── */}
-      <div className="w-96 shrink-0 flex flex-col bg-muted/20">
-        <div className="px-5 py-3 border-b border-border bg-muted/40 shrink-0">
-          <p className="text-sm font-semibold text-foreground">New Remark</p>
-        </div>
+      {/* ── Compose Area (Right Panel on Desktop / Bottom Bar on Mobile) ── */}
+      <div className={`w-full shrink-0 flex flex-col bg-slate-50/50 dark:bg-slate-900/40 border-t border-border p-3 ${isSplit ? "xl:p-0 xl:gap-0 xl:w-1/3 xl:border-t-0" : ""} gap-2`}>
+        {/* Compose Header (Desktop Only) */}
+        {isSplit && (
+          <div className="px-5 py-3 border-b border-border bg-muted/40 shrink-0 hidden xl:block">
+            <p className="text-sm font-semibold text-foreground">Compose Message</p>
+          </div>
+        )}
 
-        <div className="flex-1 flex flex-col p-4 gap-3">
+        {/* Compose Content wrapper */}
+        <div className={`flex flex-col gap-2 ${isSplit ? "xl:p-4" : ""}`}>
           {/* Reply strip */}
           {replyTo && (
-            <div className="flex items-start gap-2 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 rounded-lg px-3 py-2">
+            <div className="flex items-start gap-2 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 rounded-lg px-3 py-1.5 shrink-0">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-pink-700 dark:text-pink-400">{replyTo.user}</p>
-                <p className="text-xs text-muted-foreground line-clamp-2">{replyTo.text}</p>
+                <p className="text-[10px] font-bold text-pink-700 dark:text-pink-400">{replyTo.user}</p>
+                <p className="text-[11px] text-muted-foreground line-clamp-1">{replyTo.text}</p>
               </div>
               <button
                 type="button"
@@ -246,7 +257,7 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
 
           {/* File preview */}
           {file && (
-            <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1.5 shrink-0">
               <FileText className="h-4 w-4 text-pink-600 shrink-0" />
               <span className="text-xs truncate flex-1 text-foreground">{file.name}</span>
               <button
@@ -262,57 +273,57 @@ export function RemarksChat({ entityType, entityId, disabled = false }: Props) {
             </div>
           )}
 
-          {/* Text input */}
-          <Textarea
-            placeholder="Type your remark…  (Enter to send, Shift+Enter for new line)"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={disabled || sending}
-            rows={5}
-            className="resize-none text-sm bg-background flex-1 min-h-[120px]"
-          />
-
-          {/* Error */}
-          {error && <p className="text-xs text-red-500">{error}</p>}
-
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {/* Attach file */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          {/* Text Input & Buttons */}
+          <div className="flex flex-col gap-2">
+            <Textarea
+              placeholder="Type your remark…  (Enter to send, Shift+Enter for new line)"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
               disabled={disabled || sending}
+              rows={2}
+              className={`resize-none text-xs bg-background min-h-[60px] ${isSplit ? "xl:h-[240px]" : "h-[80px]"}`}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="flex-1 gap-1.5 text-xs border-border text-muted-foreground hover:text-foreground"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled || sending}
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              Attach
-            </Button>
 
-            {/* Send */}
-            <Button
-              type="button"
-              size="sm"
-              className="flex-1 gap-1.5 text-xs bg-pink-700 hover:bg-pink-800 text-white font-semibold"
-              onClick={handleSend}
-              disabled={disabled || sending || (!text.trim() && !file)}
-            >
-              {sending ? (
-                <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              Send
-            </Button>
+            {error && <p className="text-[10px] text-red-500 shrink-0">{error}</p>}
+
+            <div className="flex items-center justify-between gap-2 shrink-0">
+              {/* Attach button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                disabled={disabled || sending}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs border-border text-muted-foreground hover:text-foreground px-3 shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled || sending}
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                Attach
+              </Button>
+
+              {/* Send button */}
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5 text-xs bg-pink-700 hover:bg-pink-805 text-white font-semibold px-4 shrink-0"
+                onClick={handleSend}
+                disabled={disabled || sending || (!text.trim() && !file)}
+              >
+                {sending ? (
+                  <span className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Send
+              </Button>
+            </div>
           </div>
         </div>
       </div>

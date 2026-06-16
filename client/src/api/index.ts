@@ -22,11 +22,12 @@ function attachBearerToken(config: InternalAxiosRequestConfig, token: string): v
   if (!config.headers) {
     config.headers = new AxiosHeaders();
   }
-  if (config.headers instanceof AxiosHeaders) {
+  if (typeof config.headers.set === "function") {
     config.headers.set("Authorization", bearer);
-  } else {
-    (config.headers as Record<string, string>).Authorization = bearer;
   }
+  // Safe fallback and double assignment for direct properties
+  (config.headers as Record<string, string>).Authorization = bearer;
+  (config.headers as Record<string, string>).authorization = bearer;
 }
 
 function isAuthRoute(url?: string): boolean {

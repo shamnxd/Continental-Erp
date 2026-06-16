@@ -93,3 +93,26 @@ export async function getQuotationsStatsApi(): Promise<{
 }> {
   return await api.get(`${ApiRoute.QUOTATIONS}/stats`);
 }
+
+export async function convertQuotationApi(
+  id: string,
+  data: {
+    targetType: "project" | "amc" | "minorjob";
+    data: {
+      name?: string;
+      startDate?: string;
+      value?: number;
+      startDateAmc?: string;
+      endDateAmc?: string;
+      frequency?: string;
+      serviceType?: string;
+      notes?: string;
+      description?: string;
+      scheduledDate?: string;
+      assignedTo?: string;
+      assignedStaffId?: string;
+    };
+  }
+): Promise<QuotationResponse> {
+  return await api.post(`${ApiRoute.QUOTATIONS}/${id}/convert`, data);
+}

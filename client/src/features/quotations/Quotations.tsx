@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
-import { Plus, Eye, Edit, Trash2, Calendar, MoreVertical } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Calendar, MoreVertical, TrendingUp } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
@@ -163,6 +163,26 @@ export function Quotations() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[180px]">
+          {row.convertedTo && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                const targetType = row.convertedTo?.targetType;
+                const targetId = row.convertedTo?.targetId;
+                if (targetType === "project") {
+                  navigate(`/projects/${targetId}`);
+                } else if (targetType === "amc") {
+                  navigate(`/amc/${targetId}`);
+                } else {
+                  navigate(`/minor-jobs/${targetId}`);
+                }
+              }}
+              className="cursor-pointer font-semibold text-purple-700 dark:text-purple-400 focus:text-purple-800"
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              View Converted {row.convertedTo.targetType === "minorjob" ? "Job" : row.convertedTo.targetType.toUpperCase()}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onSelect={(e) => {
               e.preventDefault();
@@ -258,7 +278,40 @@ export function Quotations() {
     },
     {
       header: "Status",
-      accessor: (row: Quotation) => getStatusBadge(row.status),
+      accessor: (row: Quotation) => {
+        const badge = getStatusBadge(row.status);
+        if (row.convertedTo) {
+          const typeLabels: Record<string, string> = {
+            project: "Project",
+            amc: "AMC",
+            minorjob: "Minor Job",
+          };
+          const label = typeLabels[row.convertedTo.targetType] || row.convertedTo.targetType;
+          return (
+            <div className="flex flex-col gap-1 items-start" onClick={(e) => e.stopPropagation()}>
+              {badge}
+              <button
+                type="button"
+                onClick={() => {
+                  const targetType = row.convertedTo?.targetType;
+                  const targetId = row.convertedTo?.targetId;
+                  if (targetType === "project") {
+                    navigate(`/projects/${targetId}`);
+                  } else if (targetType === "amc") {
+                    navigate(`/amc/${targetId}`);
+                  } else {
+                    navigate(`/minor-jobs/${targetId}`);
+                  }
+                }}
+                className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-705 dark:bg-purple-950/20 dark:text-purple-400 text-[10px] font-bold uppercase tracking-wide hover:bg-purple-100/80 transition-colors"
+              >
+                ➔ {label}
+              </button>
+            </div>
+          );
+        }
+        return badge;
+      },
       className: "px-4 py-4 w-[140px]",
     },
     {

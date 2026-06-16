@@ -12,6 +12,7 @@ import {
   Download,
   Copy,
   TrendingUp,
+  ChevronDown
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
@@ -23,6 +24,13 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { RemarksChat } from "../../components/RemarksChat";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "../../components/ui/dropdown-menu";
+
 import { ScrollArea } from "../../components/ui/scroll-area";
 import {
   getQuotationByIdApi,
@@ -36,6 +44,7 @@ import { AppRoute } from "../../constants/routes.enum";
 import { toast } from "sonner";
 import { exportQuotationToPdf } from "./quotationPdfExport";
 import { PdfExportConfigModal } from "../../components/PdfExportConfigModal";
+import { ConvertQuotationModal } from "../../components/ConvertQuotationModal";
 
 const QUOTATION_STATUSES: QuotationStatus[] = [
   "Draft",
@@ -68,6 +77,7 @@ export function QuotationDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
 
   const [revisions, setRevisions] = useState<Quotation[]>([]);
   const [isCloning, setIsCloning] = useState(false);
@@ -261,6 +271,35 @@ export function QuotationDetail() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {quotation.status === "Approved" && (
+                      quotation.convertedTo ? (
+                        <span 
+                          onClick={() => {
+                            const targetType = quotation.convertedTo?.targetType;
+                            const targetId = quotation.convertedTo?.targetId;
+                            if (targetType === "project") {
+                              navigate(`/projects/${targetId}`);
+                            } else if (targetType === "amc") {
+                              navigate(`/amc/${targetId}`);
+                            } else {
+                              navigate(`/minor-jobs/${targetId}`);
+                            }
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-150 dark:border-green-900/40 whitespace-nowrap cursor-pointer hover:bg-green-100"
+                        >
+                          Converted to {quotation.convertedTo.targetType === "minorjob" ? "Minor Job" : quotation.convertedTo.targetType}
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setIsConvertModalOpen(true)}
+                          className="h-9 px-4 font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          <TrendingUp className="h-4 w-4" />
+                          Convert
+                        </Button>
+                      )
+                    )}
                     {(quotation.status === "Approved" || quotation.status === "Pending Approval") && (
                       <Button
                         size="sm"
@@ -275,38 +314,47 @@ export function QuotationDetail() {
                         Create invoice
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsPdfModalOpen(true)}
-                      className="h-9 px-4 font-semibold gap-1.5"
-                    >
-                      <Download className="h-4 w-4" />
-                      Export PDF
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => quotation.id && navigate(`${AppRoute.QUOTATIONS}/${quotation.id}/edit`)}
-                      className="h-9 px-4 font-semibold gap-1.5"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleCreateRevision}
-                      disabled={isCloning}
-                      className="h-9 px-4 font-semibold gap-1.5 border-dashed"
-                    >
-                      {isCloning ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                      Clone Revision
-                    </Button>
+                     <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-9 px-4 font-semibold gap-1.5"
+                        >
+                          Actions
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 bg-card border border-border shadow-md">
+                        <DropdownMenuItem
+                          onClick={() => quotation.id && navigate(`${AppRoute.QUOTATIONS}/${quotation.id}/edit`)}
+                          className="cursor-pointer gap-2 py-2 text-xs font-semibold text-foreground hover:bg-slate-50 dark:hover:bg-slate-900"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setIsPdfModalOpen(true)}
+                          className="cursor-pointer gap-2 py-2 text-xs font-semibold text-foreground hover:bg-slate-50 dark:hover:bg-slate-900"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Export to PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={handleCreateRevision}
+                          disabled={isCloning}
+                          className="cursor-pointer gap-2 py-2 text-xs font-semibold text-foreground hover:bg-slate-50 dark:hover:bg-slate-900"
+                        >
+                          {isCloning ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                          Clone Revision
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                   </div>
                 </div>
                 <div className="px-4 lg:px-5">
@@ -631,6 +679,12 @@ export function QuotationDetail() {
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
         quotation={quotation}
+      />
+      <ConvertQuotationModal
+        isOpen={isConvertModalOpen}
+        onClose={() => setIsConvertModalOpen(false)}
+        quotation={quotation}
+        onSuccess={loadQuotation}
       />
     </div>
   );

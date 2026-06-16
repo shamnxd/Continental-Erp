@@ -216,9 +216,4 @@
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   }
 
-  /* Disable outer page scrolling when remarks chat is open to ensure only the chat scrolls */
-  main:has(.remarks-chat-container),
-  div[data-slot="scroll-area-viewport"]:has(.remarks-chat-container) {
-    overflow: hidden !important;
-  }
 }

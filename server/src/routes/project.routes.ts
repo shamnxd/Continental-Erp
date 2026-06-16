@@ -14,6 +14,7 @@ router.post("/", validateDto(CreateProjectSchema), controller.create);
 router.get("/", controller.getAll);
 router.get("/all-subcontracts", controller.getAllSubcontracts);
 router.get("/all-purchase-orders", controller.getAllPurchaseOrders);
+router.get("/completed-without-warranty", controller.getCompletedWithoutWarranty);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateProjectSchema), controller.update);
 router.delete("/:id", controller.delete);

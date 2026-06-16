@@ -495,5 +495,14 @@ export class ProjectController {
       next(error);
     }
   };
+
+  public getCompletedWithoutWarranty = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const projects = await this._projectRepository!.findCompletedWithoutWarranty();
+      res.status(StatusCode.OK).json({ success: true, data: projects });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 

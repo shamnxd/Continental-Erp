@@ -5,6 +5,7 @@ import { IProjectRepository, GetProjectsQuery, PaginatedProjects } from "../../i
 import { IProject } from "../../interfaces/models/IProject";
 import { ProjectModel, IProjectDocument } from "../../models/Project";
 import { CounterModel } from "../../models/Counter";
+import { WarrantyModel } from "../../models/Warranty";
 
 @injectable()
 export class ProjectRepository extends BaseRepository<IProjectDocument, IProject> implements IProjectRepository {
@@ -151,5 +152,17 @@ export class ProjectRepository extends BaseRepository<IProjectDocument, IProject
         status: { $in: ["Planning", "Active", "On Hold"] }
       })
       .exec();
+  }
+
+  public async findCompletedWithoutWarranty(): Promise<IProject[]> {
+    const warranties = await WarrantyModel.find({ projectRef: { $ne: null } }).select("projectRef").exec();
+    const projectIdsWithWarranty = warranties.filter(w => w.projectRef).map(w => w.projectRef!.toString());
+
+    const docs = await this.model.find({
+      status: "Completed",
+      _id: { $nin: projectIdsWithWarranty }
+    }).populate("clientRef").sort({ updatedAt: -1 }).exec();
+
+    return docs.map(doc => this.toDomain(doc));
   }
 }

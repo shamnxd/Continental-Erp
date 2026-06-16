@@ -23,4 +23,5 @@ export interface IProjectRepository {
   update(id: string, data: Partial<IProject>): Promise<IProject | null>;
   delete(id: string): Promise<boolean>;
   countActiveByClientId(clientId: string): Promise<number>;
+  findCompletedWithoutWarranty(): Promise<IProject[]>;
 }

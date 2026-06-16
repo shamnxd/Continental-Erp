@@ -2,7 +2,7 @@ import { Router } from "express";
 import { QuotationController } from "../controllers/QuotationController";
 import { requireAuth } from "../middleware/auth.middleware";
 import { validateDto } from "../middleware/dto.middleware";
-import { CreateQuotationSchema, UpdateQuotationSchema } from "../dtos/quotation.dto";
+import { CreateQuotationSchema, UpdateQuotationSchema, ConvertQuotationSchema } from "../dtos/quotation.dto";
 import { AddQuotationRemarkSchema, EditQuotationRemarkSchema } from "../dtos/quotationRemark.dto";
 
 const router = Router();
@@ -12,6 +12,7 @@ router.use(requireAuth);
 
 router.post("/", validateDto(CreateQuotationSchema), controller.create);
 router.post("/:id/revision", controller.createRevision);
+router.post("/:id/convert", validateDto(ConvertQuotationSchema), controller.convert);
 router.get("/stats", controller.getStats);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);

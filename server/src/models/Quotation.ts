@@ -59,6 +59,10 @@ const quotationSchema = new Schema<IQuotationDocument>(
     costingId: { type: String, default: "" },
     costingRevision: { type: Number },
     clonedFromQuotationRevision: { type: Number },
+    convertedTo: {
+      targetType: { type: String, enum: ["project", "amc", "minorjob"] },
+      targetId: { type: Schema.Types.ObjectId }
+    }
   },
   { timestamps: true },
 );

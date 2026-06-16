@@ -9,6 +9,8 @@ export const REMARK_ENTITY_TYPES = [
   "minorjob",
   "warranty",
   "quotation",
+  "subcontract",
+  "purchase_order",
 ] as const;
 
 export const AddRemarkSchema = z.object({

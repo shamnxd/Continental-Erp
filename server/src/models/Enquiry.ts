@@ -70,6 +70,8 @@ const enquirySchema = new Schema<IEnquiryDocument>(
         "Quotation Prepared",
         "Follow-up Required",
         "Converted to Project",
+        "Converted to AMC",
+        "Converted to Minor Job",
         "Closed",
       ],
       required: true,

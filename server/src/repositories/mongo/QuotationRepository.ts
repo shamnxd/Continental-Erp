@@ -62,6 +62,10 @@ export class QuotationRepository
       costingId: doc.costingId,
       costingRevision: doc.costingRevision,
       clonedFromQuotationRevision: doc.clonedFromQuotationRevision,
+      convertedTo: doc.convertedTo && doc.convertedTo.targetType ? {
+        targetType: doc.convertedTo.targetType as any,
+        targetId: doc.convertedTo.targetId.toString(),
+      } : undefined,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

@@ -35,6 +35,8 @@ export class QuotationController {
       { quotationId: string; remarkKey: string; data: EditQuotationRemarkDto; user: string },
       IQuotation | null
     >,
+    @inject("ConvertQuotationUseCase")
+    private _convertQuotationUseCase?: IUseCase<{ id: string; data: any }, IQuotation>,
   ) {}
 
   public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -231,6 +233,27 @@ export class QuotationController {
       );
 
       res.status(StatusCode.OK).json({ success: true, message: "Quotation deleted" });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public convert = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const quotation = await this._convertQuotationUseCase!.execute({
+        id: req.params.id,
+        data: req.body
+      });
+
+      await AuditLogger.log(
+        authReq.user?.name || "Unknown Admin",
+        "Convert Quotation",
+        "Clients",
+        `Converted quotation ${quotation.quotationNo} to ${req.body.targetType}`
+      );
+
+      res.status(StatusCode.OK).json({ success: true, data: quotation });
     } catch (error) {
       next(error);
     }

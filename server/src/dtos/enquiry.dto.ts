@@ -26,6 +26,8 @@ export const CreateEnquirySchema = z.object({
       "Quotation Prepared",
       "Follow-up Required",
       "Converted to Project",
+      "Converted to AMC",
+      "Converted to Minor Job",
       "Closed",
     ])
     .optional()

@@ -130,7 +130,11 @@ export class EnquiryRepository extends BaseRepository<IEnquiryDocument, IEnquiry
     }
 
     if (status && status !== "all") {
-      mongoFilter.status = status;
+      if (status === "Converted to Project") {
+        mongoFilter.status = { $in: ["Converted to Project", "Converted to AMC", "Converted to Minor Job"] };
+      } else {
+        mongoFilter.status = status;
+      }
     }
 
     if (priority && priority !== "all") {

@@ -40,6 +40,10 @@ export interface IQuotation {
   costingId?: string;
   costingRevision?: number;
   clonedFromQuotationRevision?: number;
+  convertedTo?: {
+    targetType: "project" | "amc" | "minorjob";
+    targetId: string;
+  };
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

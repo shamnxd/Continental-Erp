@@ -33,6 +33,10 @@ export const CreateQuotationSchema = z.object({
   clonedFromQuotationRevision: z.number().optional(),
   revision: z.number().min(0).optional().default(0),
   isActive: z.boolean().optional().default(true),
+  convertedTo: z.object({
+    targetType: z.enum(["project", "amc", "minorjob"]),
+    targetId: z.string(),
+  }).optional(),
 });
 
 export type CreateQuotationDto = z.infer<typeof CreateQuotationSchema>;
@@ -42,3 +46,28 @@ export const UpdateQuotationSchema = CreateQuotationSchema.partial().extend({
 });
 
 export type UpdateQuotationDto = z.infer<typeof UpdateQuotationSchema>;
+
+export const ConvertQuotationSchema = z.object({
+  targetType: z.enum(["project", "amc", "minorjob"]),
+  data: z.object({
+    // project fields
+    name: z.string().optional(),
+    startDate: z.string().optional(),
+    value: z.number().optional(),
+    expectedCompletionDate: z.string().optional(),
+    // amc fields
+    startDateAmc: z.string().optional(),
+    endDateAmc: z.string().optional(),
+    frequency: z.enum(["Monthly", "Quarterly", "Bi-Annual", "Annual"]).optional(),
+    serviceType: z.string().optional(),
+    notes: z.string().optional(),
+    // minor job fields
+    description: z.string().optional(),
+    scheduledDate: z.string().optional(),
+    assignedTo: z.string().optional(),
+    assignedStaffId: z.string().optional(),
+    clientContact: z.string().optional(),
+  })
+});
+
+export type ConvertQuotationDto = z.infer<typeof ConvertQuotationSchema>;

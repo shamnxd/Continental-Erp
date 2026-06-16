@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Calendar, Eye } from "lucide-react";
+import { Calendar, Eye, Plus } from "lucide-react";
 import { useNavigate } from "react-router";
+import { MinorJobFormModal } from "../../components/MinorJobFormModal";
 import { Button } from "../../components/ui/button";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { Column } from "../../components/ReusableTable";
@@ -37,6 +38,7 @@ export function MinorJobs() {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const navigate = useNavigate();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     setIsLoading(true);
@@ -126,42 +128,58 @@ export function MinorJobs() {
   ];
 
   return (
-    <ManagementListPage
-      title="Minor Jobs"
-      subtitle="Small service jobs and quick fixes"
-      headerAction={<div />} // Created via Quotation conversion
-      searchPlaceholder="Search minor jobs..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-      filterOptions={[
-        { value: "all", label: "All", count: total, tone: "primary" },
-        { value: "Open", label: "Open", count: jobs.filter((j) => j.status === "Open").length, tone: "blue" },
-        {
-          value: "In Progress",
-          label: "In Progress",
-          count: jobs.filter((j) => j.status === "In Progress").length,
-          tone: "amber",
-        },
-        {
-          value: "Completed",
-          label: "Completed",
-          count: jobs.filter((j) => j.status === "Completed").length,
-          tone: "green",
-        },
-      ]}
-      filterValue={statusFilter}
-      onFilterChange={setStatusFilter}
-      columns={columns}
-      data={jobs}
-      isLoading={isLoading}
-      emptyMessage="No minor jobs yet. Convert an approved quotation to create a minor job."
-      currentPage={currentPage}
-      totalPages={totalPages}
-      total={total}
-      pageSize={PAGE_SIZE}
-      onPageChange={setCurrentPage}
-      entityLabel="minor jobs"
-      onRowClick={(row) => navigate(`/minor-jobs/${row.id}`)}
-    />
+    <>
+      <ManagementListPage
+        title="Minor Jobs"
+        subtitle="Small service jobs and quick fixes"
+        headerAction={
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-800 text-white font-semibold"
+          >
+            <Plus className="h-4 w-4" />
+            Create Minor Job
+          </Button>
+        }
+        searchPlaceholder="Search minor jobs..."
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterOptions={[
+          { value: "all", label: "All", count: total, tone: "primary" },
+          { value: "Open", label: "Open", count: jobs.filter((j) => j.status === "Open").length, tone: "blue" },
+          {
+            value: "In Progress",
+            label: "In Progress",
+            count: jobs.filter((j) => j.status === "In Progress").length,
+            tone: "amber",
+          },
+          {
+            value: "Completed",
+            label: "Completed",
+            count: jobs.filter((j) => j.status === "Completed").length,
+            tone: "green",
+          },
+        ]}
+        filterValue={statusFilter}
+        onFilterChange={setStatusFilter}
+        columns={columns}
+        data={jobs}
+        isLoading={isLoading}
+        emptyMessage="No minor jobs yet. Click 'Create Minor Job' or convert an approved quotation to create one."
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setCurrentPage}
+        entityLabel="minor jobs"
+        onRowClick={(row) => navigate(`/minor-jobs/${row.id}`)}
+      />
+
+      <MinorJobFormModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={fetchJobs}
+      />
+    </>
   );
 }

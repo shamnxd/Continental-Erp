@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard,
   Users,
@@ -31,6 +31,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { AppRoute } from "../constants/routes.enum";
+import { getWarrantiesApi } from "../api/warranty.api";
 
 type NavLeaf = { name: string; href: string };
 type NavSubItem = { name: string; href?: string; children?: NavLeaf[] };
@@ -197,12 +198,64 @@ export function RootLayout() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const notifications = [
+  const [notifications, setNotifications] = useState<any[]>([
     { id: 1, title: "New Enquiry", message: "New enquiry from ABC Corporation", time: "2 mins ago", type: "enquiry" },
     { id: 2, title: "AMC Due", message: "AMC visit for XYZ Industries is due tomorrow", time: "1 hour ago", type: "amc" },
     { id: 3, title: "Complaint Assigned", message: "You have been assigned a new complaint", time: "3 hours ago", type: "complaint" },
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      try {
+        const soonRes = await getWarrantiesApi({ status: "Expiring Soon", limit: 3 });
+        const expRes = await getWarrantiesApi({ status: "Expired", limit: 3 });
+        
+        const list: any[] = [];
+        let idCounter = 1;
+        
+        const staticList = [
+          { id: idCounter++, title: "New Enquiry", message: "New enquiry from ABC Corporation", time: "2 mins ago", type: "enquiry" },
+          { id: idCounter++, title: "AMC Due", message: "AMC visit for XYZ Industries is due tomorrow", time: "1 hour ago", type: "amc" },
+          { id: idCounter++, title: "Complaint Assigned", message: "You have been assigned a new complaint", time: "3 hours ago", type: "complaint" },
+        ];
+        
+        if (soonRes.success) {
+          soonRes.data.forEach((w: any) => {
+            const clientName = typeof w.clientRef === "object" ? w.clientRef.companyName : "Client";
+            list.push({
+              id: `warr_soon_${w.id}`,
+              title: "Warranty Expiring Soon",
+              message: `${w.product} for ${clientName} is expiring on ${new Date(w.endDate).toLocaleDateString()}`,
+              time: "Action Required",
+              type: "amc",
+              link: `/warranty-management/${w.id}`
+            });
+          });
+        }
+        
+        if (expRes.success) {
+          expRes.data.forEach((w: any) => {
+            const clientName = typeof w.clientRef === "object" ? w.clientRef.companyName : "Client";
+            list.push({
+              id: `warr_exp_${w.id}`,
+              title: "Warranty Expired",
+              message: `${w.product} for ${clientName} expired on ${new Date(w.endDate).toLocaleDateString()}`,
+              time: "Critical",
+              type: "complaint",
+              link: `/warranty-management/${w.id}`
+            });
+          });
+        }
+        
+        setNotifications([...list, ...staticList]);
+      } catch (err) {
+        console.error("Failed to load dynamic notifications", err);
+      }
+    }
+    loadNotifications();
+  }, []);
 
   const permissions = user?.permissions || {
     crm: true,
@@ -555,7 +608,16 @@ export function RootLayout() {
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.map((n) => (
-                        <div key={n.id} className="p-4 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0 cursor-pointer group">
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            if (n.link) {
+                              navigate(n.link);
+                              setShowNotifications(false);
+                            }
+                          }}
+                          className="p-4 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0 cursor-pointer group"
+                        >
                           <div className="flex gap-3">
                             <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${
                               n.type === 'enquiry' ? 'bg-blue-100 text-blue-600' : 

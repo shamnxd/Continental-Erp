@@ -1,3 +1,6 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { getWarrantiesApi } from "../../api/warranty.api";
 import {
   TrendingUp,
   Users,
@@ -205,6 +208,86 @@ const upcomingTasks = [
 ];
 
 export function Dashboard() {
+  const navigate = useNavigate();
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadAlerts() {
+      try {
+        const soonRes = await getWarrantiesApi({ status: "Expiring Soon", limit: 3 });
+        const expRes = await getWarrantiesApi({ status: "Expired", limit: 3 });
+        
+        const list: any[] = [];
+        
+        const staticAlerts = [
+          {
+            id: 1,
+            type: "critical",
+            title: "Generator Failure - High Priority",
+            client: "Global Tech Hub",
+            assignee: "Amit Sharma",
+            time: "10 mins ago",
+            priority: "Critical",
+          },
+          {
+            id: 2,
+            type: "urgent",
+            title: "AMC Visit Overdue",
+            client: "ABC Corporation",
+            assignee: "Rajesh Kumar",
+            time: "5 hours ago",
+            priority: "High",
+          },
+          {
+            id: 3,
+            type: "warning",
+            title: "Payment Overdue - ₹1.5L",
+            client: "DEF Solutions",
+            assignee: "Finance Team",
+            time: "1 day ago",
+            priority: "High",
+          },
+        ];
+
+        if (soonRes.success) {
+          soonRes.data.forEach((w: any) => {
+            const clientName = typeof w.clientRef === "object" ? w.clientRef.companyName : "Client";
+            list.push({
+              id: `warr_soon_${w.id}`,
+              type: "urgent",
+              title: `Warranty Expiring Soon: ${w.product}`,
+              client: `${clientName} (No: ${w.warrantyNo})`,
+              assignee: "Account Manager",
+              time: `Expires: ${new Date(w.endDate).toLocaleDateString()}`,
+              priority: "High",
+              link: `/warranty-management/${w.id}`
+            });
+          });
+        }
+        
+        if (expRes.success) {
+          expRes.data.forEach((w: any) => {
+            const clientName = typeof w.clientRef === "object" ? w.clientRef.companyName : "Client";
+            list.push({
+              id: `warr_exp_${w.id}`,
+              type: "critical",
+              title: `Warranty Expired: ${w.product}`,
+              client: `${clientName} (No: ${w.warrantyNo})`,
+              assignee: "Account Manager",
+              time: `Expired on ${new Date(w.endDate).toLocaleDateString()}`,
+              priority: "Critical",
+              link: `/warranty-management/${w.id}`
+            });
+          });
+        }
+        
+        setAlerts([...list, ...staticAlerts]);
+      } catch (err) {
+        console.error("Failed to load dynamic alerts", err);
+      }
+    }
+    loadAlerts();
+  }, []);
   return (
     <div className="space-y-4">
       {/* Quick Overview Banner */}
@@ -262,14 +345,17 @@ export function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-foreground">Critical Alerts</h3>
             <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-              {criticalAlerts.length} Active
+              {alerts.length} Active
             </span>
           </div>
           <div className="space-y-2">
-            {criticalAlerts.map((alert) => (
+            {alerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`p-3 rounded-xl border-l-4 ${
+                onClick={() => alert.link && navigate(alert.link)}
+                className={`p-3 rounded-xl border-l-4 transition-colors ${
+                  alert.link ? "cursor-pointer hover:bg-muted/30" : ""
+                } ${
                   alert.priority === "Critical"
                     ? "bg-red-500/10 border-red-500"
                     : "bg-orange-500/10 border-orange-500"

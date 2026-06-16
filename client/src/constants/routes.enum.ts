@@ -99,5 +99,7 @@ export enum ApiRoute {
   REMARKS = "/remarks",
   PROJECTS = "/projects",
   MINOR_JOBS = "/minor-jobs",
+  WARRANTIES = "/warranties",
 }
+
 

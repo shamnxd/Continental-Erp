@@ -1,46 +1,19 @@
-import { useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router";
-import { ArrowLeft, Calendar, Building, User, FileText, ClipboardList } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
+import { ArrowLeft, Calendar, Building, User, FileText, ClipboardList, Loader2, Pencil } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { ScrollArea } from "../../components/ui/scroll-area";
 import { Schedules } from "../../components/Schedules";
 import { RemarksChat } from "../../components/RemarksChat";
 import { TableStatusBadge } from "../../components/tableCells";
-
-interface MinorJob {
-  id: string;
-  jobNo: string;
-  clientName: string;
-  clientContact?: string;
-  description: string;
-  scheduledDate: string;
-  status: "Open" | "In Progress" | "Completed";
-  assignedTo: string;
-}
-
-const fallbackJobs: MinorJob[] = [
-  {
-    id: "mj_1",
-    jobNo: "MJ-2026-001",
-    clientName: "Tech Hub Office",
-    clientContact: "Ananth Krishnan",
-    description: "Replace faulty compressor in lobby AC",
-    scheduledDate: "2026-06-11T10:00:00.000Z",
-    status: "In Progress",
-    assignedTo: "Rahul Sharma",
-  },
-  {
-    id: "mj_2",
-    jobNo: "MJ-2026-002",
-    clientName: "Hotel Green Palace",
-    clientContact: "Manager",
-    description: "Thermostat calibration check",
-    scheduledDate: "2026-06-15T14:30:00.000Z",
-    status: "Open",
-    assignedTo: "Vikram Singh",
-  },
-];
+import { getMinorJobByIdApi, updateMinorJobApi } from "../../api/minorJob.api";
+import { getStaffApi } from "../../api/staff.api";
+import { MinorJob } from "../../interfaces/minorJob.interface";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
+import { toast } from "sonner";
 
 const statusTone = (s: MinorJob["status"]) => {
   if (s === "Open") return "blue" as const;
@@ -48,15 +21,63 @@ const statusTone = (s: MinorJob["status"]) => {
   return "green" as const;
 };
 
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    Open: "bg-blue-500/10 text-blue-500",
+    "In Progress": "bg-amber-500/10 text-amber-500",
+    Completed: "bg-green-500/10 text-green-500",
+  };
+  return colors[status] ?? "bg-muted text-muted-foreground";
+};
+
 export function MinorJobDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
+  const [job, setJob] = useState<MinorJob | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [staffList, setStaffList] = useState<any[]>([]);
 
-  // Get job from location state or fallback
-  const job: MinorJob | undefined =
-    location.state?.job ?? fallbackJobs.find((j) => j.id === id);
+  // Reassign modal states
+  const [isReassignOpen, setIsReassignOpen] = useState(false);
+  const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
+  const [isSavingReassign, setIsSavingReassign] = useState(false);
+
+  const loadJob = async (showSpinner = true) => {
+    if (!id) return;
+    if (showSpinner) setIsLoading(true);
+    try {
+      const res = await getMinorJobByIdApi(id);
+      if (res.success) {
+        setJob(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load minor job details");
+    } finally {
+      if (showSpinner) setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadJob();
+  }, [id]);
+
+  useEffect(() => {
+    getStaffApi({ limit: 200, activeOnly: true })
+      .then((res) => {
+        if (res.success) setStaffList(res.data);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-pink-700" />
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -69,6 +90,61 @@ export function MinorJobDetail() {
       </div>
     );
   }
+
+  const clientName = typeof job.clientRef === "object" ? job.clientRef.companyName : "Unknown Client";
+  const clientContact = typeof job.clientRef === "object" ? job.clientRef.contactPerson : "—";
+  const clientPhone = typeof job.clientRef === "object" ? job.clientRef.phone : "";
+  const clientEmail = typeof job.clientRef === "object" ? job.clientRef.email : "";
+  const clientLocation = typeof job.clientRef === "object"
+    ? `${job.clientRef.address || ""}, ${job.clientRef.city || ""}`
+    : "—";
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      const res = await updateMinorJobApi(job.id, { status: newStatus as any });
+      if (res.success) {
+        setJob(res.data);
+        toast.success("Status updated successfully");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update status");
+    }
+  };
+
+  const openReassign = () => {
+    // Parse assigned IDs
+    const ids = job.assignedStaffId
+      ? job.assignedStaffId.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+    setSelectedTechs(ids);
+    setIsReassignOpen(true);
+  };
+
+  const handleSaveReassign = async () => {
+    setIsSavingReassign(true);
+    try {
+      const selectedStaffNames = selectedTechs
+        .map((techId) => staffList.find((s) => (s.id || s._id) === techId)?.fullName)
+        .filter(Boolean);
+
+      const res = await updateMinorJobApi(job.id, {
+        assignedStaffId: selectedTechs.join(", "),
+        assignedTo: selectedStaffNames.join(", "),
+      });
+
+      if (res.success) {
+        setJob(res.data);
+        setIsReassignOpen(false);
+        toast.success("Technicians reassigned successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to reassign technicians");
+    } finally {
+      setIsSavingReassign(false);
+    }
+  };
 
   return (
     <div className="h-full bg-background">
@@ -93,14 +169,26 @@ export function MinorJobDetail() {
                     <div>
                       <h1 className="text-xl font-bold text-foreground tracking-tight">{job.jobNo}</h1>
                       <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
-                        {job.clientName}
+                        {clientName}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
-                    <TableStatusBadge label={job.status} tone={statusTone(job.status)} />
+                    <Select
+                      value={job.status}
+                      onValueChange={handleStatusChange}
+                    >
+                      <SelectTrigger className={`h-9 w-[150px] text-xs font-bold uppercase border-0 ${getStatusColor(job.status)}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="In Progress">In Progress</SelectItem>
+                        <SelectItem value="Completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <span className="text-sm font-semibold text-foreground bg-pink-50 text-pink-700 px-3 py-1.5 rounded-lg border border-pink-100">
-                      Assigned: {job.assignedTo}
+                      Assigned: {job.assignedTo || "Unassigned"}
                     </span>
                   </div>
                 </div>
@@ -157,11 +245,23 @@ export function MinorJobDetail() {
                           <span>{new Date(job.scheduledDate).toLocaleString()}</span>
                         </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Assigned Technician</span>
+                      <div className="sm:col-span-2 pt-2 border-t border-border/40">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground block">Assigned Technician</span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={openReassign}
+                            className="h-auto p-0 text-pink-750 hover:text-pink-900 font-bold text-xs hover:no-underline"
+                            disabled={job.status === "Completed"}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Reassign
+                          </Button>
+                        </div>
                         <div className="mt-1 flex items-center gap-1.5 text-foreground">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{job.assignedTo}</span>
+                          <span>{job.assignedTo || "No technicians assigned"}</span>
                         </div>
                       </div>
                     </div>
@@ -178,12 +278,30 @@ export function MinorJobDetail() {
                     <div className="text-sm space-y-3">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground block">Company / Client</span>
-                        <span className="font-semibold text-foreground text-base">{job.clientName}</span>
+                        <span className="font-semibold text-foreground text-base">{clientName}</span>
                       </div>
-                      {job.clientContact && (
+                      {clientContact && (
                         <div className="pt-2 border-t border-border/40">
                           <span className="text-[10px] uppercase font-bold text-muted-foreground block">Contact Person</span>
-                          <span className="font-semibold text-foreground">{job.clientContact}</span>
+                          <span className="font-semibold text-foreground">{clientContact}</span>
+                        </div>
+                      )}
+                      {clientPhone && (
+                        <div className="pt-2 border-t border-border/40">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground block">Phone</span>
+                          <span className="font-semibold text-foreground">{clientPhone}</span>
+                        </div>
+                      )}
+                      {clientEmail && (
+                        <div className="pt-2 border-t border-border/40">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground block">Email</span>
+                          <span className="font-semibold text-foreground">{clientEmail}</span>
+                        </div>
+                      )}
+                      {clientLocation && (
+                        <div className="pt-2 border-t border-border/40">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground block">Location</span>
+                          <span className="font-semibold text-foreground text-xs">{clientLocation}</span>
                         </div>
                       )}
                     </div>
@@ -197,9 +315,10 @@ export function MinorJobDetail() {
                   entityId={job.id}
                   entityType="minorjob"
                   entityNo={job.jobNo}
-                  clientName={job.clientName}
+                  clientName={clientName}
                   title={job.description}
                   isClosed={job.status === "Completed"}
+                  onSuccess={() => loadJob(false)}
                 />
               </TabsContent>
 
@@ -215,6 +334,47 @@ export function MinorJobDetail() {
           </div>
         </div>
       </ScrollArea>
+
+      {/* Reassign Dialog */}
+      <Dialog open={isReassignOpen} onOpenChange={setIsReassignOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground">Reassign Technicians</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <StaffSelectDropdown
+              selected={selectedTechs}
+              onChange={setSelectedTechs}
+              label="Assigned Staff"
+              placement="top"
+              nameById={staffList.reduce((acc, curr) => {
+                const id = curr.id || curr._id;
+                if (id) acc[id] = curr.fullName;
+                return acc;
+              }, {} as Record<string, string>)}
+            />
+            <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsReassignOpen(false)}
+                className="font-bold"
+                disabled={isSavingReassign}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveReassign}
+                className="bg-pink-700 hover:bg-pink-800 text-white font-bold"
+                disabled={isSavingReassign}
+              >
+                {isSavingReassign ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Plus, Calendar, Eye } from "lucide-react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { Calendar, Eye } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -12,44 +12,13 @@ import {
   tableCellClass,
 } from "../../components/tableCells";
 import { useDebounce } from "../../hooks/useDebounce";
+import { getMinorJobsApi } from "../../api/minorJob.api";
+import { MinorJob } from "../../interfaces/minorJob.interface";
+import { toast } from "sonner";
 
 type StatusFilter = "all" | "Open" | "In Progress" | "Completed";
 
-interface MinorJob {
-  id: string;
-  jobNo: string;
-  clientName: string;
-  clientContact?: string;
-  description: string;
-  scheduledDate: string;
-  status: "Open" | "In Progress" | "Completed";
-  assignedTo: string;
-}
-
 const PAGE_SIZE = 10;
-
-const initialJobs: MinorJob[] = [
-  {
-    id: "mj_1",
-    jobNo: "MJ-2026-001",
-    clientName: "Tech Hub Office",
-    clientContact: "Ananth Krishnan",
-    description: "Replace faulty compressor in lobby AC",
-    scheduledDate: "2026-06-11T10:00:00.000Z",
-    status: "In Progress",
-    assignedTo: "Rahul Sharma",
-  },
-  {
-    id: "mj_2",
-    jobNo: "MJ-2026-002",
-    clientName: "Hotel Green Palace",
-    clientContact: "Manager",
-    description: "Thermostat calibration check",
-    scheduledDate: "2026-06-15T14:30:00.000Z",
-    status: "Open",
-    assignedTo: "Vikram Singh",
-  },
-];
 
 const statusTone = (s: MinorJob["status"]) => {
   if (s === "Open") return "blue" as const;
@@ -58,30 +27,42 @@ const statusTone = (s: MinorJob["status"]) => {
 };
 
 export function MinorJobs() {
-  const [jobs] = useState<MinorJob[]>(initialJobs);
+  const [jobs, setJobs] = useState<MinorJob[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
 
-  const filtered = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    return jobs
-      .filter((j) => statusFilter === "all" || j.status === statusFilter)
-      .filter(
-      (j) =>
-        !q ||
-        j.jobNo.toLowerCase().includes(q) ||
-        j.clientName.toLowerCase().includes(q) ||
-        j.description.toLowerCase().includes(q)
-      )
-      .sort((a, b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime());
-  }, [jobs, debouncedSearch, statusFilter]);
+  const fetchJobs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await getMinorJobsApi({
+        search: debouncedSearch || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        page: currentPage,
+        limit: PAGE_SIZE,
+      });
+      if (res.success) {
+        setJobs(res.data);
+        setTotal(res.total ?? 0);
+        setTotalPages(res.totalPages ?? 1);
+      }
+    } catch (err) {
+      console.error("Failed to load minor jobs", err);
+      toast.error("Failed to load minor jobs");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, debouncedSearch, statusFilter]);
 
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
 
   const columns: Column<MinorJob>[] = [
     {
@@ -93,12 +74,16 @@ export function MinorJobs() {
     },
     {
       header: "Client",
-      accessor: (row) => (
-        <TableClientCell
-          name={row.clientName}
-          subtitle={row.clientContact ?? `Assigned: ${row.assignedTo}`}
-        />
-      ),
+      accessor: (row) => {
+        const clientName = typeof row.clientRef === "object" ? row.clientRef.companyName : "Unknown Client";
+        const contactName = typeof row.clientRef === "object" ? row.clientRef.contactPerson : "";
+        return (
+          <TableClientCell
+            name={clientName}
+            subtitle={contactName ?? `Assigned: ${row.assignedTo}`}
+          />
+        );
+      },
       className: tableCellClass.wide,
     },
     {
@@ -108,7 +93,7 @@ export function MinorJobs() {
           <Calendar className="h-4 w-4 text-pink-600 shrink-0 mt-0.5" />
           <TablePrimarySecondary
             primary={formatTableDate(row.scheduledDate)}
-            secondary={row.assignedTo}
+            secondary={row.assignedTo || "Unassigned"}
             primaryClassName="text-sm font-semibold text-foreground whitespace-nowrap"
           />
         </div>
@@ -129,7 +114,7 @@ export function MinorJobs() {
           className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/minor-jobs/${row.id}`, { state: { job: row } });
+            navigate(`/minor-jobs/${row.id}`);
           }}
         >
           <Eye className="h-3.5 w-3.5" />
@@ -144,17 +129,12 @@ export function MinorJobs() {
     <ManagementListPage
       title="Minor Jobs"
       subtitle="Small service jobs and quick fixes"
-      headerAction={
-        <Button className="flex items-center gap-2 shrink-0 bg-pink-700 hover:bg-pink-805 text-white font-semibold">
-          <Plus className="h-4 w-4" />
-          New Minor Job
-        </Button>
-      }
+      headerAction={<div />} // Created via Quotation conversion
       searchPlaceholder="Search minor jobs..."
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
       filterOptions={[
-        { value: "all", label: "All", count: jobs.length, tone: "primary" },
+        { value: "all", label: "All", count: total, tone: "primary" },
         { value: "Open", label: "Open", count: jobs.filter((j) => j.status === "Open").length, tone: "blue" },
         {
           value: "In Progress",
@@ -172,17 +152,16 @@ export function MinorJobs() {
       filterValue={statusFilter}
       onFilterChange={setStatusFilter}
       columns={columns}
-      data={pageItems}
-      emptyMessage="No minor jobs yet. Create one to get started."
+      data={jobs}
+      isLoading={isLoading}
+      emptyMessage="No minor jobs yet. Convert an approved quotation to create a minor job."
       currentPage={currentPage}
       totalPages={totalPages}
       total={total}
       pageSize={PAGE_SIZE}
       onPageChange={setCurrentPage}
       entityLabel="minor jobs"
-      onRowClick={(row) => navigate(`/minor-jobs/${row.id}`, { state: { job: row } })}
+      onRowClick={(row) => navigate(`/minor-jobs/${row.id}`)}
     />
   );
 }
-
-

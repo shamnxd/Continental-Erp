@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
-  ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, User, Briefcase,
+  ArrowLeft, Edit, Trash2, Phone, Mail, MapPin, User, Award,
   Loader2, AlertTriangle, Calendar, MoreVertical, KeyRound,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -260,7 +260,7 @@ export function StaffDetail() {
               <span
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${employmentBadge.bg} ${employmentBadge.color}`}
               >
-                <Briefcase className="h-3.5 w-3.5" />
+                <Award className="h-3.5 w-3.5" />
                 {employmentBadge.label}
               </span>
               <DropdownMenu>
@@ -346,7 +346,7 @@ export function StaffDetail() {
                   <div>
                     <label className={labelClass}>Specialization</label>
                     <div className="mt-1 flex items-center gap-2 text-sm font-semibold">
-                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <Award className="h-4 w-4 text-muted-foreground" />
                       {staff.specialization}
                     </div>
                   </div>

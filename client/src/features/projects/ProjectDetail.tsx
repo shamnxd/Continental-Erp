@@ -43,6 +43,8 @@ import { getPurchaseOrdersApi, createPurchaseOrderApi, updatePurchaseOrderApi, d
 import { getQuotationByIdApi } from "../../api/quotation.api";
 import { getStaffApi } from "../../api/staff.api";
 import { addRemarkApi } from "../../api/remark.api";
+import { getWarrantyByProjectIdApi, createWarrantyApi } from "../../api/warranty.api";
+
 
 // Interfaces
 import { Project } from "../../interfaces/project.interface";
@@ -84,6 +86,17 @@ export function ProjectDetail() {
   const [completionNotes, setCompletionNotes] = useState("");
   const [actualCompletionDate, setActualCompletionDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [isCompleting, setIsCompleting] = useState(false);
+
+  // Warranty Integration States
+  const [warranty, setWarranty] = useState<any | null>(null);
+  const [isLoadingWarranty, setIsLoadingWarranty] = useState(false);
+  const [isWarrantyDialogOpen, setIsWarrantyDialogOpen] = useState(false);
+  const [warrantyProduct, setWarrantyProduct] = useState("");
+  const [warrantyStartDate, setWarrantyStartDate] = useState("");
+  const [warrantyEndDate, setWarrantyEndDate] = useState("");
+  const [warrantyRemarks, setWarrantyRemarks] = useState("");
+  const [isSavingWarranty, setIsSavingWarranty] = useState(false);
+
 
   // Handover Doc Upload States
   const [isUploadingHandover, setIsUploadingHandover] = useState(false);
@@ -188,6 +201,84 @@ export function ProjectDetail() {
       loadProjectSubData();
     }
   }, [id, project]);
+
+  useEffect(() => {
+    async function loadWarranty() {
+      if (!project || project.status !== "Completed") {
+        setWarranty(null);
+        return;
+      }
+      setIsLoadingWarranty(true);
+      try {
+        const wRes = await getWarrantyByProjectIdApi(project.id);
+        if (wRes.success) {
+          setWarranty(wRes.data);
+        }
+      } catch (err) {
+        console.error("Failed to load project warranty details", err);
+      } finally {
+        setIsLoadingWarranty(false);
+      }
+    }
+    loadWarranty();
+  }, [project]);
+
+  const openRegisterWarrantyDialog = () => {
+    if (!project) return;
+    setWarrantyProduct(project.name || "");
+    const todayStr = project.actualCompletionDate 
+      ? new Date(project.actualCompletionDate).toISOString().split("T")[0] 
+      : new Date().toISOString().split("T")[0];
+    setWarrantyStartDate(todayStr);
+    
+    const oneYearLater = new Date(todayStr);
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    setWarrantyEndDate(oneYearLater.toISOString().split("T")[0]);
+    setWarrantyRemarks("");
+    
+    setIsWarrantyDialogOpen(true);
+  };
+
+  const handleStartDateChange = (val: string) => {
+    setWarrantyStartDate(val);
+    const newEnd = new Date(val);
+    newEnd.setFullYear(newEnd.getFullYear() + 1);
+    setWarrantyEndDate(newEnd.toISOString().split("T")[0]);
+  };
+
+  const handleCreateWarranty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project) return;
+    if (!warrantyProduct.trim()) {
+      toast.error("Product name/description is required");
+      return;
+    }
+
+    setIsSavingWarranty(true);
+    try {
+      const wData = {
+        clientRef: typeof project.clientRef === "object" ? project.clientRef.id : project.clientRef,
+        projectRef: project.id,
+        product: warrantyProduct.trim(),
+        startDate: new Date(warrantyStartDate).toISOString(),
+        endDate: new Date(warrantyEndDate).toISOString(),
+        status: "Active" as const,
+        remarks: warrantyRemarks.trim() || undefined
+      };
+      
+      const res = await createWarrantyApi(wData);
+      if (res.success) {
+        toast.success("Warranty registered successfully");
+        setWarranty(res.data);
+        setIsWarrantyDialogOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to register warranty");
+    } finally {
+      setIsSavingWarranty(false);
+    }
+  };
 
   // Reload Helpers
   const reloadTasks = async () => {
@@ -927,7 +1018,7 @@ export function ProjectDetail() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className={`grid grid-cols-1 ${project.status === "Completed" ? "lg:grid-cols-3" : "lg:grid-cols-2"} gap-4`}>
                   {/* Linked Commercials */}
                   <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4">
                     <div className="flex items-center gap-2 pb-3 border-b border-border/50">
@@ -1048,6 +1139,89 @@ export function ProjectDetail() {
                       </div>
                     )}
                   </div>
+
+                  {/* Warranty Status/Details Card */}
+                  {project.status === "Completed" && (
+                    <div className="bg-card rounded-xl border border-border p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
+                              <ShieldCheck className="h-4.5 w-4.5 text-pink-700" />
+                            </div>
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Warranty Status</h3>
+                          </div>
+                          {warranty && (
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                              warranty.status === "Active" ? "bg-green-500/10 text-green-500" :
+                              warranty.status === "Expiring Soon" ? "bg-amber-500/10 text-amber-500" :
+                              warranty.status === "Expired" ? "bg-red-500/10 text-red-500" :
+                              "bg-blue-500/10 text-blue-500"
+                            }`}>
+                              {warranty.status}
+                            </span>
+                          )}
+                        </div>
+
+                        {isLoadingWarranty ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-5 w-5 animate-spin text-pink-700" />
+                          </div>
+                        ) : warranty ? (
+                          <div className="text-sm space-y-3">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Warranty Number</span>
+                              <span className="font-semibold text-foreground text-base">{warranty.warrantyNo}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Product Name</span>
+                              <span className="font-semibold text-foreground truncate block max-w-full">{warranty.product}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground block">Coverage Period</span>
+                              <span className="font-semibold text-foreground text-xs">
+                                {new Date(warranty.startDate).toLocaleDateString()} – {new Date(warranty.endDate).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {warranty.remarks && (
+                              <div className="pt-1 border-t border-border/30">
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground block">Conditions / Notes</span>
+                                <p className="text-xs text-foreground italic leading-relaxed whitespace-pre-wrap mt-0.5">{warranty.remarks}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-muted-foreground italic text-xs border border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2">
+                            <span>No warranty registered for this completed project.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {!isLoadingWarranty && (
+                        <div className="pt-2">
+                          {warranty ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => navigate(`/warranty-management/${warranty.id || (warranty as any)._id}`)}
+                              className="w-full text-xs font-semibold"
+                            >
+                              View Warranty Details
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={openRegisterWarrantyDialog}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5"
+                            >
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Register Warranty
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -1931,6 +2105,110 @@ export function ProjectDetail() {
                 className="bg-pink-700 hover:bg-pink-800 text-white font-semibold h-9 text-xs"
               >
                 {isSavingProjectDetails ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* REGISTER WARRANTY DIALOG */}
+      <Dialog open={isWarrantyDialogOpen} onOpenChange={setIsWarrantyDialogOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-1.5">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              Register Project Warranty
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+              Initialize a warranty coverage period for this completed project.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateWarranty} className="space-y-4 mt-3">
+            <div>
+              <Label>Client Name</Label>
+              <Input
+                value={clientName}
+                disabled
+                className="mt-1 text-sm h-9 bg-muted text-muted-foreground"
+              />
+            </div>
+
+            <div>
+              <Label>Project Reference</Label>
+              <Input
+                value={project.projectNo}
+                disabled
+                className="mt-1 text-sm h-9 bg-muted text-muted-foreground"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="warrantyProductInput">Product / Scope of Warranty *</Label>
+              <Input
+                id="warrantyProductInput"
+                value={warrantyProduct}
+                onChange={(e) => setWarrantyProduct(e.target.value)}
+                placeholder="Product/System Name..."
+                className="mt-1 text-sm h-9 text-foreground"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="warrantyStartDateInput">Start Date *</Label>
+                <Input
+                  id="warrantyStartDateInput"
+                  type="date"
+                  value={warrantyStartDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="mt-1 text-sm h-9 text-foreground"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="warrantyEndDateInput">End Date *</Label>
+                <Input
+                  id="warrantyEndDateInput"
+                  type="date"
+                  value={warrantyEndDate}
+                  onChange={(e) => setWarrantyEndDate(e.target.value)}
+                  className="mt-1 text-sm h-9 text-foreground"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="warrantyRemarksInput">Description / Warranty Conditions</Label>
+              <Textarea
+                id="warrantyRemarksInput"
+                value={warrantyRemarks}
+                onChange={(e) => setWarrantyRemarks(e.target.value)}
+                placeholder="Specify warranty terms, parts covered, inclusions/exclusions..."
+                className="mt-1 text-sm text-foreground bg-card"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
+              <Button type="button" variant="outline" onClick={() => setIsWarrantyDialogOpen(false)} disabled={isSavingWarranty} className="h-9 text-xs">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSavingWarranty}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-9 text-xs flex items-center gap-1"
+              >
+                {isSavingWarranty ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Create Warranty"
+                )}
               </Button>
             </div>
           </form>

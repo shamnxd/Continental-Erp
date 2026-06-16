@@ -27,6 +27,8 @@ import { leaveRouter } from "./routes/leave.routes";
 import { complaintRequestRouter } from "./routes/complaintRequest.routes";
 import { scheduleRouter } from "./routes/schedule.routes";
 import { remarkRouter } from "./routes/remark.routes";
+import { warrantyRouter } from "./routes/warranty.routes";
+
 import { errorHandler } from "./middleware/error.middleware";
 
 const app = express();
@@ -74,6 +76,8 @@ app.use("/api/v1/schedules", scheduleRouter);
 app.use("/api/v1/remarks", remarkRouter);
 app.use("/api/v1/projects", projectRouter);
 app.use("/api/v1/minor-jobs", minorJobRouter);
+app.use("/api/v1/warranties", warrantyRouter);
+
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

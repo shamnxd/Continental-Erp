@@ -195,9 +195,16 @@ import { RecordInvoicePaymentUseCase } from "../usecases/finance/RecordInvoicePa
 import { RecordVendorBillPaymentUseCase } from "../usecases/finance/RecordVendorBillPaymentUseCase";
 import { SendInvoiceEmailUseCase } from "../usecases/finance/SendInvoiceEmailUseCase";
 
-// Services
 import { IEmailService } from "../interfaces/services/IEmailService";
 import { EmailService } from "../services/EmailService";
+
+// Warranty Imports
+import { IWarrantyRepository } from "../interfaces/repositories/IWarrantyRepository";
+import { WarrantyRepository } from "../repositories/mongo/WarrantyRepository";
+import { CreateWarrantyUseCase } from "../usecases/warranty/CreateWarrantyUseCase";
+import { GetWarrantiesUseCase } from "../usecases/warranty/GetWarrantiesUseCase";
+import { GetWarrantyByIdUseCase } from "../usecases/warranty/GetWarrantyByIdUseCase";
+import { UpdateWarrantyUseCase } from "../usecases/warranty/UpdateWarrantyUseCase";
 
 // Register repositories
 container.registerSingleton<IUserRepository>("UserRepository", UserRepository);
@@ -217,6 +224,7 @@ container.registerSingleton<IMinorJobRepository>("MinorJobRepository", MinorJobR
 container.registerSingleton<IProjectTaskRepository>("ProjectTaskRepository", ProjectTaskRepository);
 container.registerSingleton<ISubcontractRepository>("SubcontractRepository", SubcontractRepository);
 container.registerSingleton<IPurchaseOrderRepository>("PurchaseOrderRepository", PurchaseOrderRepository);
+container.registerSingleton<IWarrantyRepository>("WarrantyRepository", WarrantyRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
@@ -393,3 +401,9 @@ container.registerSingleton<IUseCase<any, any>>("GetMinorJobsUseCase", GetMinorJ
 container.registerSingleton<IUseCase<any, any>>("GetMinorJobByIdUseCase", GetMinorJobByIdUseCase);
 container.registerSingleton<IUseCase<any, any>>("UpdateMinorJobUseCase", UpdateMinorJobUseCase);
 container.registerSingleton<IUseCase<any, any>>("DeleteMinorJobUseCase", DeleteMinorJobUseCase);
+
+// Warranty Use Cases
+container.registerSingleton<IUseCase<any, any>>("CreateWarrantyUseCase", CreateWarrantyUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetWarrantiesUseCase", GetWarrantiesUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetWarrantyByIdUseCase", GetWarrantyByIdUseCase);
+container.registerSingleton<IUseCase<any, any>>("UpdateWarrantyUseCase", UpdateWarrantyUseCase);

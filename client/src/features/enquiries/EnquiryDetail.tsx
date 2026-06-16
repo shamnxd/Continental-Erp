@@ -77,6 +77,8 @@ const ENQUIRY_STATUSES: EnquiryStatus[] = [
   "Quotation Prepared",
   "Follow-up Required",
   "Converted to Project",
+  "Converted to AMC",
+  "Converted to Minor Job",
   "Closed",
 ];
 
@@ -86,6 +88,8 @@ const getStatusColor = (status: string) => {
     "Quotation Prepared": "bg-green-500/10 text-green-500",
     "Follow-up Required": "bg-amber-500/10 text-amber-500",
     "Converted to Project": "bg-purple-500/10 text-purple-500",
+    "Converted to AMC": "bg-emerald-500/10 text-emerald-500",
+    "Converted to Minor Job": "bg-teal-500/10 text-teal-500",
     "Converted to Quotation": "bg-purple-500/10 text-purple-500",
     Closed: "bg-slate-500/10 text-slate-600",
   };

@@ -179,6 +179,8 @@ export function Enquiries() {
       "Quotation Prepared": "bg-amber-500/10 text-amber-600 dark:text-amber-400",
       "Follow-up Required": "bg-orange-500/10 text-orange-600 dark:text-orange-400",
       "Converted to Project": "bg-green-500/10 text-green-600 dark:text-green-400",
+      "Converted to AMC": "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+      "Converted to Minor Job": "bg-teal-500/10 text-teal-600 dark:text-teal-400",
       Closed: "bg-slate-500/10 text-slate-600 dark:text-slate-400",
     };
     return (

@@ -6,7 +6,9 @@ export type RemarkEntityType =
   | "project"
   | "minorjob"
   | "warranty"
-  | "quotation";
+  | "quotation"
+  | "subcontract"
+  | "purchase_order";
 
 export interface RemarkAttachment {
   name: string;

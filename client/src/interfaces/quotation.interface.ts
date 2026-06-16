@@ -47,6 +47,10 @@ export interface Quotation {
   costingId?: string;
   costingRevision?: number;
   clonedFromQuotationRevision?: number;
+  convertedTo?: {
+    targetType: "project" | "amc" | "minorjob";
+    targetId: string;
+  };
   createdAt?: string;
   updatedAt?: string;
   panNo?: string;

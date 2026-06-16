@@ -3,6 +3,8 @@ export type EnquiryStatus =
   | "Quotation Prepared"
   | "Follow-up Required"
   | "Converted to Project"
+  | "Converted to AMC"
+  | "Converted to Minor Job"
   | "Closed";
 
 export type EnquiryPriority = "High" | "Medium" | "Low";

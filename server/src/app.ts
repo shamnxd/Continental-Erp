@@ -19,6 +19,8 @@ import { copperPipeRateRouter } from "./routes/copperPipeRate.routes";
 import { financeRouter } from "./routes/finance.routes";
 import { adminRouter } from "./routes/admin.routes";
 import { auditLogRouter } from "./routes/auditLog.routes";
+import { projectRouter } from "./routes/project.routes";
+import { minorJobRouter } from "./routes/minorJob.routes";
 import { staffAuthRouter } from "./routes/staff.auth.routes";
 import { staffPortalRouter } from "./routes/staff.portal.routes";
 import { leaveRouter } from "./routes/leave.routes";
@@ -70,6 +72,8 @@ app.use("/api/v1/audit-logs", auditLogRouter);
 app.use("/api/v1/leaves", leaveRouter);
 app.use("/api/v1/schedules", scheduleRouter);
 app.use("/api/v1/remarks", remarkRouter);
+app.use("/api/v1/projects", projectRouter);
+app.use("/api/v1/minor-jobs", minorJobRouter);
 
 // Centralized error handler (must be registered last)
 app.use(errorHandler);

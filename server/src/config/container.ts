@@ -8,6 +8,27 @@ import { IAuditLogRepository } from "../interfaces/repositories/IAuditLogReposit
 import { AuditLogRepository } from "../repositories/mongo/AuditLogRepository";
 import { ILeaveRequestRepository } from "../interfaces/repositories/ILeaveRequestRepository";
 import { LeaveRequestRepository } from "../repositories/mongo/LeaveRequestRepository";
+import { IProjectRepository } from "../interfaces/repositories/IProjectRepository";
+import { ProjectRepository } from "../repositories/mongo/ProjectRepository";
+import { CreateProjectUseCase } from "../usecases/projects/CreateProjectUseCase";
+import { GetProjectsUseCase } from "../usecases/projects/GetProjectsUseCase";
+import { GetProjectByIdUseCase } from "../usecases/projects/GetProjectByIdUseCase";
+import { UpdateProjectUseCase } from "../usecases/projects/UpdateProjectUseCase";
+import { DeleteProjectUseCase } from "../usecases/projects/DeleteProjectUseCase";
+import { ConvertQuotationUseCase } from "../usecases/quotations/ConvertQuotationUseCase";
+import { IMinorJobRepository } from "../interfaces/repositories/IMinorJobRepository";
+import { MinorJobRepository } from "../repositories/mongo/MinorJobRepository";
+import { IProjectTaskRepository } from "../interfaces/repositories/IProjectTaskRepository";
+import { ProjectTaskRepository } from "../repositories/mongo/ProjectTaskRepository";
+import { ISubcontractRepository } from "../interfaces/repositories/ISubcontractRepository";
+import { SubcontractRepository } from "../repositories/mongo/SubcontractRepository";
+import { IPurchaseOrderRepository } from "../interfaces/repositories/IPurchaseOrderRepository";
+import { PurchaseOrderRepository } from "../repositories/mongo/PurchaseOrderRepository";
+import { CreateMinorJobUseCase } from "../usecases/minor-jobs/CreateMinorJobUseCase";
+import { GetMinorJobsUseCase } from "../usecases/minor-jobs/GetMinorJobsUseCase";
+import { GetMinorJobByIdUseCase } from "../usecases/minor-jobs/GetMinorJobByIdUseCase";
+import { UpdateMinorJobUseCase } from "../usecases/minor-jobs/UpdateMinorJobUseCase";
+import { DeleteMinorJobUseCase } from "../usecases/minor-jobs/DeleteMinorJobUseCase";
 
 
 // Complaints & SMR Repositories
@@ -191,6 +212,11 @@ container.registerSingleton<IAuditLogRepository>("AuditLogRepository", AuditLogR
 container.registerSingleton<ICostingRepository>("CostingRepository", CostingRepository);
 container.registerSingleton<IScheduleRepository>("ScheduleRepository", ScheduleRepository);
 container.registerSingleton<IRemarkRepository>("RemarkRepository", RemarkRepository);
+container.registerSingleton<IProjectRepository>("ProjectRepository", ProjectRepository);
+container.registerSingleton<IMinorJobRepository>("MinorJobRepository", MinorJobRepository);
+container.registerSingleton<IProjectTaskRepository>("ProjectTaskRepository", ProjectTaskRepository);
+container.registerSingleton<ISubcontractRepository>("SubcontractRepository", SubcontractRepository);
+container.registerSingleton<IPurchaseOrderRepository>("PurchaseOrderRepository", PurchaseOrderRepository);
 
 // Finance Repositories
 container.registerSingleton<IClientInvoiceRepository>("ClientInvoiceRepository", ClientInvoiceRepository);
@@ -352,3 +378,18 @@ container.registerSingleton<
     boolean
   >
 >("SendInvoiceEmailUseCase", SendInvoiceEmailUseCase);
+
+// Project Use Cases
+container.registerSingleton<IUseCase<any, any>>("CreateProjectUseCase", CreateProjectUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetProjectsUseCase", GetProjectsUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetProjectByIdUseCase", GetProjectByIdUseCase);
+container.registerSingleton<IUseCase<any, any>>("UpdateProjectUseCase", UpdateProjectUseCase);
+container.registerSingleton<IUseCase<any, any>>("DeleteProjectUseCase", DeleteProjectUseCase);
+container.registerSingleton<IUseCase<any, any>>("ConvertQuotationUseCase", ConvertQuotationUseCase);
+
+// Minor Job Use Cases
+container.registerSingleton<IUseCase<any, any>>("CreateMinorJobUseCase", CreateMinorJobUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetMinorJobsUseCase", GetMinorJobsUseCase);
+container.registerSingleton<IUseCase<any, any>>("GetMinorJobByIdUseCase", GetMinorJobByIdUseCase);
+container.registerSingleton<IUseCase<any, any>>("UpdateMinorJobUseCase", UpdateMinorJobUseCase);
+container.registerSingleton<IUseCase<any, any>>("DeleteMinorJobUseCase", DeleteMinorJobUseCase);

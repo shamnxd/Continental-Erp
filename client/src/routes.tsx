@@ -34,6 +34,7 @@ import { InvoiceDetailsPage } from "./features/finance/InvoiceDetailsPage";
 import { VendorBillFormPage } from "./features/finance/VendorBillFormPage";
 import { Reports } from "./features/reports/Reports";
 import { Schedules } from "./features/schedules/Schedules";
+import { ScheduleDetail } from "./features/schedules/ScheduleDetail";
 import { MinorJobs } from "./features/minor-jobs/MinorJobs";
 import { MinorJobDetail } from "./features/minor-jobs/MinorJobDetail";
 import { Projects } from "./features/projects/Projects";
@@ -126,6 +127,7 @@ export const router = createBrowserRouter([
       },
       { path: AppRoute.REPORTS, element: <Reports /> },
       { path: AppRoute.SCHEDULES, element: <Schedules /> },
+      { path: AppRoute.SCHEDULE_DETAIL, element: <ScheduleDetail /> },
       { path: AppRoute.MINOR_JOBS, element: <MinorJobs /> },
       { path: AppRoute.MINOR_JOB_DETAIL, element: <MinorJobDetail /> },
       { path: AppRoute.PROJECTS, element: <Projects /> },

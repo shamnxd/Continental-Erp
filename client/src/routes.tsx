@@ -38,6 +38,10 @@ import { MinorJobs } from "./features/minor-jobs/MinorJobs";
 import { MinorJobDetail } from "./features/minor-jobs/MinorJobDetail";
 import { Projects } from "./features/projects/Projects";
 import { ProjectDetail } from "./features/projects/ProjectDetail";
+import { SubcontractDetail } from "./features/projects/SubcontractDetail";
+import { PurchaseOrderDetail } from "./features/projects/PurchaseOrderDetail";
+import { SubcontractsList } from "./features/projects/SubcontractsList";
+import { PurchaseOrdersList } from "./features/projects/PurchaseOrdersList";
 import { LeaveManagement } from "./features/leave-management/LeaveManagement";
 import { AuditLogs } from "./features/audit-logs/AuditLogs";
 import { WarrantyManagement } from "./features/warranty/WarrantyManagement";
@@ -126,6 +130,10 @@ export const router = createBrowserRouter([
       { path: AppRoute.MINOR_JOB_DETAIL, element: <MinorJobDetail /> },
       { path: AppRoute.PROJECTS, element: <Projects /> },
       { path: AppRoute.PROJECT_DETAIL, element: <ProjectDetail /> },
+      { path: AppRoute.SUBCONTRACT_DETAIL, element: <SubcontractDetail /> },
+      { path: AppRoute.PO_DETAIL, element: <PurchaseOrderDetail /> },
+      { path: AppRoute.SUBCONTRACTS, element: <SubcontractsList /> },
+      { path: AppRoute.PURCHASE_ORDERS, element: <PurchaseOrdersList /> },
       { path: AppRoute.CUSTOMER_COMPLAINTS, element: <ComplaintRequests /> },
       { path: `${AppRoute.CUSTOMER_COMPLAINTS}/:id`, element: <ComplaintRequestDetail /> },
       { path: AppRoute.LEAVE_MANAGEMENT, element: <LeaveManagement /> },

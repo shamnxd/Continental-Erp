@@ -27,6 +27,8 @@ import {
   Palmtree,
   ScrollText,
   ShieldCheck,
+  Handshake,
+  ShoppingBag,
 } from "lucide-react";
 import { AppRoute } from "../constants/routes.enum";
 
@@ -77,6 +79,8 @@ const navigation: NavSection[] = [
       { name: "Schedules", href: AppRoute.SCHEDULES, icon: CalendarDays },
       { name: "Minor Jobs", href: AppRoute.MINOR_JOBS, icon: Wrench },
       { name: "Projects", href: AppRoute.PROJECTS, icon: FolderKanban },
+      { name: "Subcontracts", href: AppRoute.SUBCONTRACTS, icon: Handshake },
+      { name: "Purchase Orders", href: AppRoute.PURCHASE_ORDERS, icon: ShoppingBag },
       { name: "Warranty Management", href: AppRoute.WARRANTY_MANAGEMENT, icon: ShieldCheck },
     ],
   },

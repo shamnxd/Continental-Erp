@@ -44,6 +44,10 @@ export enum AppRoute {
   SCHEDULES = "/schedules",
   PROJECTS = "/projects",
   PROJECT_DETAIL = "/projects/:id",
+  SUBCONTRACT_DETAIL = "/projects/:projectId/subcontracts/:subcontractId",
+  PO_DETAIL = "/projects/:projectId/purchase-orders/:poId",
+  SUBCONTRACTS = "/subcontracts",
+  PURCHASE_ORDERS = "/purchase-orders",
   MINOR_JOBS = "/minor-jobs",
   MINOR_JOB_DETAIL = "/minor-jobs/:id",
   CUSTOMER_COMPLAINTS = "/customer-complaints",
@@ -93,5 +97,7 @@ export enum ApiRoute {
   COSTINGS = "/costings",
   SCHEDULES = "/schedules",
   REMARKS = "/remarks",
+  PROJECTS = "/projects",
+  MINOR_JOBS = "/minor-jobs",
 }
 

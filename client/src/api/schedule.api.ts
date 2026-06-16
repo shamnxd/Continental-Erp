@@ -41,6 +41,10 @@ export async function getSchedulesApi(query?: GetSchedulesQuery): Promise<GetSch
   return await api.get(url);
 }
 
+export async function getScheduleByIdApi(id: string): Promise<ScheduleResponse> {
+  return await api.get(`${ApiRoute.SCHEDULES}/${id}`);
+}
+
 export async function createScheduleApi(data: Partial<Schedule>): Promise<ScheduleResponse> {
   return await api.post(ApiRoute.SCHEDULES, data);
 }

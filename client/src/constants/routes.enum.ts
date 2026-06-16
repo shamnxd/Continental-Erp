@@ -42,6 +42,7 @@ export enum AppRoute {
   FINANCE_REPORTS = "/finance/reports",
   REPORTS = "/reports",
   SCHEDULES = "/schedules",
+  SCHEDULE_DETAIL = "/schedules/:id",
   PROJECTS = "/projects",
   PROJECT_DETAIL = "/projects/:id",
   SUBCONTRACT_DETAIL = "/projects/:projectId/subcontracts/:subcontractId",

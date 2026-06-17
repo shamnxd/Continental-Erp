@@ -44,6 +44,7 @@ export type ScheduleType =
   | "Preferred Visit"
   | "Site Visit"
   | "Complaint Resolution"
+  | "Follow-up"
   | "Project/Minor Job";
 
 export interface ScheduleItem {
@@ -68,7 +69,7 @@ export interface ScheduleItem {
   assignedTo?: string[];
 }
 
-type ScheduleTab = "visits" | "preferred";
+type ScheduleTab = "visits" | "followups" | "preferred";
 
 type VisitTypeFilter =
   | "all"
@@ -76,6 +77,8 @@ type VisitTypeFilter =
   | "Site Visit"
   | "Complaint Resolution"
   | "Project/Minor Job";
+
+type FollowUpStatusFilter = "all" | "Scheduled" | "Pending" | "In Progress" | "Completed" | "Cancelled";
 
 type PreferredContractFilter = "all" | AmcContractStatus;
 
@@ -147,12 +150,14 @@ const tabTriggerClass =
 export function Schedules() {
   const navigate = useNavigate();
   const [visitItems, setVisitItems] = useState<ScheduleItem[]>([]);
+  const [followUpItems, setFollowUpItems] = useState<ScheduleItem[]>([]);
   const [preferredItems, setPreferredItems] = useState<ScheduleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [activeTab, setActiveTab] = useState<ScheduleTab>("visits");
   const [visitFilter, setVisitFilter] = useState<VisitTypeFilter>("all");
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpStatusFilter>("all");
   const [preferredFilter, setPreferredFilter] = useState<PreferredContractFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -175,11 +180,27 @@ export function Schedules() {
 
       if (staffRes.success) setStaffList(staffRes.data);
 
-      // Visit items from DB (exclude Follow-up)
+      // Visit items + Follow-up items from DB (split by scheduleType)
       const visits: ScheduleItem[] = [];
+      const followUps: ScheduleItem[] = [];
       if (schedulesRes.success) {
         for (const sch of schedulesRes.data) {
-          if (sch.scheduleType === "Follow-up") continue; // no follow-up tab
+          if (sch.scheduleType === "Follow-up") {
+            followUps.push({
+              id: `schedule-${sch.id}`,
+              scheduleId: sch.id,
+              date: sch.scheduledDate,
+              type: "Follow-up",
+              title: sch.title,
+              clientName: sch.clientName,
+              clientSubtitle: sch.assignedTo?.length ? `Assigned: ${sch.assignedTo.join(", ")}` : "",
+              eventSubtitle: sch.notes || "",
+              status: sch.status,
+              reference: sch.entityNo,
+              assignedTo: sch.assignedTo,
+            });
+            continue;
+          }
           let itemType: ScheduleType = "Site Visit";
           if (sch.scheduleType === "AMC Visit") itemType = "AMC Visit";
           else if (sch.scheduleType === "Complaint Resolution") itemType = "Complaint Resolution";
@@ -202,7 +223,9 @@ export function Schedules() {
         }
       }
       visits.sort(compareByDateDesc);
+      followUps.sort(compareByDateDesc);
       setVisitItems(visits);
+      setFollowUpItems(followUps);
 
       // Preferred: only NEXT visit per contract, sorted ascending (nearest first)
       const preferred: ScheduleItem[] = [];
@@ -223,7 +246,7 @@ export function Schedules() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, activeTab, visitFilter, preferredFilter]);
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
@@ -235,6 +258,14 @@ export function Schedules() {
     project: visitItems.filter((i) => i.type === "Project/Minor Job").length,
   }), [visitItems]);
 
+  const followUpStats = useMemo(() => ({
+    all: followUpItems.length,
+    scheduled: followUpItems.filter((i) => i.status === "Scheduled").length,
+    pending: followUpItems.filter((i) => i.status === "Pending").length,
+    inProgress: followUpItems.filter((i) => i.status === "In Progress").length,
+    completed: followUpItems.filter((i) => i.status === "Completed").length,
+  }), [followUpItems]);
+
   const preferredStats = useMemo(() => ({
     all: preferredItems.length,
     active: preferredItems.filter((i) => i.contractStatus === "Active").length,
@@ -243,13 +274,18 @@ export function Schedules() {
 
   // ── Filtering ─────────────────────────────────────────────────────────────
 
-  const tabSource = activeTab === "visits" ? visitItems : preferredItems;
+  const tabSource =
+    activeTab === "visits" ? visitItems :
+    activeTab === "followups" ? followUpItems :
+    preferredItems;
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return tabSource.filter((item) => {
       if (activeTab === "visits") {
         if (visitFilter !== "all" && item.type !== visitFilter) return false;
+      } else if (activeTab === "followups") {
+        if (followUpFilter !== "all" && item.status !== followUpFilter) return false;
       } else {
         if (preferredFilter !== "all" && item.contractStatus !== preferredFilter) return false;
       }
@@ -262,7 +298,7 @@ export function Schedules() {
         (item.visitSlot?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [tabSource, debouncedSearch, activeTab, visitFilter, preferredFilter]);
+  }, [tabSource, debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -475,10 +511,68 @@ export function Schedules() {
 
   const counts = useMemo(() => ({
     visits: visitItems.length,
+    followups: followUpItems.length,
     preferred: preferredItems.length,
-  }), [visitItems.length, preferredItems.length]);
+  }), [visitItems.length, followUpItems.length, preferredItems.length]);
 
-  const currentColumns = activeTab === "visits" ? visitColumns : preferredColumns;
+  // Follow-up columns (same structure as visit columns with amber accent)
+  const followUpColumns: Column<ScheduleItem>[] = [
+    {
+      header: "Follow-up Date",
+      accessor: (row) => (
+        <div className="flex items-start gap-2 min-w-0">
+          <CalendarClock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <TablePrimarySecondary
+            primary={fmtDate(row.date)}
+            secondary={row.reference}
+            primaryClassName="text-sm font-semibold text-amber-600 whitespace-nowrap"
+            secondaryClassName="text-[11px] text-muted-foreground font-medium"
+          />
+        </div>
+      ),
+      className: tableCellClass.medium,
+    },
+    {
+      header: "Client",
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
+      className: tableCellClass.wide,
+    },
+    {
+      header: "Notes / Subject",
+      accessor: (row) => (
+        <TablePrimarySecondary
+          primary={row.title}
+          secondary={row.eventSubtitle || "—"}
+          secondaryClassName="text-xs text-muted-foreground line-clamp-2 leading-snug max-w-[220px]"
+        />
+      ),
+      className: tableCellClass.wide,
+    },
+    {
+      header: "Status",
+      accessor: (row) => <TableStatusBadge label={row.status} tone={scheduleStatusTone(row.status)} />,
+      className: tableCellClass.narrow,
+    },
+    {
+      header: <span className="sr-only">Actions</span>,
+      className: tableCellClass.actions,
+      accessor: (row) => (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs font-semibold gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
+          onClick={(e) => { e.stopPropagation(); if (row.scheduleId) navigate(`/schedules/${row.scheduleId}`); }}
+        >
+          <Eye className="h-3.5 w-3.5" />View
+        </Button>
+      ),
+    },
+  ];
+
+  const currentColumns =
+    activeTab === "visits" ? visitColumns :
+    activeTab === "followups" ? followUpColumns :
+    preferredColumns;
 
   const currentFilterOptions =
     activeTab === "visits"
@@ -489,16 +583,28 @@ export function Schedules() {
           { value: "Complaint Resolution", label: "Complaints", count: visitStats.complaint, tone: "amber" as const },
           { value: "Project/Minor Job", label: "Projects/Jobs", count: visitStats.project, tone: "green" as const },
         ]
+      : activeTab === "followups"
+      ? [
+          { value: "all", label: "All", count: followUpStats.all, tone: "primary" as const },
+          { value: "Scheduled", label: "Scheduled", count: followUpStats.scheduled, tone: "pink" as const },
+          { value: "Pending", label: "Pending", count: followUpStats.pending, tone: "amber" as const },
+          { value: "In Progress", label: "In Progress", count: followUpStats.inProgress, tone: "blue" as const },
+          { value: "Completed", label: "Completed", count: followUpStats.completed, tone: "green" as const },
+        ]
       : [
           { value: "all", label: "All", count: preferredStats.all, tone: "primary" as const },
           { value: "Active", label: "Active", count: preferredStats.active, tone: "green" as const },
           { value: "Due for Renewal", label: "Due for Renewal", count: preferredStats.renewal, tone: "amber" as const },
         ];
 
-  const currentFilterValue = activeTab === "visits" ? visitFilter : preferredFilter;
+  const currentFilterValue =
+    activeTab === "visits" ? visitFilter :
+    activeTab === "followups" ? followUpFilter :
+    preferredFilter;
 
   const handleFilterChange = (v: string) => {
     if (activeTab === "visits") setVisitFilter(v as VisitTypeFilter);
+    else if (activeTab === "followups") setFollowUpFilter(v as FollowUpStatusFilter);
     else setPreferredFilter(v as PreferredContractFilter);
   };
 
@@ -510,6 +616,7 @@ export function Schedules() {
 
   const emptyMessages: Record<ScheduleTab, string> = {
     visits: "No visit schedules found. Visit schedules are created from AMC, enquiry, complaint, project, or minor job detail pages.",
+    followups: "No follow-up schedules found. Follow-ups are added from entity detail pages (enquiry, complaint, AMC, project, etc.).",
     preferred: "No upcoming preferred AMC visits. Preferred visit dates are computed from active AMC contracts.",
   };
 
@@ -529,6 +636,11 @@ export function Schedules() {
                 Visit Schedules
                 <span className="tabular-nums text-muted-foreground font-semibold">({counts.visits})</span>
               </TabsTrigger>
+              <TabsTrigger value="followups" className={tabTriggerClass}>
+                <CalendarClock className="h-4 w-4" />
+                Follow-up Schedules
+                <span className="tabular-nums text-muted-foreground font-semibold">({counts.followups})</span>
+              </TabsTrigger>
               <TabsTrigger value="preferred" className={tabTriggerClass}>
                 <CalendarDays className="h-4 w-4" />
                 AMC Preferred Visits
@@ -540,6 +652,8 @@ export function Schedules() {
         searchPlaceholder={
           activeTab === "preferred"
             ? "Search by AMC no., client, or visit slot..."
+            : activeTab === "followups"
+            ? "Search by client, reference, or notes..."
             : "Search by client, reference, or title..."
         }
         searchValue={searchQuery}
@@ -550,7 +664,7 @@ export function Schedules() {
         rowKey={(row) => row.id}
         onRowClick={handleRowClick}
         emptyMessage={emptyMessages[activeTab]}
-        entityLabel={activeTab === "visits" ? "visit schedules" : "preferred visits"}
+        entityLabel={activeTab === "visits" ? "visit schedules" : activeTab === "followups" ? "follow-up schedules" : "preferred visits"}
         filterOptions={currentFilterOptions}
         filterValue={currentFilterValue}
         onFilterChange={handleFilterChange}

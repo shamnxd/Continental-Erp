@@ -186,13 +186,16 @@ export class DashboardController {
       );
 
       // ─── 6. Fetch Dynamic Critical Alerts ──────────────────────────────────
+      const allAlerts = req.query.allAlerts === "true";
+      const limitVal = allAlerts ? 100 : 3;
+
       const alerts: any[] = [];
       const [soonWarranties, expiredWarranties, overdueAmc, overdueComp, overduePayments] = await Promise.all([
-        WarrantyModel.find({ status: "Expiring Soon" }).populate("clientRef").limit(3).lean().exec(),
-        WarrantyModel.find({ status: "Expired" }).populate("clientRef").limit(3).lean().exec(),
-        ScheduleModel.find({ entityType: "amc", scheduledDate: { $lt: now }, status: { $in: ["Scheduled", "In Progress", "Pending"] } }).limit(3).lean().exec(),
-        ComplaintModel.find({ expectedResolution: { $lt: now }, status: { $in: ["Pending", "In Progress"] } }).limit(3).lean().exec(),
-        ClientInvoiceModel.find({ dueDate: { $lt: now.toISOString().split("T")[0] }, paymentState: { $in: ["Overdue", "Open", "Partially Paid"] }, documentStatus: "Approved" }).limit(3).lean().exec()
+        WarrantyModel.find({ status: "Expiring Soon" }).populate("clientRef").limit(limitVal).lean().exec(),
+        WarrantyModel.find({ status: "Expired" }).populate("clientRef").limit(limitVal).lean().exec(),
+        ScheduleModel.find({ entityType: "amc", scheduledDate: { $lt: now }, status: { $in: ["Scheduled", "In Progress", "Pending"] } }).limit(limitVal).lean().exec(),
+        ComplaintModel.find({ expectedResolution: { $lt: now }, status: { $in: ["Pending", "In Progress"] } }).limit(limitVal).lean().exec(),
+        ClientInvoiceModel.find({ dueDate: { $lt: now.toISOString().split("T")[0] }, paymentState: { $in: ["Overdue", "Open", "Partially Paid"] }, documentStatus: "Approved" }).limit(limitVal).lean().exec()
       ]);
 
       soonWarranties.forEach((w: any) => {

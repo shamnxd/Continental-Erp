@@ -6,12 +6,23 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarCheck2,
-  PhoneCall,
+  CalendarPlus,
+  Loader2,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { getAmcApi } from "../../api/amc.api";
-import { getSchedulesApi } from "../../api/schedule.api";
+import { getSchedulesApi, createScheduleApi } from "../../api/schedule.api";
+import { getStaffApi } from "../../api/staff.api";
 import type { AmcContract, AmcContractStatus } from "../../interfaces/amc.interface";
 import { calculatePreferredVisitDate } from "../../utils/calculateAmcVisits";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -33,12 +44,11 @@ export type ScheduleType =
   | "Preferred Visit"
   | "Site Visit"
   | "Complaint Resolution"
-  | "Follow-up"
   | "Project/Minor Job";
 
 export interface ScheduleItem {
   id: string;
-  scheduleId?: string; // raw schedule DB id (for detail page navigation)
+  scheduleId?: string;
   date: string;
   type: ScheduleType;
   title: string;
@@ -48,19 +58,18 @@ export interface ScheduleItem {
   clientSubtitle?: string;
   eventSubtitle?: string;
   visitSlot?: string;
+  visitIndex?: number;
+  totalVisits?: number;
   contractStatus?: AmcContractStatus;
   amcId?: string;
-  visitId?: string;
-  enquiryId?: string;
-  complaintId?: string;
-  projectId?: string;
-  minorjobId?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  contractNo?: string;
   assignedTo?: string[];
 }
 
-type ScheduleTab = "visits" | "followups" | "preferred";
+type ScheduleTab = "visits" | "preferred";
 
-// Visit-sub-type filters
 type VisitTypeFilter =
   | "all"
   | "AMC Visit"
@@ -68,47 +77,47 @@ type VisitTypeFilter =
   | "Complaint Resolution"
   | "Project/Minor Job";
 
-// Follow-up status filters
-type FollowUpStatusFilter = "all" | "Scheduled" | "Pending" | "In Progress" | "Completed" | "Cancelled";
-
-// AMC preferred contract filters
 type PreferredContractFilter = "all" | AmcContractStatus;
 
 const PAGE_SIZE = 15;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function buildPreferredVisitItems(contract: AmcContract): ScheduleItem[] {
-  if (!contract.id || contract.status === "Expired") return [];
+/** Returns only the NEXT preferred visit for each AMC contract. */
+function buildNextPreferredVisitItem(contract: AmcContract): ScheduleItem | null {
+  if (!contract.id || contract.status === "Expired") return null;
   const completed = Math.max(0, contract.visitsCompleted ?? 0);
   const total = Math.max(0, contract.totalVisits ?? 0);
-  if (total <= 0 || completed >= total) return [];
+  if (total <= 0 || completed >= total) return null;
 
-  const items: ScheduleItem[] = [];
-  for (let visitIndex = completed + 1; visitIndex <= total; visitIndex++) {
-    const date = calculatePreferredVisitDate(
-      contract.startDate,
-      contract.endDate,
-      visitIndex,
-      total
-    );
-    if (!date) continue;
-    items.push({
-      id: `preferred-${contract.id}-${visitIndex}`,
-      date,
-      type: "Preferred Visit",
-      title: contract.serviceType,
-      visitSlot: `Visit ${visitIndex} of ${total}`,
-      clientName: contract.clientName,
-      clientSubtitle: contract.email?.trim() || contract.contactPerson,
-      eventSubtitle: contract.serviceType,
-      status: "Preferred",
-      reference: contract.amcNo,
-      contractStatus: contract.status,
-      amcId: contract.id,
-    });
-  }
-  return items;
+  const nextIndex = completed + 1;
+  const date = calculatePreferredVisitDate(
+    contract.startDate,
+    contract.endDate,
+    nextIndex,
+    total
+  );
+  if (!date) return null;
+
+  return {
+    id: `preferred-${contract.id}-${nextIndex}`,
+    date,
+    type: "Preferred Visit",
+    title: contract.serviceType,
+    visitSlot: `Visit ${nextIndex} of ${total}`,
+    visitIndex: nextIndex,
+    totalVisits: total,
+    clientName: contract.clientName,
+    clientSubtitle: contract.email?.trim() || contract.contactPerson,
+    eventSubtitle: contract.serviceType,
+    status: "Preferred",
+    reference: contract.amcNo,
+    contractStatus: contract.status,
+    amcId: contract.id,
+    contractStartDate: contract.startDate,
+    contractEndDate: contract.endDate,
+    contractNo: contract.amcNo,
+  };
 }
 
 function fmtDate(value: string): string {
@@ -122,6 +131,10 @@ function fmtDate(value: string): string {
   });
 }
 
+function compareByDateAsc(a: ScheduleItem, b: ScheduleItem): number {
+  return new Date(a.date).getTime() - new Date(b.date).getTime();
+}
+
 function compareByDateDesc(a: ScheduleItem, b: ScheduleItem): number {
   return new Date(b.date).getTime() - new Date(a.date).getTime();
 }
@@ -133,84 +146,74 @@ const tabTriggerClass =
 
 export function Schedules() {
   const navigate = useNavigate();
-  const [allItems, setAllItems] = useState<ScheduleItem[]>([]);
+  const [visitItems, setVisitItems] = useState<ScheduleItem[]>([]);
+  const [preferredItems, setPreferredItems] = useState<ScheduleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [activeTab, setActiveTab] = useState<ScheduleTab>("visits");
   const [visitFilter, setVisitFilter] = useState<VisitTypeFilter>("all");
-  const [followUpFilter, setFollowUpFilter] = useState<FollowUpStatusFilter>("all");
   const [preferredFilter, setPreferredFilter] = useState<PreferredContractFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchSchedules = useCallback(async () => {
+  // Schedule Visit dialog (convert preferred → scheduled)
+  const [scheduleDialogItem, setScheduleDialogItem] = useState<ScheduleItem | null>(null);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedStaffIds, setSchedStaffIds] = useState<string[]>([]);
+  const [schedNotes, setSchedNotes] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [staffList, setStaffList] = useState<any[]>([]);
+
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const items: ScheduleItem[] = [];
-
-      const [schedulesRes, amcRes] = await Promise.all([
+      const [schedulesRes, amcRes, staffRes] = await Promise.all([
         getSchedulesApi({ limit: 1000 }),
         getAmcApi({ page: 1, limit: 500 }),
+        getStaffApi({ limit: 200, activeOnly: true }),
       ]);
 
-      // AMC Preferred Visits (computed)
-      if (amcRes.success) {
-        for (const contract of amcRes.data) {
-          items.push(...buildPreferredVisitItems(contract));
-        }
-      }
+      if (staffRes.success) setStaffList(staffRes.data);
 
-      // Scheduled entries from DB
+      // Visit items from DB (exclude Follow-up)
+      const visits: ScheduleItem[] = [];
       if (schedulesRes.success) {
         for (const sch of schedulesRes.data) {
+          if (sch.scheduleType === "Follow-up") continue; // no follow-up tab
           let itemType: ScheduleType = "Site Visit";
-          if (sch.scheduleType === "Follow-up") {
-            itemType = "Follow-up";
-          } else if (sch.scheduleType === "AMC Visit") {
-            itemType = "AMC Visit";
-          } else if (sch.scheduleType === "Complaint Resolution") {
-            itemType = "Complaint Resolution";
-          } else if (
-            sch.scheduleType === "Project Installation" ||
-            sch.scheduleType === "Minor Job"
-          ) {
-            itemType = "Project/Minor Job";
-          } else {
-            itemType = "Site Visit";
-          }
+          if (sch.scheduleType === "AMC Visit") itemType = "AMC Visit";
+          else if (sch.scheduleType === "Complaint Resolution") itemType = "Complaint Resolution";
+          else if (sch.scheduleType === "Project Installation" || sch.scheduleType === "Minor Job") itemType = "Project/Minor Job";
+          else itemType = "Site Visit";
 
-          items.push({
+          visits.push({
             id: `schedule-${sch.id}`,
             scheduleId: sch.id,
             date: sch.scheduledDate,
             type: itemType,
             title: sch.title,
             clientName: sch.clientName,
-            clientSubtitle:
-              sch.assignedTo && sch.assignedTo.length > 0
-                ? `Assigned: ${sch.assignedTo.join(", ")}`
-                : "",
+            clientSubtitle: sch.assignedTo?.length ? `Assigned: ${sch.assignedTo.join(", ")}` : "",
             eventSubtitle: sch.notes || "",
             status: sch.status,
             reference: sch.entityNo,
             assignedTo: sch.assignedTo,
-            amcId: sch.entityType === "amc" ? sch.entityId : undefined,
-            visitId:
-              sch.entityType === "amc" && sch.scheduleType === "AMC Visit"
-                ? sch.id
-                : undefined,
-            enquiryId: sch.entityType === "enquiry" ? sch.entityId : undefined,
-            complaintId:
-              sch.entityType === "complaint" ? sch.entityId : undefined,
-            projectId: sch.entityType === "project" ? sch.entityId : undefined,
-            minorjobId:
-              sch.entityType === "minorjob" ? sch.entityId : undefined,
           });
         }
       }
+      visits.sort(compareByDateDesc);
+      setVisitItems(visits);
 
-      items.sort(compareByDateDesc);
-      setAllItems(items);
+      // Preferred: only NEXT visit per contract, sorted ascending (nearest first)
+      const preferred: ScheduleItem[] = [];
+      if (amcRes.success) {
+        for (const contract of amcRes.data) {
+          const item = buildNextPreferredVisitItem(contract);
+          if (item) preferred.push(item);
+        }
+      }
+      preferred.sort(compareByDateAsc);
+      setPreferredItems(preferred);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load schedules");
@@ -219,81 +222,37 @@ export function Schedules() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchSchedules();
-  }, [fetchSchedules]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, activeTab, visitFilter, preferredFilter]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
-  // ── Derived data ───────────────────────────────────────────────────────────
+  const visitStats = useMemo(() => ({
+    all: visitItems.length,
+    amc: visitItems.filter((i) => i.type === "AMC Visit").length,
+    site: visitItems.filter((i) => i.type === "Site Visit").length,
+    complaint: visitItems.filter((i) => i.type === "Complaint Resolution").length,
+    project: visitItems.filter((i) => i.type === "Project/Minor Job").length,
+  }), [visitItems]);
 
-  const visitItems = useMemo(
-    () => allItems.filter((i) => i.type !== "Preferred Visit" && i.type !== "Follow-up"),
-    [allItems]
-  );
-  const followUpItems = useMemo(
-    () => allItems.filter((i) => i.type === "Follow-up"),
-    [allItems]
-  );
-  const preferredItems = useMemo(
-    () => allItems.filter((i) => i.type === "Preferred Visit"),
-    [allItems]
-  );
+  const preferredStats = useMemo(() => ({
+    all: preferredItems.length,
+    active: preferredItems.filter((i) => i.contractStatus === "Active").length,
+    renewal: preferredItems.filter((i) => i.contractStatus === "Due for Renewal").length,
+  }), [preferredItems]);
 
-  const tabSource =
-    activeTab === "visits"
-      ? visitItems
-      : activeTab === "followups"
-      ? followUpItems
-      : preferredItems;
+  // ── Filtering ─────────────────────────────────────────────────────────────
 
-  const visitStats = useMemo(
-    () => ({
-      all: visitItems.length,
-      amc: visitItems.filter((i) => i.type === "AMC Visit").length,
-      site: visitItems.filter((i) => i.type === "Site Visit").length,
-      complaint: visitItems.filter((i) => i.type === "Complaint Resolution").length,
-      project: visitItems.filter((i) => i.type === "Project/Minor Job").length,
-    }),
-    [visitItems]
-  );
-
-  const followUpStats = useMemo(
-    () => ({
-      all: followUpItems.length,
-      scheduled: followUpItems.filter((i) => i.status === "Scheduled").length,
-      pending: followUpItems.filter((i) => i.status === "Pending").length,
-      inProgress: followUpItems.filter((i) => i.status === "In Progress").length,
-      completed: followUpItems.filter((i) => i.status === "Completed").length,
-      cancelled: followUpItems.filter((i) => i.status === "Cancelled").length,
-    }),
-    [followUpItems]
-  );
-
-  const preferredStats = useMemo(
-    () => ({
-      all: preferredItems.length,
-      active: preferredItems.filter((i) => i.contractStatus === "Active").length,
-      renewal: preferredItems.filter((i) => i.contractStatus === "Due for Renewal").length,
-      expired: preferredItems.filter((i) => i.contractStatus === "Expired").length,
-    }),
-    [preferredItems]
-  );
+  const tabSource = activeTab === "visits" ? visitItems : preferredItems;
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return tabSource.filter((item) => {
-      // Tab-specific filter
       if (activeTab === "visits") {
         if (visitFilter !== "all" && item.type !== visitFilter) return false;
-      } else if (activeTab === "followups") {
-        if (followUpFilter !== "all" && item.status !== followUpFilter) return false;
       } else {
         if (preferredFilter !== "all" && item.contractStatus !== preferredFilter) return false;
       }
-
       if (!q) return true;
       return (
         item.title.toLowerCase().includes(q) ||
@@ -303,7 +262,7 @@ export function Schedules() {
         (item.visitSlot?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [tabSource, debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
+  }, [tabSource, debouncedSearch, activeTab, visitFilter, preferredFilter]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -311,21 +270,60 @@ export function Schedules() {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
 
-  const handleOpen = (row: ScheduleItem) => {
+  const handleRowClick = (row: ScheduleItem) => {
     if (activeTab === "preferred") {
-      // AMC preferred: go to AMC detail (existing behavior)
-      if (row.amcId) {
-        navigate(AppRoute.AMC_DETAIL.replace(":id", row.amcId));
-      }
+      if (row.amcId) navigate(AppRoute.AMC_DETAIL.replace(":id", row.amcId));
       return;
     }
-    // Visit Schedules & Follow-up Schedules → go to detail page
-    if (row.scheduleId) {
-      navigate(`/schedules/${row.scheduleId}`);
+    if (row.scheduleId) navigate(`/schedules/${row.scheduleId}`);
+  };
+
+  // ── Schedule Visit conversion dialog ──────────────────────────────────────
+
+  const openScheduleDialog = (item: ScheduleItem) => {
+    setScheduleDialogItem(item);
+    setSchedDate(item.date); // pre-fill with preferred date
+    setSchedStaffIds([]);
+    setSchedNotes("");
+  };
+
+  const handleScheduleVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scheduleDialogItem || !schedDate) return;
+    setIsSaving(true);
+    try {
+      const staffNames = schedStaffIds
+        .map((sid) => staffList.find((s) => (s.id || s._id) === sid)?.fullName)
+        .filter(Boolean);
+
+      const res = await createScheduleApi({
+        entityType: "amc",
+        entityId: scheduleDialogItem.amcId,
+        entityNo: scheduleDialogItem.contractNo || scheduleDialogItem.reference,
+        clientName: scheduleDialogItem.clientName,
+        title: `${scheduleDialogItem.title} — ${scheduleDialogItem.visitSlot}`,
+        scheduleType: "AMC Visit",
+        scheduledDate: new Date(schedDate).toISOString(),
+        status: "Scheduled",
+        assignedStaffIds: schedStaffIds,
+        assignedTo: staffNames,
+        notes: schedNotes,
+      });
+
+      if (res.success) {
+        toast.success("Visit scheduled successfully");
+        setScheduleDialogItem(null);
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to schedule visit");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // ── Status tone helpers ────────────────────────────────────────────────────
+  // ── Status helpers ─────────────────────────────────────────────────────────
 
   const scheduleStatusTone = (status: string): "muted" | "pink" | "amber" | "green" | "blue" => {
     if (status === "Scheduled") return "pink";
@@ -335,10 +333,9 @@ export function Schedules() {
     return "muted";
   };
 
-  const contractStatusTone = (status?: string): "green" | "amber" | "red" | "muted" => {
+  const contractStatusTone = (status?: string): "green" | "amber" | "muted" => {
     if (status === "Active") return "green";
     if (status === "Due for Renewal") return "amber";
-    if (status === "Expired") return "red";
     return "muted";
   };
 
@@ -346,7 +343,6 @@ export function Schedules() {
     if (type === "AMC Visit") return "text-purple-700 bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400";
     if (type === "Complaint Resolution") return "text-red-700 bg-red-50 border-red-200 dark:bg-red-950/20 dark:text-red-400";
     if (type === "Project/Minor Job") return "text-green-700 bg-green-50 border-green-200 dark:bg-green-950/20 dark:text-green-400";
-    if (type === "Follow-up") return "text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400";
     return "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400";
   };
 
@@ -369,13 +365,11 @@ export function Schedules() {
           />
         </div>
       ),
-      className: `${tableCellClass.medium}`,
+      className: tableCellClass.medium,
     },
     {
       header: "Client",
-      accessor: (row) => (
-        <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />
-      ),
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
       className: tableCellClass.wide,
     },
     {
@@ -391,9 +385,7 @@ export function Schedules() {
     },
     {
       header: "Status",
-      accessor: (row) => (
-        <TableStatusBadge label={row.status} tone={scheduleStatusTone(row.status)} />
-      ),
+      accessor: (row) => <TableStatusBadge label={row.status} tone={scheduleStatusTone(row.status)} />,
       className: tableCellClass.narrow,
     },
     {
@@ -404,74 +396,9 @@ export function Schedules() {
           variant="outline"
           size="sm"
           className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpen(row);
-          }}
+          onClick={(e) => { e.stopPropagation(); handleRowClick(row); }}
         >
-          <Eye className="h-3.5 w-3.5" />
-          View
-        </Button>
-      ),
-    },
-  ];
-
-  const followUpColumns: Column<ScheduleItem>[] = [
-    {
-      header: "Follow-up Date",
-      accessor: (row) => (
-        <div className="flex items-start gap-2 min-w-0">
-          <PhoneCall className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <TablePrimarySecondary
-            primary={fmtDate(row.date)}
-            secondary={row.reference}
-            primaryClassName="text-sm font-semibold text-amber-600 whitespace-nowrap"
-            secondaryClassName="text-[11px] text-muted-foreground font-medium"
-          />
-        </div>
-      ),
-      className: `${tableCellClass.medium}`,
-    },
-    {
-      header: "Client",
-      accessor: (row) => (
-        <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />
-      ),
-      className: tableCellClass.wide,
-    },
-    {
-      header: "Notes / Subject",
-      accessor: (row) => (
-        <TablePrimarySecondary
-          primary={row.title}
-          secondary={row.eventSubtitle || "—"}
-          secondaryClassName="text-xs text-muted-foreground line-clamp-2 leading-snug max-w-[220px]"
-        />
-      ),
-      className: tableCellClass.wide,
-    },
-    {
-      header: "Status",
-      accessor: (row) => (
-        <TableStatusBadge label={row.status} tone={scheduleStatusTone(row.status)} />
-      ),
-      className: tableCellClass.narrow,
-    },
-    {
-      header: <span className="sr-only">Actions</span>,
-      className: tableCellClass.actions,
-      accessor: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs font-semibold gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpen(row);
-          }}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          View
+          <Eye className="h-3.5 w-3.5" />View
         </Button>
       ),
     },
@@ -487,6 +414,7 @@ export function Schedules() {
             primary={fmtDate(row.date)}
             secondary={row.visitSlot}
             primaryClassName="text-sm font-semibold text-blue-600 whitespace-nowrap"
+            secondaryClassName="text-[11px] text-muted-foreground font-medium"
           />
         </div>
       ),
@@ -495,64 +423,62 @@ export function Schedules() {
     {
       header: "AMC Contract",
       accessor: (row) => (
-        <TablePrimarySecondary primary={row.reference} secondary={row.eventSubtitle ?? row.title} />
+        <TablePrimarySecondary
+          primary={row.reference}
+          secondary={row.eventSubtitle ?? row.title}
+        />
       ),
       className: tableCellClass.medium,
     },
     {
       header: "Client",
-      accessor: (row) => (
-        <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />
-      ),
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
       className: tableCellClass.wide,
     },
     {
-      header: "Contract Status",
+      header: "Status",
       accessor: (row) => (
         <TableStatusBadge
-          label={row.contractStatus ?? "Preferred"}
-          tone={row.contractStatus ? contractStatusTone(row.contractStatus) : "blue"}
+          label={row.contractStatus ?? "Active"}
+          tone={contractStatusTone(row.contractStatus)}
         />
       ),
       className: tableCellClass.narrow,
     },
     {
       header: <span className="sr-only">Actions</span>,
-      className: tableCellClass.actions,
+      className: "w-[200px]",
       accessor: (row) => (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 text-xs font-semibold gap-1.5 border-blue-200 text-blue-700 hover:bg-blue-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpen(row);
-          }}
-        >
-          <Eye className="h-3.5 w-3.5" />
-          View AMC
-        </Button>
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-[11px] font-semibold gap-1 border-green-200 text-green-700 hover:bg-green-50 px-2.5"
+            onClick={() => openScheduleDialog(row)}
+          >
+            <CalendarPlus className="h-3.5 w-3.5" />Schedule Visit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-[11px] font-semibold gap-1 border-blue-200 text-blue-700 hover:bg-blue-50 px-2.5"
+            onClick={() => row.amcId && navigate(AppRoute.AMC_DETAIL.replace(":id", row.amcId))}
+          >
+            <Eye className="h-3.5 w-3.5" />View AMC
+          </Button>
+        </div>
       ),
     },
   ];
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const counts = useMemo(
-    () => ({
-      visits: visitItems.length,
-      followups: followUpItems.length,
-      preferred: preferredItems.length,
-    }),
-    [visitItems.length, followUpItems.length, preferredItems.length]
-  );
+  const counts = useMemo(() => ({
+    visits: visitItems.length,
+    preferred: preferredItems.length,
+  }), [visitItems.length, preferredItems.length]);
 
-  const currentColumns =
-    activeTab === "visits"
-      ? visitColumns
-      : activeTab === "followups"
-      ? followUpColumns
-      : preferredColumns;
+  const currentColumns = activeTab === "visits" ? visitColumns : preferredColumns;
 
   const currentFilterOptions =
     activeTab === "visits"
@@ -563,108 +489,138 @@ export function Schedules() {
           { value: "Complaint Resolution", label: "Complaints", count: visitStats.complaint, tone: "amber" as const },
           { value: "Project/Minor Job", label: "Projects/Jobs", count: visitStats.project, tone: "green" as const },
         ]
-      : activeTab === "followups"
-      ? [
-          { value: "all", label: "All", count: followUpStats.all, tone: "primary" as const },
-          { value: "Scheduled", label: "Scheduled", count: followUpStats.scheduled, tone: "pink" as const },
-          { value: "Pending", label: "Pending", count: followUpStats.pending, tone: "amber" as const },
-          { value: "In Progress", label: "In Progress", count: followUpStats.inProgress, tone: "blue" as const },
-          { value: "Completed", label: "Completed", count: followUpStats.completed, tone: "green" as const },
-        ]
       : [
           { value: "all", label: "All", count: preferredStats.all, tone: "primary" as const },
           { value: "Active", label: "Active", count: preferredStats.active, tone: "green" as const },
           { value: "Due for Renewal", label: "Due for Renewal", count: preferredStats.renewal, tone: "amber" as const },
-          { value: "Expired", label: "Expired", count: preferredStats.expired, tone: "red" as const },
         ];
 
-  const currentFilterValue =
-    activeTab === "visits"
-      ? visitFilter
-      : activeTab === "followups"
-      ? followUpFilter
-      : preferredFilter;
+  const currentFilterValue = activeTab === "visits" ? visitFilter : preferredFilter;
 
   const handleFilterChange = (v: string) => {
     if (activeTab === "visits") setVisitFilter(v as VisitTypeFilter);
-    else if (activeTab === "followups") setFollowUpFilter(v as FollowUpStatusFilter);
     else setPreferredFilter(v as PreferredContractFilter);
   };
 
+  const staffNameById = staffList.reduce((acc, curr) => {
+    const sid = curr.id || curr._id;
+    if (sid) acc[sid] = curr.fullName;
+    return acc;
+  }, {} as Record<string, string>);
+
   const emptyMessages: Record<ScheduleTab, string> = {
     visits: "No visit schedules found. Visit schedules are created from AMC, enquiry, complaint, project, or minor job detail pages.",
-    followups: "No follow-up schedules found. Follow-ups are added from entity detail pages.",
     preferred: "No upcoming preferred AMC visits. Preferred visit dates are computed from active AMC contracts.",
   };
 
   return (
-    <ManagementListPage
-      title="Schedules"
-      subtitle="Manage visit schedules, follow-ups, and AMC preferred visit dates"
-      toolbar={
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => {
-            setActiveTab(v as ScheduleTab);
-            setCurrentPage(1);
-          }}
-        >
-          <TabsList className="w-full h-12 bg-transparent p-0 rounded-none inline-flex flex-nowrap justify-start gap-6 border-b border-border pb-0 mb-1">
-            <TabsTrigger value="visits" className={tabTriggerClass}>
-              <CalendarClock className="h-4 w-4" />
-              Visit Schedules
-              <span className="tabular-nums text-muted-foreground font-semibold">
-                ({counts.visits})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="followups" className={tabTriggerClass}>
-              <PhoneCall className="h-4 w-4" />
-              Follow-up Schedules
-              <span className="tabular-nums text-muted-foreground font-semibold">
-                ({counts.followups})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger value="preferred" className={tabTriggerClass}>
-              <CalendarDays className="h-4 w-4" />
-              AMC Preferred Visits
-              <span className="tabular-nums text-muted-foreground font-semibold">
-                ({counts.preferred})
-              </span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      }
-      searchPlaceholder={
-        activeTab === "preferred"
-          ? "Search by AMC no., client, or visit slot..."
-          : activeTab === "followups"
-          ? "Search by client, reference, or notes..."
-          : "Search by client, reference, or title..."
-      }
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-      columns={currentColumns}
-      data={pageItems}
-      isLoading={isLoading}
-      rowKey={(row) => row.id}
-      onRowClick={handleOpen}
-      emptyMessage={emptyMessages[activeTab]}
-      entityLabel={
-        activeTab === "visits"
-          ? "visit schedules"
-          : activeTab === "followups"
-          ? "follow-up schedules"
-          : "preferred visits"
-      }
-      filterOptions={currentFilterOptions}
-      filterValue={currentFilterValue}
-      onFilterChange={handleFilterChange}
-      onClearFilter={() => handleFilterChange("all")}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      total={total}
-      pageSize={PAGE_SIZE}
-      onPageChange={setCurrentPage}
-    />
+    <>
+      <ManagementListPage
+        title="Schedules"
+        subtitle="Manage service visit schedules and upcoming AMC preferred visit dates"
+        toolbar={
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => { setActiveTab(v as ScheduleTab); setCurrentPage(1); }}
+          >
+            <TabsList className="w-full h-12 bg-transparent p-0 rounded-none inline-flex flex-nowrap justify-start gap-6 border-b border-border pb-0 mb-1">
+              <TabsTrigger value="visits" className={tabTriggerClass}>
+                <CalendarClock className="h-4 w-4" />
+                Visit Schedules
+                <span className="tabular-nums text-muted-foreground font-semibold">({counts.visits})</span>
+              </TabsTrigger>
+              <TabsTrigger value="preferred" className={tabTriggerClass}>
+                <CalendarDays className="h-4 w-4" />
+                AMC Preferred Visits
+                <span className="tabular-nums text-muted-foreground font-semibold">({counts.preferred})</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+        searchPlaceholder={
+          activeTab === "preferred"
+            ? "Search by AMC no., client, or visit slot..."
+            : "Search by client, reference, or title..."
+        }
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        columns={currentColumns}
+        data={pageItems}
+        isLoading={isLoading}
+        rowKey={(row) => row.id}
+        onRowClick={handleRowClick}
+        emptyMessage={emptyMessages[activeTab]}
+        entityLabel={activeTab === "visits" ? "visit schedules" : "preferred visits"}
+        filterOptions={currentFilterOptions}
+        filterValue={currentFilterValue}
+        onFilterChange={handleFilterChange}
+        onClearFilter={() => handleFilterChange("all")}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onPageChange={setCurrentPage}
+      />
+
+      {/* Schedule Visit Dialog */}
+      <Dialog open={!!scheduleDialogItem} onOpenChange={(open) => !open && setScheduleDialogItem(null)}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <CalendarPlus className="h-4 w-4 text-green-600" />
+              Schedule AMC Visit
+            </DialogTitle>
+          </DialogHeader>
+          {scheduleDialogItem && (
+            <form onSubmit={handleScheduleVisit} className="space-y-4 mt-2">
+              {/* Info card */}
+              <div className="rounded-lg bg-muted/50 border border-border px-3 py-2.5 text-xs space-y-1">
+                <div className="font-bold text-foreground">{scheduleDialogItem.reference} — {scheduleDialogItem.visitSlot}</div>
+                <div className="text-muted-foreground">{scheduleDialogItem.clientName}</div>
+                <div className="text-muted-foreground">{scheduleDialogItem.title}</div>
+                <div className="text-blue-600 font-semibold">Preferred date: {fmtDate(scheduleDialogItem.date)}</div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="schedDate" className="text-xs font-semibold">Visit Date *</Label>
+                <Input
+                  id="schedDate"
+                  type="date"
+                  value={schedDate}
+                  onChange={(e) => setSchedDate(e.target.value)}
+                  className="h-9 text-xs [color-scheme:light] dark:[color-scheme:dark]"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <StaffSelectDropdown
+                  selected={schedStaffIds}
+                  onChange={setSchedStaffIds}
+                  label="Assign Staff"
+                  placement="top"
+                  nameById={staffNameById}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="schedNotes" className="text-xs font-semibold">Notes (Optional)</Label>
+                <textarea
+                  id="schedNotes"
+                  value={schedNotes}
+                  onChange={(e) => setSchedNotes(e.target.value)}
+                  placeholder="Instructions or preparation notes..."
+                  rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-pink-600/30 resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+                <Button type="button" variant="outline" size="sm" onClick={() => setScheduleDialogItem(null)} className="h-8 text-xs">Cancel</Button>
+                <Button type="submit" size="sm" disabled={isSaving} className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs font-semibold gap-1.5">
+                  {isSaving ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Scheduling...</> : <><CalendarPlus className="h-3.5 w-3.5" />Schedule Visit</>}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

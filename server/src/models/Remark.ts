@@ -20,7 +20,7 @@ const remarkSchema = new Schema<IRemarkDocument>(
   {
     entityType: {
       type: String,
-      enum: ["enquiry", "complaint", "complaint_request", "amc", "project", "minorjob", "warranty", "quotation", "subcontract", "purchase_order"],
+      enum: ["enquiry", "complaint", "complaint_request", "amc", "project", "minorjob", "warranty", "quotation", "subcontract", "purchase_order", "schedule"],
       required: true,
       index: true,
     },

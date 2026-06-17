@@ -8,7 +8,8 @@ export type RemarkEntityType =
   | "warranty"
   | "quotation"
   | "subcontract"
-  | "purchase_order";
+  | "purchase_order"
+  | "schedule";
 
 export interface RemarkAttachment {
   name: string;

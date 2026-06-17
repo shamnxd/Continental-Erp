@@ -141,7 +141,7 @@ export function ScheduleDetail() {
   const [completionDate, setCompletionDate] = useState("");
   const [completionTime, setCompletionTime] = useState("");
   const [completionNotes, setCompletionNotes] = useState("");
-  const [completionFile, setCompletionFile] = useState<File | null>(null);
+  const [completionFiles, setCompletionFiles] = useState<File[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Edit dialog
@@ -182,7 +182,7 @@ export function ScheduleDetail() {
     setCompletionDate(now.toISOString().split("T")[0]);
     setCompletionTime(now.toTimeString().slice(0, 5));
     setCompletionNotes("");
-    setCompletionFile(null);
+    setCompletionFiles([]);
     setIsCompleteOpen(true);
   };
 
@@ -197,7 +197,7 @@ export function ScheduleDetail() {
       const res = await completeScheduleApi(id, {
         completedAt,
         completionNotes: completionNotes.trim(),
-        file: completionFile,
+        files: completionFiles,
       });
 
       if (res.success) {
@@ -330,7 +330,7 @@ export function ScheduleDetail() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
                   {!isClosed && (
-                    <Button size="sm" onClick={openComplete} className="h-9 gap-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold text-xs">
+                    <Button size="sm" onClick={openComplete} className="h-9 gap-1.5 bg-[#00A63E] hover:bg-[#00A63E]/90 text-white font-semibold text-xs">
                       <Check className="h-4 w-4" />Mark Complete
                     </Button>
                   )}
@@ -428,39 +428,43 @@ export function ScheduleDetail() {
                                   </div>
                                 )}
 
-                                {schedule.completionAttachment && (
+                                {schedule.completionAttachments && schedule.completionAttachments.length > 0 && (
                                   <div className="bg-card rounded-lg border border-border p-3">
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-2">Completion Attachment</span>
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/40">
-                                      <div className="flex items-center gap-3 overflow-hidden">
-                                        {schedule.completionAttachment.mimeType.startsWith("image/") ? (
-                                          <div className="h-16 w-16 rounded bg-muted border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
-                                            <img
-                                              src={`http://localhost:5000${schedule.completionAttachment.url}`}
-                                              alt={schedule.completionAttachment.name}
-                                              className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                              onClick={() => window.open(`http://localhost:5000${schedule.completionAttachment!.url}`, "_blank")}
-                                            />
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-2">Completion Attachments</span>
+                                    <div className="grid grid-cols-1 gap-2">
+                                      {schedule.completionAttachments.map((att, idx) => (
+                                        <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/40">
+                                          <div className="flex items-center gap-3 overflow-hidden">
+                                            {att.mimeType.startsWith("image/") ? (
+                                              <div className="h-16 w-16 rounded bg-muted border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+                                                <img
+                                                  src={`http://localhost:5000${att.url}`}
+                                                  alt={att.name}
+                                                  className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                                  onClick={() => window.open(`http://localhost:5000${att.url}`, "_blank")}
+                                                />
+                                              </div>
+                                            ) : (
+                                              <div className="h-16 w-16 rounded bg-muted border border-border/60 flex items-center justify-center shrink-0">
+                                                <FileText className="h-8 w-8 text-muted-foreground" />
+                                              </div>
+                                            )}
+                                            <div className="overflow-hidden">
+                                              <p className="text-xs font-semibold text-foreground truncate">{att.name}</p>
+                                              <p className="text-[10px] text-muted-foreground">{(att.size / 1024).toFixed(1)} KB</p>
+                                            </div>
                                           </div>
-                                        ) : (
-                                          <div className="h-16 w-16 rounded bg-muted border border-border/60 flex items-center justify-center shrink-0">
-                                            <FileText className="h-8 w-8 text-muted-foreground" />
-                                          </div>
-                                        )}
-                                        <div className="overflow-hidden">
-                                          <p className="text-xs font-semibold text-foreground truncate">{schedule.completionAttachment.name}</p>
-                                          <p className="text-[10px] text-muted-foreground">{(schedule.completionAttachment.size / 1024).toFixed(1)} KB</p>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => window.open(`http://localhost:5000${att.url}`, "_blank")}
+                                            className="h-8 text-xs shrink-0 font-semibold"
+                                          >
+                                            View File
+                                          </Button>
                                         </div>
-                                      </div>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => window.open(`http://localhost:5000${schedule.completionAttachment!.url}`, "_blank")}
-                                        className="h-8 text-xs shrink-0 font-semibold"
-                                      >
-                                        View File
-                                      </Button>
+                                      ))}
                                     </div>
                                   </div>
                                 )}
@@ -622,21 +626,35 @@ export function ScheduleDetail() {
               <Textarea id="completionNotes" placeholder="Work done, outcomes, observations..." value={completionNotes} onChange={(e) => setCompletionNotes(e.target.value)} className="text-xs min-h-[80px]" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="completionFile" className="text-xs font-semibold">Completion Image / Attachment (Optional)</Label>
+              <Label htmlFor="completionFiles" className="text-xs font-semibold">Completion Images / Attachments (Optional)</Label>
               <Input
-                id="completionFile"
+                id="completionFiles"
                 type="file"
                 accept="image/*,application/pdf"
+                multiple
                 onChange={(e) => {
                   const files = e.target.files;
                   if (files && files.length > 0) {
-                    setCompletionFile(files[0]);
+                    setCompletionFiles(Array.from(files));
                   } else {
-                    setCompletionFile(null);
+                    setCompletionFiles([]);
                   }
                 }}
-                className="h-9 text-xs file:bg-pink-50 file:text-pink-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-pink-100 dark:file:bg-pink-950/40 dark:file:text-pink-400"
+                className="h-9 text-xs file:bg-[#00A63E]/10 file:text-[#00A63E] file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-[#00A63E]/20 dark:file:bg-[#00A63E]/20 dark:file:text-green-400"
               />
+              {completionFiles.length > 0 && (
+                <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/40 mt-1.5 space-y-1">
+                  <p className="font-semibold uppercase tracking-wider text-[9px]">Selected Files ({completionFiles.length}):</p>
+                  <div className="max-h-[80px] overflow-y-auto space-y-1 pr-1">
+                    {completionFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 bg-card px-2 py-1 rounded border border-border/30">
+                        <span className="truncate max-w-[200px] font-medium text-foreground">{file.name}</span>
+                        <span className="shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {smrRoute && (
               <div className="flex items-start gap-2 px-3 py-2.5 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200/60 text-xs text-pink-700 dark:text-pink-400">
@@ -646,7 +664,7 @@ export function ScheduleDetail() {
             )}
             <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
               <Button type="button" variant="outline" size="sm" onClick={() => setIsCompleteOpen(false)} className="h-8 text-xs">Cancel</Button>
-              <Button type="submit" size="sm" disabled={isCompleting} className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs font-semibold">
+              <Button type="submit" size="sm" disabled={isCompleting} className="bg-[#00A63E] hover:bg-[#00A63E]/90 text-white h-8 text-xs font-semibold">
                 {isCompleting ? "Saving..." : "Mark as Completed"}
               </Button>
             </div>

@@ -22,12 +22,12 @@ export interface Schedule {
   smrId?: string | null;
   completedAt?: string | null;
   completionNotes?: string;
-  completionAttachment?: {
+  completionAttachments?: Array<{
     name: string;
     url: string;
     mimeType: string;
     size: number;
-  } | null;
+  }>;
   createdAt?: string;
   updatedAt?: string;
 }

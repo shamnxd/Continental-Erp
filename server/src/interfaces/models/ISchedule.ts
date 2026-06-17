@@ -22,12 +22,12 @@ export interface ISchedule {
   smrId?: string | null;
   completedAt?: Date | string | null;
   completionNotes?: string;
-  completionAttachment?: {
+  completionAttachments?: Array<{
     name: string;
     url: string;
     mimeType: string;
     size: number;
-  } | null;
+  }>;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

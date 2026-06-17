@@ -14,7 +14,7 @@ router.post("/", validateDto(CreateScheduleSchema), controller.create);
 router.get("/", controller.getAll);
 router.get("/:id", controller.getById);
 router.put("/:id", validateDto(UpdateScheduleSchema), controller.update);
-router.put("/:id/complete", enquiryDrawingUpload.single("file"), controller.complete);
+router.put("/:id/complete", enquiryDrawingUpload.array("files"), controller.complete);
 router.delete("/:id", controller.delete);
 
 export const scheduleRouter = router;

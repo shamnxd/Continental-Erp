@@ -144,15 +144,19 @@ export class ScheduleController {
 
       const { completedAt, completionNotes } = req.body;
 
-      let completionAttachment = null;
-      if (req.file) {
-        const stored = await persistUploadedFile(req.file, `schedules/${id}`);
-        completionAttachment = {
-          name: stored.originalName,
-          url: stored.url,
-          mimeType: stored.mimeType,
-          size: stored.size,
-        };
+      const completionAttachments = [];
+      const files = req.files as Express.Multer.File[] | undefined;
+
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const stored = await persistUploadedFile(file, `schedules/${id}`);
+          completionAttachments.push({
+            name: stored.originalName,
+            url: stored.url,
+            mimeType: stored.mimeType,
+            size: stored.size,
+          });
+        }
       }
 
       const schedule = await this._updateScheduleUseCase!.execute({
@@ -161,7 +165,7 @@ export class ScheduleController {
           status: "Completed",
           completedAt: completedAt ? new Date(completedAt) : new Date(),
           completionNotes: completionNotes || "",
-          completionAttachment,
+          completionAttachments,
         },
         user,
       });

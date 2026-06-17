@@ -39,14 +39,15 @@ export const CreateScheduleSchema = z.object({
     .nullable()
     .optional(),
   completionNotes: z.string().optional(),
-  completionAttachment: z
-    .object({
-      name: z.string(),
-      url: z.string(),
-      mimeType: z.string(),
-      size: z.number(),
-    })
-    .nullable()
+  completionAttachments: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string(),
+        mimeType: z.string(),
+        size: z.number(),
+      })
+    )
     .optional(),
 });
 

@@ -62,7 +62,7 @@ export async function completeScheduleApi(
   data: {
     completedAt: string;
     completionNotes?: string;
-    file?: File | null;
+    files?: File[];
   }
 ): Promise<ScheduleResponse> {
   const formData = new FormData();
@@ -70,8 +70,10 @@ export async function completeScheduleApi(
   if (data.completionNotes) {
     formData.append("completionNotes", data.completionNotes);
   }
-  if (data.file) {
-    formData.append("file", data.file);
+  if (data.files && data.files.length > 0) {
+    data.files.forEach((file) => {
+      formData.append("files", file);
+    });
   }
   return await api.put(`${ApiRoute.SCHEDULES}/${id}/complete`, formData, {
     headers: {

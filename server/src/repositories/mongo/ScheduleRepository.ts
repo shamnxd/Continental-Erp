@@ -36,14 +36,12 @@ export class ScheduleRepository
       smrId: doc.smrId?.toString() || null,
       completedAt: doc.completedAt || null,
       completionNotes: (doc as any).completionNotes || "",
-      completionAttachment: (doc as any).completionAttachment
-        ? {
-            name: (doc as any).completionAttachment.name,
-            url: (doc as any).completionAttachment.url,
-            mimeType: (doc as any).completionAttachment.mimeType,
-            size: (doc as any).completionAttachment.size,
-          }
-        : null,
+      completionAttachments: ((doc as any).completionAttachments || []).map((att: any) => ({
+        name: att.name,
+        url: att.url,
+        mimeType: att.mimeType,
+        size: att.size,
+      })),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

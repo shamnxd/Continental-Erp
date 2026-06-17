@@ -35,6 +35,15 @@ export class ScheduleRepository
       notes: doc.notes || "",
       smrId: doc.smrId?.toString() || null,
       completedAt: doc.completedAt || null,
+      completionNotes: (doc as any).completionNotes || "",
+      completionAttachment: (doc as any).completionAttachment
+        ? {
+            name: (doc as any).completionAttachment.name,
+            url: (doc as any).completionAttachment.url,
+            mimeType: (doc as any).completionAttachment.mimeType,
+            size: (doc as any).completionAttachment.size,
+          }
+        : null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

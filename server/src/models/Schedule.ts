@@ -45,6 +45,16 @@ const scheduleSchema = new Schema<IScheduleDocument>(
     notes: { type: String, trim: true, default: "" },
     smrId: { type: Schema.Types.ObjectId, ref: "SMR", default: null },
     completedAt: { type: Date, default: null },
+    completionNotes: { type: String, trim: true, default: "" },
+    completionAttachment: {
+      type: {
+        name: { type: String, required: true },
+        url: { type: String, required: true },
+        mimeType: { type: String, required: true },
+        size: { type: Number, required: true },
+      },
+      default: null,
+    },
   },
   { timestamps: true },
 );

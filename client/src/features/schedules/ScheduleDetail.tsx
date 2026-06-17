@@ -51,6 +51,7 @@ import {
   getScheduleByIdApi,
   updateScheduleApi,
   deleteScheduleApi,
+  completeScheduleApi,
 } from "../../api/schedule.api";
 import { getStaffApi } from "../../api/staff.api";
 import { Schedule } from "../../interfaces/schedule.interface";
@@ -140,6 +141,7 @@ export function ScheduleDetail() {
   const [completionDate, setCompletionDate] = useState("");
   const [completionTime, setCompletionTime] = useState("");
   const [completionNotes, setCompletionNotes] = useState("");
+  const [completionFile, setCompletionFile] = useState<File | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Edit dialog
@@ -180,6 +182,7 @@ export function ScheduleDetail() {
     setCompletionDate(now.toISOString().split("T")[0]);
     setCompletionTime(now.toTimeString().slice(0, 5));
     setCompletionNotes("");
+    setCompletionFile(null);
     setIsCompleteOpen(true);
   };
 
@@ -190,18 +193,13 @@ export function ScheduleDetail() {
     setIsCompleting(true);
     try {
       const completedAt = new Date(`${completionDate}T${completionTime || "00:00"}`).toISOString();
-      const existingNotes = schedule.notes || "";
-      const updatedNotes = completionNotes.trim()
-        ? existingNotes
-          ? `${existingNotes}\n\n[Completed ${new Date(completedAt).toLocaleString("en-IN")}]: ${completionNotes}`
-          : `[Completed ${new Date(completedAt).toLocaleString("en-IN")}]: ${completionNotes}`
-        : existingNotes;
 
-      const res = await updateScheduleApi(id, {
-        status: "Completed",
+      const res = await completeScheduleApi(id, {
         completedAt,
-        notes: updatedNotes,
+        completionNotes: completionNotes.trim(),
+        file: completionFile,
       });
+
       if (res.success) {
         setSchedule(res.data);
         setIsCompleteOpen(false);
@@ -410,7 +408,7 @@ export function ScheduleDetail() {
                               </div>
                             )}
                             {schedule.status === "Completed" && schedule.completedAt && (
-                              <div className="sm:col-span-2 pt-3 border-t border-border/40">
+                              <div className="sm:col-span-2 pt-3 border-t border-border/40 space-y-3">
                                 <div className="flex items-center gap-2 px-3 py-2.5 bg-green-50 rounded-lg border border-green-200/60 dark:bg-green-950/20 dark:border-green-800/40">
                                   <Check className="h-4 w-4 text-green-600 shrink-0" />
                                   <div>
@@ -422,6 +420,50 @@ export function ScheduleDetail() {
                                     </span>
                                   </div>
                                 </div>
+
+                                {schedule.completionNotes && (
+                                  <div className="bg-card rounded-lg border border-border p-3">
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">Completion Notes</span>
+                                    <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{schedule.completionNotes}</p>
+                                  </div>
+                                )}
+
+                                {schedule.completionAttachment && (
+                                  <div className="bg-card rounded-lg border border-border p-3">
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-2">Completion Attachment</span>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/40">
+                                      <div className="flex items-center gap-3 overflow-hidden">
+                                        {schedule.completionAttachment.mimeType.startsWith("image/") ? (
+                                          <div className="h-16 w-16 rounded bg-muted border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
+                                            <img
+                                              src={`http://localhost:5000${schedule.completionAttachment.url}`}
+                                              alt={schedule.completionAttachment.name}
+                                              className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                                              onClick={() => window.open(`http://localhost:5000${schedule.completionAttachment!.url}`, "_blank")}
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="h-16 w-16 rounded bg-muted border border-border/60 flex items-center justify-center shrink-0">
+                                            <FileText className="h-8 w-8 text-muted-foreground" />
+                                          </div>
+                                        )}
+                                        <div className="overflow-hidden">
+                                          <p className="text-xs font-semibold text-foreground truncate">{schedule.completionAttachment.name}</p>
+                                          <p className="text-[10px] text-muted-foreground">{(schedule.completionAttachment.size / 1024).toFixed(1)} KB</p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.open(`http://localhost:5000${schedule.completionAttachment!.url}`, "_blank")}
+                                        className="h-8 text-xs shrink-0 font-semibold"
+                                      >
+                                        View File
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -546,7 +588,6 @@ export function ScheduleDetail() {
                         entityType="schedule"
                         entityId={schedule.id}
                         disabled={isClosed}
-                        layout="stacked"
                       />
                     )}
                   </TabsContent>
@@ -579,6 +620,23 @@ export function ScheduleDetail() {
             <div className="space-y-1.5">
               <Label htmlFor="completionNotes" className="text-xs font-semibold">Completion Notes (Optional)</Label>
               <Textarea id="completionNotes" placeholder="Work done, outcomes, observations..." value={completionNotes} onChange={(e) => setCompletionNotes(e.target.value)} className="text-xs min-h-[80px]" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="completionFile" className="text-xs font-semibold">Completion Image / Attachment (Optional)</Label>
+              <Input
+                id="completionFile"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    setCompletionFile(files[0]);
+                  } else {
+                    setCompletionFile(null);
+                  }
+                }}
+                className="h-9 text-xs file:bg-pink-50 file:text-pink-700 file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-pink-100 dark:file:bg-pink-950/40 dark:file:text-pink-400"
+              />
             </div>
             {smrRoute && (
               <div className="flex items-start gap-2 px-3 py-2.5 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200/60 text-xs text-pink-700 dark:text-pink-400">

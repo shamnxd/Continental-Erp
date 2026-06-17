@@ -21,6 +21,13 @@ export interface Schedule {
   notes?: string;
   smrId?: string | null;
   completedAt?: string | null;
+  completionNotes?: string;
+  completionAttachment?: {
+    name: string;
+    url: string;
+    mimeType: string;
+    size: number;
+  } | null;
   createdAt?: string;
   updatedAt?: string;
 }

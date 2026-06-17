@@ -21,6 +21,13 @@ export interface ISchedule {
   notes?: string;
   smrId?: string | null;
   completedAt?: Date | string | null;
+  completionNotes?: string;
+  completionAttachment?: {
+    name: string;
+    url: string;
+    mimeType: string;
+    size: number;
+  } | null;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

@@ -8,6 +8,7 @@ import { StatusCode } from "../constants/statusCodes";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { AuditLogger } from "../utils/AuditLogger";
 import { IScheduleRepository } from "../interfaces/repositories/IScheduleRepository";
+import { persistUploadedFile } from "../usecases/enquiries/AddEnquiryDrawingUseCase";
 
 @autoInjectable()
 export class ScheduleController {
@@ -129,6 +130,57 @@ export class ScheduleController {
       res.status(StatusCode.OK).json({
         success: true,
         message: "Schedule deleted successfully"
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public complete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const id = req.params.id;
+      const user = authReq.user?.name || "Admin";
+
+      const { completedAt, completionNotes } = req.body;
+
+      let completionAttachment = null;
+      if (req.file) {
+        const stored = await persistUploadedFile(req.file, `schedules/${id}`);
+        completionAttachment = {
+          name: stored.originalName,
+          url: stored.url,
+          mimeType: stored.mimeType,
+          size: stored.size,
+        };
+      }
+
+      const schedule = await this._updateScheduleUseCase!.execute({
+        id,
+        data: {
+          status: "Completed",
+          completedAt: completedAt ? new Date(completedAt) : new Date(),
+          completionNotes: completionNotes || "",
+          completionAttachment,
+        },
+        user,
+      });
+
+      if (!schedule) {
+        res.status(StatusCode.NOT_FOUND).json({ success: false, message: "Schedule not found" });
+        return;
+      }
+
+      await AuditLogger.log(
+        user,
+        "Complete Schedule",
+        "Schedules",
+        `Completed schedule: ${schedule.scheduleType} for ${schedule.entityType} ${schedule.entityNo}`
+      );
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: schedule,
       });
     } catch (error) {
       next(error);

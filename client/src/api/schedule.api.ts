@@ -56,3 +56,26 @@ export async function updateScheduleApi(id: string, data: Partial<Schedule>): Pr
 export async function deleteScheduleApi(id: string): Promise<{ success: boolean; message: string }> {
   return await api.delete(`${ApiRoute.SCHEDULES}/${id}`);
 }
+
+export async function completeScheduleApi(
+  id: string,
+  data: {
+    completedAt: string;
+    completionNotes?: string;
+    file?: File | null;
+  }
+): Promise<ScheduleResponse> {
+  const formData = new FormData();
+  formData.append("completedAt", data.completedAt);
+  if (data.completionNotes) {
+    formData.append("completionNotes", data.completionNotes);
+  }
+  if (data.file) {
+    formData.append("file", data.file);
+  }
+  return await api.put(`${ApiRoute.SCHEDULES}/${id}/complete`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}

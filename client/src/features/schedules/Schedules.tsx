@@ -700,7 +700,7 @@ export function Schedules() {
               value={visitTypeFilter}
               onValueChange={(v) => { setVisitTypeFilter(v as VisitTypeFilter); setCurrentPage(1); }}
             >
-              <SelectTrigger className="h-10 rounded-xl px-4 text-sm w-[180px] border-input">
+              <SelectTrigger className="!h-11 !rounded-xl !px-4 text-sm w-[180px] border-input">
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>

@@ -38,6 +38,16 @@ export const CreateScheduleSchema = z.object({
     .or(z.date())
     .nullable()
     .optional(),
+  completionNotes: z.string().optional(),
+  completionAttachment: z
+    .object({
+      name: z.string(),
+      url: z.string(),
+      mimeType: z.string(),
+      size: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export type CreateScheduleDto = z.infer<typeof CreateScheduleSchema>;

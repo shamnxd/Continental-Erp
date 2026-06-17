@@ -196,9 +196,12 @@ export function Dashboard() {
         <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-foreground">Upcoming Tasks</h3>
-            <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-              {data.upcomingTasks.length} Tasks
-            </span>
+            <button
+              onClick={() => navigate("/upcoming-tasks")}
+              className="text-xs font-semibold text-pink-700 hover:text-pink-800 transition-colors bg-pink-50 dark:bg-pink-950/20 px-2.5 py-1 rounded-lg border border-pink-200/40 hover:border-pink-300 hover:bg-pink-100/50"
+            >
+              View All
+            </button>
           </div>
           <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
             {data.upcomingTasks.length === 0 ? (

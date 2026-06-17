@@ -105,7 +105,7 @@ export function ManagementListPage<TData, TFilter extends string = string>({
         </div>
       )}
 
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4 space-y-4">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-4">
         {toolbar}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">

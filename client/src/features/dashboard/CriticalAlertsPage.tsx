@@ -1,32 +1,35 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { getDashboardApi } from "../../api/dashboard.api";
-import {
-  AlertCircle,
-  ArrowLeft,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { Eye, ArrowLeft } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { ManagementListPage } from "../../components/ManagementListPage";
+import { Column } from "../../components/ReusableTable";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
+  TableClientCell,
+  TablePrimarySecondary,
+  TableStatusBadge,
+  tableCellClass,
+} from "../../components/tableCells";
+import { useDebounce } from "../../hooks/useDebounce";
+
+type AlertCategory = "all" | "warranty" | "amc" | "complaint" | "invoice";
+
+const PAGE_SIZE = 10;
 
 export function CriticalAlertsPage() {
   const navigate = useNavigate();
   const [alerts, setAlerts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const [categoryFilter, setCategoryFilter] = useState<AlertCategory>("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function loadAlerts() {
+      setIsLoading(true);
       try {
         const res = await getDashboardApi({ allAlerts: true });
         if (res.success && res.data.criticalAlerts) {
@@ -35,165 +38,144 @@ export function CriticalAlertsPage() {
       } catch (err) {
         console.error("Failed to load critical alerts", err);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
     loadAlerts();
   }, []);
 
+  // Filter alerts by search term and category filter
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
-      // 1. Search Query
-      const q = searchQuery.toLowerCase().trim();
+      // 1. Category Filter
+      let matchesCategory = true;
+      if (categoryFilter !== "all") {
+        const titleL = alert.title.toLowerCase();
+        if (categoryFilter === "warranty") {
+          matchesCategory = titleL.includes("warranty");
+        } else if (categoryFilter === "amc") {
+          matchesCategory = titleL.includes("amc");
+        } else if (categoryFilter === "complaint") {
+          matchesCategory = titleL.includes("complaint");
+        } else if (categoryFilter === "invoice") {
+          matchesCategory = titleL.includes("invoice");
+        }
+      }
+
+      // 2. Search Query
+      const q = debouncedSearch.toLowerCase().trim();
       const matchesSearch =
         !q ||
         alert.title.toLowerCase().includes(q) ||
         alert.client.toLowerCase().includes(q) ||
         alert.assignee.toLowerCase().includes(q);
 
-      // 2. Priority Filter
-      const matchesPriority =
-        priorityFilter === "all" || alert.priority === priorityFilter;
-
-      // 3. Type Filter
-      let matchesType = true;
-      if (typeFilter !== "all") {
-        const titleL = alert.title.toLowerCase();
-        if (typeFilter === "warranty") {
-          matchesType = titleL.includes("warranty");
-        } else if (typeFilter === "amc") {
-          matchesType = titleL.includes("amc");
-        } else if (typeFilter === "complaint") {
-          matchesType = titleL.includes("complaint");
-        } else if (typeFilter === "invoice") {
-          matchesType = titleL.includes("invoice");
-        }
-      }
-
-      return matchesSearch && matchesPriority && matchesType;
+      return matchesCategory && matchesSearch;
     });
-  }, [alerts, searchQuery, priorityFilter, typeFilter]);
+  }, [alerts, categoryFilter, debouncedSearch]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
-        <Loader2 className="h-10 w-10 animate-spin text-pink-700" />
-        <span className="text-sm font-semibold">Loading all alerts...</span>
-      </div>
-    );
-  }
+  // Handle client-side pagination
+  const paginatedAlerts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredAlerts.slice(start, start + PAGE_SIZE);
+  }, [filteredAlerts, currentPage]);
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3">
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / PAGE_SIZE));
+
+  // Reset to first page when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [categoryFilter, debouncedSearch]);
+
+  const columns: Column<any>[] = [
+    {
+      header: "Alert Detail",
+      accessor: (row) => (
+        <TablePrimarySecondary primary={row.title} secondary={row.time} />
+      ),
+      className: tableCellClass.wide,
+    },
+    {
+      header: "Client / Reference",
+      accessor: (row) => {
+        const hasParenthesis = row.client.includes(" (");
+        const clientName = hasParenthesis ? row.client.split(" (")[0] : row.client;
+        const refNo = hasParenthesis ? row.client.slice(row.client.indexOf(" (") + 2, -1) : `Assigned: ${row.assignee}`;
+        return (
+          <TableClientCell
+            name={clientName}
+            subtitle={refNo}
+            seed={clientName}
+          />
+        );
+      },
+      className: tableCellClass.wide,
+    },
+    {
+      header: "Priority Status",
+      accessor: (row) => {
+        const tone = row.priority === "Critical" ? ("red" as const) : ("orange" as const);
+        return <TableStatusBadge label={row.priority} tone={tone} />;
+      },
+      className: tableCellClass.narrow,
+    },
+    {
+      header: "Actions",
+      accessor: (row) => (
         <Button
           variant="outline"
-          size="icon"
-          className="h-9 w-9 border-border"
+          size="sm"
+          className="h-8 text-xs font-semibold gap-1.5 border-pink-200 text-pink-700 hover:bg-pink-50"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (row.link) navigate(row.link);
+          }}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          View
+        </Button>
+      ),
+      className: tableCellClass.narrow,
+    },
+  ];
+
+  return (
+    <ManagementListPage
+      title="Critical & Urgent Alerts"
+      subtitle="Overview of system critical delays, expired warranties, overdue AMC visits, and outstanding invoices."
+      headerAction={
+        <Button
+          variant="outline"
           onClick={() => navigate("/")}
+          className="flex items-center gap-1.5 shrink-0 border-border hover:bg-muted text-muted-foreground hover:text-foreground font-semibold text-sm h-9"
         >
           <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
         </Button>
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Critical & High Priority Alerts</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            A comprehensive overview of expired warranties, overdue AMC visits, pending complaints, and payment delays.
-          </p>
-        </div>
-      </div>
-
-      {/* Filters Card */}
-      <div className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search alerts by client, description, or title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 !rounded-xl text-sm"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-11 !rounded-xl px-4 text-sm w-[160px] border-input">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="Critical">Critical</SelectItem>
-                <SelectItem value="High">High</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="h-11 !rounded-xl px-4 text-sm w-[160px] border-input">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="warranty">Warranties</SelectItem>
-                <SelectItem value="amc">AMC Visits</SelectItem>
-                <SelectItem value="complaint">Complaints</SelectItem>
-                <SelectItem value="invoice">Invoices</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* Alerts List Container */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
-        <div className="flex items-center justify-between mb-4 border-b border-border pb-3">
-          <span className="text-sm font-semibold text-foreground">
-            Showing {filteredAlerts.length} of {alerts.length} Active Alerts
-          </span>
-        </div>
-        <div className="space-y-3">
-          {filteredAlerts.length === 0 ? (
-            <div className="p-12 text-center text-sm text-muted-foreground italic border border-dashed border-border rounded-xl">
-              No matching alerts found
-            </div>
-          ) : (
-            filteredAlerts.map((alert) => (
-              <div
-                key={alert.id}
-                onClick={() => alert.link && navigate(alert.link)}
-                className={`p-4 rounded-xl border-l-4 shadow-sm hover:shadow-md hover:bg-muted/10 transition-all ${
-                  alert.link ? "cursor-pointer" : ""
-                } ${
-                  alert.priority === "Critical"
-                    ? "bg-red-500/5 border-red-500 hover:border-red-600"
-                    : "bg-orange-500/5 border-orange-500 hover:border-orange-600"
-                }`}
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className={`h-4 w-4 ${alert.priority === "Critical" ? "text-red-500" : "text-orange-500"}`} />
-                    <h3 className="font-bold text-foreground text-sm sm:text-base">{alert.title}</h3>
-                  </div>
-                  <span
-                    className={`w-fit px-2 py-0.5 text-xs font-bold rounded uppercase shrink-0 ${
-                      alert.priority === "Critical"
-                        ? "bg-red-500/20 text-red-500"
-                        : "bg-orange-500/20 text-orange-500"
-                    }`}
-                  >
-                    {alert.priority}
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground mb-2 font-medium bg-muted/40 px-2.5 py-1 rounded w-fit border border-border/20">
-                  Client: <span className="text-foreground font-semibold">{alert.client}</span>
-                </p>
-                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground pt-2 border-t border-border/30">
-                  <span>Assigned To: <strong className="text-foreground">{alert.assignee}</strong></span>
-                  <span className="font-semibold text-pink-700">{alert.time}</span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+      }
+      searchPlaceholder="Search active system alerts..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+      filterOptions={[
+        { value: "all", label: "All Alerts", count: alerts.length, tone: "pink" as const },
+        { value: "warranty", label: "Warranties", count: alerts.filter((a) => a.title.toLowerCase().includes("warranty")).length, tone: "red" as const },
+        { value: "amc", label: "AMC Visits", count: alerts.filter((a) => a.title.toLowerCase().includes("amc")).length, tone: "blue" as const },
+        { value: "complaint", label: "Complaints", count: alerts.filter((a) => a.title.toLowerCase().includes("complaint")).length, tone: "amber" as const },
+        { value: "invoice", label: "Invoices", count: alerts.filter((a) => a.title.toLowerCase().includes("invoice")).length, tone: "orange" as const },
+      ]}
+      filterValue={categoryFilter}
+      onFilterChange={setCategoryFilter}
+      columns={columns}
+      data={paginatedAlerts}
+      isLoading={isLoading}
+      emptyMessage="No active critical system alerts found matching filters."
+      currentPage={currentPage}
+      totalPages={totalPages}
+      total={filteredAlerts.length}
+      pageSize={PAGE_SIZE}
+      onPageChange={setCurrentPage}
+      entityLabel="alerts"
+      onRowClick={(row) => row.link && navigate(row.link)}
+    />
   );
 }

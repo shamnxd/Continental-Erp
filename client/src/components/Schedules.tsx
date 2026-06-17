@@ -9,6 +9,8 @@ import {
   AlertCircle,
   FileText,
   Check,
+  Eye,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -27,10 +29,11 @@ import {
   createScheduleApi,
   updateScheduleApi,
   deleteScheduleApi,
+  completeScheduleApi,
 } from "../api/schedule.api";
 import { Schedule } from "../interfaces/schedule.interface";
 import { toast } from "sonner";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +50,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+
+function smrCreateRoute(schedule: Schedule): string | null {
+  if (schedule.entityType === "amc" && schedule.scheduleType === "AMC Visit" && schedule.id) {
+    return `/amc/${schedule.entityId}/visits/${schedule.id}/smr/create`;
+  }
+  if (schedule.entityType === "complaint" && schedule.entityId) {
+    return `/complaints/${schedule.entityId}/smr/create`;
+  }
+  return null;
+}
 
 interface SchedulesProps {
   entityId: string;
@@ -78,10 +91,14 @@ export function Schedules({
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const navigate = useNavigate();
+
   // Completion states
   const [completeScheduleId, setCompleteScheduleId] = useState<string | null>(null);
+  const [completionDateInput, setCompletionDateInput] = useState("");
   const [completionTimeInput, setCompletionTimeInput] = useState("");
   const [completionNotesInput, setCompletionNotesInput] = useState("");
+  const [completionFiles, setCompletionFiles] = useState<File[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
 
   // Form fields
@@ -223,22 +240,19 @@ export function Schedules({
   const handleCompleteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completeScheduleId) return;
+    if (!completionDateInput) {
+      toast.error("Please select a completion date");
+      return;
+    }
 
     setIsCompleting(true);
-    const targetSchedule = schedules.find((s) => s.id === completeScheduleId);
-    const originalNotes = targetSchedule?.notes || "";
-    
-    const updatedNotes = completionNotesInput.trim()
-      ? originalNotes
-        ? `${originalNotes}\n\n[Completion Notes - ${new Date(completionTimeInput).toLocaleString("en-IN")}]: ${completionNotesInput}`
-        : `[Completion Notes - ${new Date(completionTimeInput).toLocaleString("en-IN")}]: ${completionNotesInput}`
-      : originalNotes;
-
     try {
-      const res = await updateScheduleApi(completeScheduleId, {
-        status: "Completed",
-        completedAt: new Date(completionTimeInput).toISOString(),
-        notes: updatedNotes,
+      const completedAt = new Date(`${completionDateInput}T${completionTimeInput || "00:00"}`).toISOString();
+
+      const res = await completeScheduleApi(completeScheduleId, {
+        completedAt,
+        completionNotes: completionNotesInput.trim(),
+        files: completionFiles,
       });
 
       if (res.success) {
@@ -246,6 +260,14 @@ export function Schedules({
         setCompleteScheduleId(null);
         loadSchedules();
         onSuccess?.();
+
+        const smrRoute = smrCreateRoute(res.data);
+        if (smrRoute) {
+          toast("Would you like to create an SMR report?", {
+            action: { label: "Create SMR", onClick: () => navigate(smrRoute) },
+            duration: 8000,
+          });
+        }
       }
     } catch (err) {
       console.error(err);
@@ -285,6 +307,11 @@ export function Schedules({
         return acc;
       }, {} as Record<string, string>)
     : undefined;
+
+  const targetScheduleForComplete = completeScheduleId
+    ? schedules.find((s) => s.id === completeScheduleId)
+    : null;
+  const smrRouteForComplete = targetScheduleForComplete ? smrCreateRoute(targetScheduleForComplete) : null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -397,51 +424,66 @@ export function Schedules({
                         {sch.status}
                       </span>
 
-                      {!isClosed && !sch.smrId && (
-                        <div className="flex items-center gap-1">
-                          {sch.status !== "Completed" && sch.status !== "Cancelled" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2 text-[10px] font-bold text-green-700 border-green-200 hover:bg-green-50/70 hover:border-green-300 transition-all gap-1 shadow-2xs"
-                              onClick={() => {
-                                if (sch.id) {
-                                  setCompleteScheduleId(sch.id);
-                                  const now = new Date();
-                                  const offset = now.getTimezoneOffset();
-                                  const localNow = new Date(now.getTime() - offset * 60 * 1000);
-                                  setCompletionTimeInput(localNow.toISOString().slice(0, 16));
-                                  setCompletionNotesInput("");
-                                }
-                              }}
-                            >
-                              <Check className="h-3 w-3 text-green-600" />
-                              Complete
-                            </Button>
-                          )}
+                      <div className="flex items-center gap-1">
+                        {sch.id && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-                            onClick={() => handleOpenEdit(sch)}
+                            className="h-7 w-7 text-muted-foreground hover:text-pink-700 hover:bg-pink-50"
+                            asChild
+                            title="View Details"
                           >
-                            <Edit className="h-3.5 w-3.5 text-blue-500" />
+                            <Link to={`/schedules/${sch.id}`}>
+                              <Eye className="h-3.5 w-3.5 text-pink-700" />
+                            </Link>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
-                            onClick={() => sch.id && setConfirmDeleteId(sch.id)}
-                            disabled={isDeletingId === sch.id}
-                          >
-                            {isDeletingId === sch.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                        )}
+                        {!isClosed && !sch.smrId && (
+                          <>
+                            {sch.status !== "Completed" && sch.status !== "Cancelled" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 text-[10px] font-bold text-green-700 border-green-200 hover:bg-green-50/70 hover:border-green-300 transition-all gap-1 shadow-2xs"
+                                onClick={() => {
+                                  if (sch.id) {
+                                    setCompleteScheduleId(sch.id);
+                                    const now = new Date();
+                                    setCompletionDateInput(now.toISOString().split("T")[0]);
+                                    setCompletionTimeInput(now.toTimeString().slice(0, 5));
+                                    setCompletionNotesInput("");
+                                    setCompletionFiles([]);
+                                  }
+                                }}
+                              >
+                                <Check className="h-3 w-3 text-green-600" />
+                                Complete
+                              </Button>
                             )}
-                          </Button>
-                        </div>
-                      )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+                              onClick={() => handleOpenEdit(sch)}
+                            >
+                              <Edit className="h-3.5 w-3.5 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50"
+                              onClick={() => sch.id && setConfirmDeleteId(sch.id)}
+                              disabled={isDeletingId === sch.id}
+                            >
+                              {isDeletingId === sch.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                              )}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -529,9 +571,6 @@ export function Schedules({
                   <SelectContent>
                     <SelectItem value="Scheduled" className="text-xs">
                       Scheduled
-                    </SelectItem>
-                    <SelectItem value="Pending" className="text-xs">
-                      Pending
                     </SelectItem>
                     <SelectItem value="In Progress" className="text-xs">
                       In Progress
@@ -640,36 +679,93 @@ export function Schedules({
       <Dialog open={completeScheduleId !== null} onOpenChange={(open) => !open && setCompleteScheduleId(null)}>
         <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold text-foreground">Mark Schedule as Completed</DialogTitle>
+            <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-600" />Mark Schedule as Completed
+            </DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleCompleteSubmit} className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="completionTime" className="text-xs font-semibold text-foreground">
-                Completion Date & Time *
-              </Label>
-              <Input
-                id="completionTime"
-                type="datetime-local"
-                value={completionTimeInput}
-                onChange={(e) => setCompletionTimeInput(e.target.value)}
-                className="h-9 text-xs"
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="completionDate" className="text-xs font-semibold text-foreground">
+                  Completion Date *
+                </Label>
+                <Input
+                  id="completionDate"
+                  type="date"
+                  value={completionDateInput}
+                  onChange={(e) => setCompletionDateInput(e.target.value)}
+                  className="h-9 text-xs [color-scheme:light] dark:[color-scheme:dark]"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="completionTime" className="text-xs font-semibold text-foreground">
+                  Time
+                </Label>
+                <Input
+                  id="completionTime"
+                  type="time"
+                  value={completionTimeInput}
+                  onChange={(e) => setCompletionTimeInput(e.target.value)}
+                  className="h-9 text-xs [color-scheme:light] dark:[color-scheme:dark]"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="completionNotes" className="text-xs font-semibold text-foreground">
-                Completion Notes / Remarks (Optional)
+                Completion Notes (Optional)
               </Label>
               <Textarea
                 id="completionNotes"
-                placeholder="Details of service performed, outcomes, etc..."
+                placeholder="Work done, outcomes, observations..."
                 value={completionNotesInput}
                 onChange={(e) => setCompletionNotesInput(e.target.value)}
                 className="text-xs min-h-[80px]"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="completionFiles" className="text-xs font-semibold text-foreground">
+                Completion Images / Attachments (Optional)
+              </Label>
+              <Input
+                id="completionFiles"
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    setCompletionFiles(Array.from(files));
+                  } else {
+                    setCompletionFiles([]);
+                  }
+                }}
+                className="border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 file:bg-pink-50 file:text-pink-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 file:mr-3 hover:file:bg-pink-100 dark:file:bg-pink-950/40 dark:file:text-pink-400 cursor-pointer"
+              />
+              {completionFiles.length > 0 && (
+                <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/40 mt-1.5 space-y-1">
+                  <p className="font-semibold uppercase tracking-wider text-[9px]">Selected Files ({completionFiles.length}):</p>
+                  <div className="max-h-[80px] overflow-y-auto space-y-1 pr-1">
+                    {completionFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 bg-card px-2 py-1 rounded border border-border/30">
+                        <span className="truncate max-w-[200px] font-medium text-foreground">{file.name}</span>
+                        <span className="shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {smrRouteForComplete && (
+              <div className="flex items-start gap-2 px-3 py-2.5 bg-pink-50 dark:bg-pink-950/20 rounded-lg border border-pink-200/60 text-xs text-pink-700 dark:text-pink-400">
+                <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>After marking complete, you'll be prompted to create an SMR report.</span>
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
               <Button
@@ -685,9 +781,9 @@ export function Schedules({
                 type="submit"
                 size="sm"
                 disabled={isCompleting}
-                className="bg-green-600 hover:bg-green-700 text-white h-8 text-xs font-semibold"
+                className="bg-pink-700 hover:bg-pink-800 text-white h-8 text-xs font-semibold"
               >
-                {isCompleting ? "Saving..." : "Complete Schedule"}
+                {isCompleting ? "Saving..." : "Mark as Completed"}
               </Button>
             </div>
           </form>

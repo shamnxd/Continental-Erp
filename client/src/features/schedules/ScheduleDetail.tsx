@@ -304,6 +304,29 @@ export function ScheduleDetail() {
     }
   };
 
+  const handleStatusChange = async (newStatus: Schedule["status"]) => {
+    if (!id || !schedule) return;
+    if (newStatus === schedule.status) return;
+    if (newStatus === "Completed") {
+      openComplete();
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await updateScheduleApi(id, { status: newStatus });
+      if (res.success) {
+        setSchedule(res.data);
+        toast.success(`Status updated to ${newStatus}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update status");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     setIsDeleting(true);
@@ -387,17 +410,29 @@ export function ScheduleDetail() {
                       {schedule.smrId ? "View SMR" : "Create SMR"}
                     </Button>
                   )}
-                  {!isClosed && (
-                    <Button variant="outline" size="sm" onClick={openEdit} className="h-9 gap-1.5 font-semibold text-xs">
-                      <Edit className="h-3.5 w-3.5 text-blue-600" />Edit
-                    </Button>
-                  )}
+                  <Button variant="outline" size="sm" onClick={openEdit} className="h-9 gap-1.5 font-semibold text-xs">
+                    <Edit className="h-3.5 w-3.5 text-blue-600" />Edit
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setIsDeleteOpen(true)} className="h-9 gap-1.5 text-red-600 border-red-200 hover:bg-red-50 font-semibold text-xs">
                     <Trash2 className="h-3.5 w-3.5" />Delete
                   </Button>
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider ${statusColorMap[schedule.status] ?? "bg-muted text-muted-foreground border-border"}`}>
-                    {schedule.status}
-                  </span>
+                  <Select
+                    value={schedule.status}
+                    onValueChange={(val) => handleStatusChange(val as Schedule["status"])}
+                  >
+                    <SelectTrigger className={`h-9 text-[10px] font-bold uppercase tracking-wider px-2.5 w-[130px] rounded-lg border focus:ring-0 focus:ring-offset-0 ${statusColorMap[schedule.status] ?? "bg-muted text-muted-foreground border-border"}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Scheduled" className="text-[10px] font-bold uppercase tracking-wider">Scheduled</SelectItem>
+                      <SelectItem value="In Progress" className="text-[10px] font-bold uppercase tracking-wider">In Progress</SelectItem>
+                      <SelectItem value="Completed" className="text-[10px] font-bold uppercase tracking-wider">Completed</SelectItem>
+                      <SelectItem value="Cancelled" className="text-[10px] font-bold uppercase tracking-wider">Cancelled</SelectItem>
+                      {schedule.status === "Pending" && (
+                        <SelectItem value="Pending" className="text-[10px] font-bold uppercase tracking-wider">Pending</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -632,13 +667,6 @@ export function ScheduleDetail() {
                             </div>
                           </div>
                         </div>
-
-                        {isClosed && (
-                          <div className="bg-card rounded-xl border border-border p-4 text-center flex flex-col items-center gap-2">
-                            <AlertCircle className="h-5 w-5 text-muted-foreground/60" />
-                            <p className="text-xs text-muted-foreground italic">This schedule is {schedule.status.toLowerCase()} and cannot be edited.</p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </TabsContent>
@@ -837,7 +865,6 @@ export function ScheduleDetail() {
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Scheduled">Scheduled</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="In Progress">In Progress</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
                   <SelectItem value="Cancelled">Cancelled</SelectItem>

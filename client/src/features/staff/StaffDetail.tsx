@@ -431,9 +431,7 @@ export function StaffDetail() {
                   <div
                     key={item.id}
                     className="border border-border rounded-xl p-4 hover:bg-muted/20 cursor-pointer transition-colors"
-                    onClick={() => {
-                      if (item.type === "complaint") navigate(`/complaints/${item.id}`);
-                    }}
+                    onClick={() => navigate(`/schedules/${item.id}`)}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>

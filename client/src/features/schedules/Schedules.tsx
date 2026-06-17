@@ -535,10 +535,10 @@ export function Schedules() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   const counts = useMemo(() => ({
-    visits: visitItems.length,
-    followups: followUpItems.length,
+    visits: visitItems.filter((i) => i.status !== "Completed" && i.status !== "Cancelled").length,
+    followups: followUpItems.filter((i) => i.status !== "Completed" && i.status !== "Cancelled").length,
     preferred: preferredItems.length,
-  }), [visitItems.length, followUpItems.length, preferredItems.length]);
+  }), [visitItems, followUpItems, preferredItems]);
 
   // Follow-up columns (same structure as visit columns with amber accent)
   const followUpColumns: Column<ScheduleItem>[] = [

@@ -63,12 +63,16 @@ export async function completeScheduleApi(
     completedAt: string;
     completionNotes?: string;
     files?: File[];
+    existingAttachments?: any[];
   }
 ): Promise<ScheduleResponse> {
   const formData = new FormData();
   formData.append("completedAt", data.completedAt);
   if (data.completionNotes) {
     formData.append("completionNotes", data.completionNotes);
+  }
+  if (data.existingAttachments) {
+    formData.append("existingAttachments", JSON.stringify(data.existingAttachments));
   }
   if (data.files && data.files.length > 0) {
     data.files.forEach((file) => {

@@ -144,6 +144,14 @@ export function ScheduleDetail() {
   const [completionFiles, setCompletionFiles] = useState<File[]>([]);
   const [isCompleting, setIsCompleting] = useState(false);
 
+  // Edit complete dialog
+  const [isEditCompleteOpen, setIsEditCompleteOpen] = useState(false);
+  const [editCompletionDate, setEditCompletionDate] = useState("");
+  const [editCompletionTime, setEditCompletionTime] = useState("");
+  const [editCompletionNotes, setEditCompletionNotes] = useState("");
+  const [editCompletionFiles, setEditCompletionFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<any[]>([]);
+
   // Edit dialog
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editDate, setEditDate] = useState("");
@@ -215,6 +223,45 @@ export function ScheduleDetail() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to complete schedule");
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const openEditComplete = () => {
+    if (!schedule) return;
+    const d = schedule.completedAt ? new Date(schedule.completedAt) : new Date();
+    setEditCompletionDate(d.toISOString().split("T")[0]);
+    setEditCompletionTime(d.toTimeString().slice(0, 5));
+    setEditCompletionNotes(schedule.completionNotes || "");
+    setExistingAttachments(schedule.completionAttachments || []);
+    setEditCompletionFiles([]);
+    setIsEditCompleteOpen(true);
+  };
+
+  const handleEditComplete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !schedule) return;
+    if (!editCompletionDate) { toast.error("Please select a completion date"); return; }
+    setIsCompleting(true);
+    try {
+      const completedAt = new Date(`${editCompletionDate}T${editCompletionTime || "00:00"}`).toISOString();
+
+      const res = await completeScheduleApi(id, {
+        completedAt,
+        completionNotes: editCompletionNotes.trim(),
+        files: editCompletionFiles,
+        existingAttachments,
+      });
+
+      if (res.success) {
+        setSchedule(res.data);
+        setIsEditCompleteOpen(false);
+        toast.success("Completion record updated successfully");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update completion record");
     } finally {
       setIsCompleting(false);
     }
@@ -409,16 +456,27 @@ export function ScheduleDetail() {
                             )}
                             {schedule.status === "Completed" && schedule.completedAt && (
                               <div className="sm:col-span-2 pt-3 border-t border-border/40 space-y-3">
-                                <div className="flex items-center gap-2 px-3 py-2.5 bg-green-50 rounded-lg border border-green-200/60 dark:bg-green-950/20 dark:border-green-800/40">
-                                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                                  <div>
-                                    <span className="text-[10px] uppercase font-bold text-green-700 dark:text-green-400 block">Completed On</span>
-                                    <span className="text-sm font-semibold text-green-800 dark:text-green-300">
-                                      {new Date(schedule.completedAt).toLocaleString("en-IN", {
-                                        weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
-                                      })}
-                                    </span>
+                                <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-green-50 rounded-lg border border-green-200/60 dark:bg-green-950/20 dark:border-green-800/40">
+                                  <div className="flex items-center gap-2">
+                                    <Check className="h-4 w-4 text-green-600 shrink-0" />
+                                    <div>
+                                      <span className="text-[10px] uppercase font-bold text-green-700 dark:text-green-400 block">Completed On</span>
+                                      <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                                        {new Date(schedule.completedAt).toLocaleString("en-IN", {
+                                          weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
                                   </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={openEditComplete}
+                                    className="h-8 px-2 text-green-700 hover:bg-green-100 hover:text-green-800 font-semibold gap-1 text-xs shrink-0 bg-transparent shadow-none"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" /> Edit Completion
+                                  </Button>
                                 </div>
 
                                 {schedule.completionNotes && (
@@ -666,6 +724,96 @@ export function ScheduleDetail() {
               <Button type="button" variant="outline" size="sm" onClick={() => setIsCompleteOpen(false)} className="h-8 text-xs">Cancel</Button>
               <Button type="submit" size="sm" disabled={isCompleting} className="bg-pink-700 hover:bg-pink-800 text-white h-8 text-xs font-semibold">
                 {isCompleting ? "Saving..." : "Mark as Completed"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Completion Dialog */}
+      <Dialog open={isEditCompleteOpen} onOpenChange={(open) => !open && setIsEditCompleteOpen(false)}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Edit className="h-4 w-4 text-pink-700" />Edit Completion Record
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditComplete} className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="editCompletionDate" className="text-xs font-semibold">Completion Date *</Label>
+                <Input id="editCompletionDate" type="date" value={editCompletionDate} onChange={(e) => setEditCompletionDate(e.target.value)} className="h-9 text-xs [color-scheme:light] dark:[color-scheme:dark]" required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editCompletionTime" className="text-xs font-semibold">Time</Label>
+                <Input id="editCompletionTime" type="time" value={editCompletionTime} onChange={(e) => setEditCompletionTime(e.target.value)} className="h-9 text-xs [color-scheme:light] dark:[color-scheme:dark]" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="editCompletionNotes" className="text-xs font-semibold">Completion Notes (Optional)</Label>
+              <Textarea id="editCompletionNotes" placeholder="Work done, outcomes, observations..." value={editCompletionNotes} onChange={(e) => setEditCompletionNotes(e.target.value)} className="text-xs min-h-[80px]" />
+            </div>
+
+            {existingAttachments.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Current Attachments</Label>
+                <div className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
+                  {existingAttachments.map((att, idx) => (
+                    <div key={idx} className="flex items-center justify-between gap-2 bg-muted/30 px-2 py-1.5 rounded border border-border/40 text-xs">
+                      <span className="truncate max-w-[220px] font-medium text-foreground">{att.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent shadow-none"
+                        onClick={() => {
+                          setExistingAttachments(existingAttachments.filter((_, i) => i !== idx));
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="editCompletionFiles" className="text-xs font-semibold">Add New Images / Attachments (Optional)</Label>
+              <Input
+                id="editCompletionFiles"
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    setEditCompletionFiles(Array.from(files));
+                  } else {
+                    setEditCompletionFiles([]);
+                  }
+                }}
+                className="border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 file:bg-pink-50 file:text-pink-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 file:mr-3 hover:file:bg-pink-100 dark:file:bg-pink-950/40 dark:file:text-pink-400 cursor-pointer"
+              />
+              {editCompletionFiles.length > 0 && (
+                <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/40 mt-1.5 space-y-1">
+                  <p className="font-semibold uppercase tracking-wider text-[9px]">New Files ({editCompletionFiles.length}):</p>
+                  <div className="max-h-[80px] overflow-y-auto space-y-1 pr-1">
+                    {editCompletionFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-2 bg-card px-2 py-1 rounded border border-border/30">
+                        <span className="truncate max-w-[200px] font-medium text-foreground">{file.name}</span>
+                        <span className="shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsEditCompleteOpen(false)} className="h-8 text-xs">Cancel</Button>
+              <Button type="submit" size="sm" disabled={isCompleting} className="bg-pink-700 hover:bg-pink-800 text-white h-8 text-xs font-semibold">
+                {isCompleting ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>

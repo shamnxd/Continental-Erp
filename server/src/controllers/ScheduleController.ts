@@ -142,9 +142,16 @@ export class ScheduleController {
       const id = req.params.id;
       const user = authReq.user?.name || "Admin";
 
-      const { completedAt, completionNotes } = req.body;
+      const { completedAt, completionNotes, existingAttachments } = req.body;
 
-      const completionAttachments = [];
+      let completionAttachments = [];
+      if (existingAttachments) {
+        try {
+          completionAttachments = JSON.parse(existingAttachments);
+        } catch (err) {
+          console.error("Failed to parse existingAttachments:", err);
+        }
+      }
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (files && files.length > 0) {

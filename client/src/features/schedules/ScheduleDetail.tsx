@@ -330,7 +330,7 @@ export function ScheduleDetail() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
                   {!isClosed && (
-                    <Button size="sm" onClick={openComplete} className="h-9 gap-1.5 bg-[#00A63E] hover:bg-[#00A63E]/90 text-white font-semibold text-xs">
+                    <Button size="sm" onClick={openComplete} className="h-9 gap-1.5 bg-pink-700 hover:bg-pink-800 text-white font-semibold text-xs">
                       <Check className="h-4 w-4" />Mark Complete
                     </Button>
                   )}
@@ -640,7 +640,7 @@ export function ScheduleDetail() {
                     setCompletionFiles([]);
                   }
                 }}
-                className="h-9 text-xs file:bg-[#00A63E]/10 file:text-[#00A63E] file:border-0 file:rounded-md file:px-3 file:py-1 file:mr-3 hover:file:bg-[#00A63E]/20 dark:file:bg-[#00A63E]/20 dark:file:text-green-400"
+                className="border-0 bg-transparent shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 file:bg-pink-50 file:text-pink-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 file:mr-3 hover:file:bg-pink-100 dark:file:bg-pink-950/40 dark:file:text-pink-400 cursor-pointer"
               />
               {completionFiles.length > 0 && (
                 <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded-lg border border-border/40 mt-1.5 space-y-1">
@@ -664,7 +664,7 @@ export function ScheduleDetail() {
             )}
             <div className="flex justify-end gap-2 pt-2 border-t border-border/40">
               <Button type="button" variant="outline" size="sm" onClick={() => setIsCompleteOpen(false)} className="h-8 text-xs">Cancel</Button>
-              <Button type="submit" size="sm" disabled={isCompleting} className="bg-[#00A63E] hover:bg-[#00A63E]/90 text-white h-8 text-xs font-semibold">
+              <Button type="submit" size="sm" disabled={isCompleting} className="bg-pink-700 hover:bg-pink-800 text-white h-8 text-xs font-semibold">
                 {isCompleting ? "Saving..." : "Mark as Completed"}
               </Button>
             </div>

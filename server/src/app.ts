@@ -28,6 +28,7 @@ import { complaintRequestRouter } from "./routes/complaintRequest.routes";
 import { scheduleRouter } from "./routes/schedule.routes";
 import { remarkRouter } from "./routes/remark.routes";
 import { warrantyRouter } from "./routes/warranty.routes";
+import { kanbanRouter } from "./routes/kanban.routes";
 
 import { errorHandler } from "./middleware/error.middleware";
 
@@ -77,6 +78,7 @@ app.use("/api/v1/remarks", remarkRouter);
 app.use("/api/v1/projects", projectRouter);
 app.use("/api/v1/minor-jobs", minorJobRouter);
 app.use("/api/v1/warranties", warrantyRouter);
+app.use("/api/v1/kanban", kanbanRouter);
 
 
 // Centralized error handler (must be registered last)

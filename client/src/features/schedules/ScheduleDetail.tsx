@@ -496,10 +496,10 @@ export function ScheduleDetail() {
                                             {att.mimeType.startsWith("image/") ? (
                                               <div className="h-16 w-16 rounded bg-muted border border-border/60 overflow-hidden flex items-center justify-center shrink-0">
                                                 <img
-                                                  src={`http://localhost:5000${att.url}`}
+                                                  src={att.url}
                                                   alt={att.name}
                                                   className="h-full w-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                  onClick={() => window.open(`http://localhost:5000${att.url}`, "_blank")}
+                                                  onClick={() => window.open(att.url, "_blank")}
                                                 />
                                               </div>
                                             ) : (
@@ -516,7 +516,7 @@ export function ScheduleDetail() {
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => window.open(`http://localhost:5000${att.url}`, "_blank")}
+                                            onClick={() => window.open(att.url, "_blank")}
                                             className="h-8 text-xs shrink-0 font-semibold"
                                           >
                                             View File

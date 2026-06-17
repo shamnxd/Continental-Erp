@@ -54,6 +54,7 @@ export interface DashboardResponse {
       client: string;
       date: string;
       assignee: string;
+      type?: string;
     }>;
   };
 }

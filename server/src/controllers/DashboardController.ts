@@ -332,21 +332,56 @@ export class DashboardController {
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const recentActivities = activities.slice(0, 5);
 
-      // ─── 8. Fetch Upcoming Schedules (Top 4) ──────────────────────────────
-      const upcoming = await ScheduleModel.find({
-        scheduledDate: { $gte: now },
-        status: { $in: ["Scheduled", "In Progress", "Pending"] }
-      }).sort({ scheduledDate: 1 }).limit(4).lean().exec();
+      // ─── 8. Fetch Upcoming Tasks (Schedules + Enquiry Follow-ups) ────────
+      const [upcomingSchedules, upcomingEnquiries] = await Promise.all([
+        ScheduleModel.find({
+          scheduledDate: { $gte: now },
+          status: { $in: ["Scheduled", "In Progress", "Pending"] }
+        }).lean().exec(),
+        EnquiryModel.find({
+          followUpDate: { $gte: now },
+          status: { $ne: "Closed" }
+        }).lean().exec()
+      ]);
 
-      const upcomingTasks = upcoming.map((s: any) => {
-        const timeStr = s.scheduledDate.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
-        const dateStr = s.scheduledDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
-        return {
+      const mergedUpcoming: any[] = [];
+
+      upcomingSchedules.forEach((s: any) => {
+        mergedUpcoming.push({
           id: s._id.toString(),
           task: s.title,
           client: s.clientName,
+          date: s.scheduledDate,
+          assignee: s.assignedTo?.join(", ") || "Unassigned",
+          type: "schedule"
+        });
+      });
+
+      upcomingEnquiries.forEach((e: any) => {
+        mergedUpcoming.push({
+          id: e._id.toString(),
+          task: `Follow-up: ${e.requirement || e.description}`,
+          client: e.clientName || "Client",
+          date: e.followUpDate,
+          assignee: e.assignedTo || "Unassigned",
+          type: "enquiry"
+        });
+      });
+
+      // Sort by date ascending (closest task first)
+      mergedUpcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      // Take top 4 and format for response
+      const upcomingTasks = mergedUpcoming.slice(0, 4).map((item) => {
+        const timeStr = new Date(item.date).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+        const dateStr = new Date(item.date).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+        return {
+          id: item.id,
+          task: item.task,
+          client: item.client,
           date: `${dateStr}, ${timeStr}`,
-          assignee: s.assignedTo?.join(", ") || "Unassigned"
+          assignee: item.assignee,
+          type: item.type
         };
       });
 

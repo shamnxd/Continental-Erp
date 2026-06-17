@@ -209,7 +209,13 @@ export function Dashboard() {
               data.upcomingTasks.map((task: any) => (
                 <div 
                   key={task.id} 
-                  onClick={() => navigate(`/schedules/${task.id}`)}
+                  onClick={() => {
+                    if (task.type === "enquiry") {
+                      navigate(`/enquiries/${task.id}`);
+                    } else {
+                      navigate(`/schedules/${task.id}`);
+                    }
+                  }}
                   className="p-3 bg-muted/30 rounded-xl hover:bg-muted/50 hover:border-pink-650/30 transition-all border border-transparent cursor-pointer shadow-sm"
                 >
                   <div className="flex items-start justify-between mb-1">

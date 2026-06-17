@@ -58,6 +58,7 @@ export enum AppRoute {
   WARRANTY_DETAIL = "/warranty-management/:id",
   ADMIN_MANAGEMENT = "/admin-management",
   CRITICAL_ALERTS = "/critical-alerts",
+  UPCOMING_TASKS = "/upcoming-tasks",
   PUBLIC_COMPLAINT_REGISTER = "/register-complaint",
   // Staff Portal
   STAFF_LOGIN = "/staff/login",

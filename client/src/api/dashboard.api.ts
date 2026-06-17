@@ -59,7 +59,11 @@ export interface DashboardResponse {
   };
 }
 
-export async function getDashboardApi(query?: { allAlerts?: boolean }): Promise<DashboardResponse> {
-  const qs = query?.allAlerts ? "?allAlerts=true" : "";
+export async function getDashboardApi(query?: { allAlerts?: boolean; allTasks?: boolean }): Promise<DashboardResponse> {
+  const params = new URLSearchParams();
+  if (query?.allAlerts) params.append("allAlerts", "true");
+  if (query?.allTasks) params.append("allTasks", "true");
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return await api.get(`/dashboard${qs}`);
 }
+

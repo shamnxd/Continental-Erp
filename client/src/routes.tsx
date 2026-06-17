@@ -49,6 +49,7 @@ import { WarrantyManagement } from "./features/warranty/WarrantyManagement";
 import { WarrantyDetail } from "./features/warranty/WarrantyDetail";
 import { Kanban } from "./features/kanban/Kanban";
 import { CriticalAlertsPage } from "./features/dashboard/CriticalAlertsPage";
+import { UpcomingTasksPage } from "./features/dashboard/UpcomingTasksPage";
 import { Login } from "./features/auth/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppRoute } from "./constants/routes.enum";
@@ -145,6 +146,7 @@ export const router = createBrowserRouter([
       { path: AppRoute.WARRANTY_DETAIL, element: <WarrantyDetail /> },
       { path: AppRoute.ADMIN_MANAGEMENT, element: <AdminManagement /> },
       { path: AppRoute.CRITICAL_ALERTS, element: <CriticalAlertsPage /> },
+      { path: AppRoute.UPCOMING_TASKS, element: <UpcomingTasksPage /> },
     ],
   },
   {

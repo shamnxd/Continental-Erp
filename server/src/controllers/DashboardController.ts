@@ -371,8 +371,9 @@ export class DashboardController {
       // Sort by date ascending (closest task first)
       mergedUpcoming.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Take top 4 and format for response
-      const upcomingTasks = mergedUpcoming.slice(0, 4).map((item) => {
+      // Take top 4 (or up to 100 if allTasks is true) and format for response
+      const upcomingTasksLimit = req.query.allTasks === "true" ? 100 : 4;
+      const upcomingTasks = mergedUpcoming.slice(0, upcomingTasksLimit).map((item) => {
         const timeStr = new Date(item.date).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
         const dateStr = new Date(item.date).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
         return {

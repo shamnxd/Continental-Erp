@@ -17,6 +17,8 @@ import {
   RefreshCw,
   FolderDot,
   Search,
+  Wrench,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -33,15 +35,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../componen
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { FilterStatChips } from "../../components/FilterStatChips";
 
+import { useDebounce } from "../../hooks/useDebounce";
+import { getKanbanApi } from "../../api/kanban.api";
 import {
-  getSchedulesApi,
   createScheduleApi,
   updateScheduleApi,
   completeScheduleApi,
 } from "../../api/schedule.api";
-import { getComplaintsApi, updateComplaintApi } from "../../api/complaint.api";
-import { getProjectsApi, updateProjectApi } from "../../api/project.api";
-import { getMinorJobsApi, updateMinorJobApi } from "../../api/minorJob.api";
+import { updateComplaintApi } from "../../api/complaint.api";
+import { updateProjectApi } from "../../api/project.api";
+import { updateMinorJobApi } from "../../api/minorJob.api";
 import { getStaffApi } from "../../api/staff.api";
 import { Schedule } from "../../interfaces/schedule.interface";
 import { Complaint } from "../../interfaces/complaint.interface";
@@ -60,7 +63,7 @@ interface KanbanTask {
   assignee: string;
   assignedStaffIds: string[];
   dueDate: string;
-  type: "Schedule" | "Complaint" | "Project" | "Minor Job" | "Custom";
+  type: "Schedule" | "Complaint" | "Project" | "Minor Job" | "Custom" | "Customer Complaint";
   stage: "todo" | "in-progress" | "review";
   reference: string;
   rawStatus: string;
@@ -83,15 +86,99 @@ const KANBAN_COLUMNS: Column[] = [
   { id: "review", title: "Review / Completion", color: "bg-slate-50/50 dark:bg-slate-900/40", borderColor: "border-t-indigo-500" },
 ];
 
+const getLeftBorderClass = (type: string) => {
+  const map: Record<string, string> = {
+    Schedule: "border-l-4 border-l-purple-500",
+    Complaint: "border-l-4 border-l-red-500",
+    Project: "border-l-4 border-l-green-500",
+    "Minor Job": "border-l-4 border-l-teal-500",
+    "Customer Complaint": "border-l-4 border-l-orange-500",
+    Custom: "border-l-4 border-l-pink-500",
+  };
+  return map[type] ?? "border-l-4 border-l-muted";
+};
+
+const getTypeTextClass = (type: string) => {
+  const map: Record<string, string> = {
+    Schedule: "text-purple-700 dark:text-purple-400",
+    Complaint: "text-red-700 dark:text-red-400",
+    Project: "text-green-700 dark:text-green-400",
+    "Minor Job": "text-teal-700 dark:text-teal-400",
+    "Customer Complaint": "text-orange-700 dark:text-orange-400",
+    Custom: "text-pink-700 dark:text-pink-400",
+  };
+  return map[type] ?? "text-muted-foreground";
+};
+
+const getInitials = (name: string) => {
+  const parts = name.split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const getTypeIcon = (type: string) => {
+  const className = "h-3.5 w-3.5 shrink-0";
+  switch (type) {
+    case "Schedule":
+      return <Calendar className={`${className} text-purple-600 dark:text-purple-400`} />;
+    case "Complaint":
+      return <AlertCircle className={`${className} text-red-650 dark:text-red-400`} />;
+    case "Project":
+      return <FolderDot className={`${className} text-green-650 dark:text-green-400`} />;
+    case "Minor Job":
+      return <Wrench className={`${className} text-teal-650 dark:text-teal-400`} />;
+    case "Customer Complaint":
+      return <MessageSquare className={`${className} text-orange-650 dark:text-orange-400`} />;
+    case "Custom":
+    default:
+      return <FileText className={`${className} text-pink-700 dark:text-pink-400`} />;
+  }
+};
+
 export function Kanban() {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<KanbanTask[]>([]);
+  const [tasksByColumn, setTasksByColumn] = useState<{
+    todo: KanbanTask[];
+    "in-progress": KanbanTask[];
+    review: KanbanTask[];
+  }>({ todo: [], "in-progress": [], review: [] });
+
+  const [hasMoreByColumn, setHasMoreByColumn] = useState<{
+    todo: boolean;
+    "in-progress": boolean;
+    review: boolean;
+  }>({ todo: false, "in-progress": false, review: false });
+
+  const [pageByColumn, setPageByColumn] = useState<{
+    todo: number;
+    "in-progress": number;
+    review: number;
+  }>({ todo: 1, "in-progress": 1, review: 1 });
+
+  const [loadingMoreByColumn, setLoadingMoreByColumn] = useState<{
+    todo: boolean;
+    "in-progress": boolean;
+    review: boolean;
+  }>({ todo: false, "in-progress": false, review: false });
+
+  const [counts, setCounts] = useState<Record<string, number>>({
+    all: 0,
+    Schedule: 0,
+    Complaint: 0,
+    Project: 0,
+    "Minor Job": 0,
+    "Customer Complaint": 0,
+    Custom: 0,
+  });
+
   const [staffList, setStaffList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
@@ -121,135 +208,32 @@ export function Kanban() {
   const loadAllData = useCallback(async (showIndicator = true) => {
     if (showIndicator) setIsRefreshing(true);
     try {
-      const [schedulesRes, complaintsRes, projectsRes, minorJobsRes, staffRes] = await Promise.all([
-        getSchedulesApi({ limit: 1000 }),
-        getComplaintsApi({ limit: 1000 }),
-        getProjectsApi({ limit: 1000 }),
-        getMinorJobsApi({ limit: 1000 }),
-        getStaffApi({ limit: 200, activeOnly: true }),
-      ]);
-
+      const staffRes = await getStaffApi({ limit: 200, activeOnly: true });
       if (staffRes.success) setStaffList(staffRes.data);
 
-      const loadedTasks: KanbanTask[] = [];
+      const res = await getKanbanApi({
+        search: debouncedSearch,
+        type: typeFilter,
+        priority: priorityFilter,
+        limit: 5,
+      });
 
-      // 1. Map Schedules
-      if (schedulesRes.success) {
-        schedulesRes.data.forEach((s) => {
-          // Check completed/cancelled logic
-          const isCompletedWithSMR = s.status === "Completed" && s.smrId;
-          const isCancelled = s.status === "Cancelled";
-          if (isCompletedWithSMR || isCancelled) return;
-
-          let stage: KanbanTask["stage"] = "todo";
-          if (s.status === "In Progress") {
-            stage = "in-progress";
-          } else if (s.status === "Pending" || s.status === "Completed") {
-            stage = "review";
-          }
-
-          const isCustom = s.entityId === "custom";
-
-          loadedTasks.push({
-            id: `schedule-${s.id}`,
-            dbId: s.id!,
-            title: s.title,
-            description: s.notes || "",
-            priority: "Medium", // Schedules default to Medium, can map if needed
-            assignee: s.assignedTo?.join(", ") || "Unassigned",
-            assignedStaffIds: s.assignedStaffIds || [],
-            dueDate: s.scheduledDate ? s.scheduledDate.split("T")[0] : "",
-            type: isCustom ? "Custom" : "Schedule",
-            stage,
-            reference: isCustom ? "CUSTOM" : s.entityNo,
-            rawStatus: s.status,
-            clientName: s.clientName,
-            notes: s.notes,
-            smrId: s.smrId,
-            entityType: s.entityType,
-          });
+      if (res.success && res.data) {
+        setTasksByColumn({
+          todo: res.data.todo?.data || [],
+          "in-progress": res.data["in-progress"]?.data || [],
+          review: res.data.review?.data || [],
         });
-      }
-
-      // 2. Map Complaints
-      if (complaintsRes.success) {
-        complaintsRes.data.forEach((c) => {
-          if (c.status === "Resolved") return; // complete resolution is hidden
-
-          let stage: KanbanTask["stage"] = "todo";
-          if (c.status === "In Progress") stage = "in-progress";
-
-          loadedTasks.push({
-            id: `complaint-${c.id}`,
-            dbId: c.id!,
-            title: c.issue,
-            description: c.description || "",
-            priority: (c.priority as any) || "Medium",
-            assignee: c.assignedTo?.join(", ") || "Unassigned",
-            assignedStaffIds: c.assignedStaffIds || [],
-            dueDate: c.expectedResolution ? c.expectedResolution.split("T")[0] : "",
-            type: "Complaint",
-            stage,
-            reference: c.complaintNo,
-            rawStatus: c.status,
-            clientName: c.clientName,
-          });
+        setHasMoreByColumn({
+          todo: !!res.data.todo?.hasMore,
+          "in-progress": !!res.data["in-progress"]?.hasMore,
+          review: !!res.data.review?.hasMore,
         });
+        setPageByColumn({ todo: 1, "in-progress": 1, review: 1 });
+        if (res.counts) {
+          setCounts(res.counts);
+        }
       }
-
-      // 3. Map Projects
-      if (projectsRes.success) {
-        projectsRes.data.forEach((p) => {
-          if (p.status === "Completed") return;
-
-          let stage: KanbanTask["stage"] = "todo";
-          if (p.status === "Active") stage = "in-progress";
-
-          loadedTasks.push({
-            id: `project-${p.id}`,
-            dbId: p.id!,
-            title: p.name,
-            description: `Value: ₹${p.value.toLocaleString("en-IN")}`,
-            priority: "High",
-            assignee: "Manager",
-            assignedStaffIds: [],
-            dueDate: p.expectedCompletionDate ? p.expectedCompletionDate.split("T")[0] : "",
-            type: "Project",
-            stage,
-            reference: p.projectNo,
-            rawStatus: p.status,
-            clientName: typeof p.clientRef === "object" && p.clientRef ? p.clientRef.companyName : "—",
-          });
-        });
-      }
-
-      // 4. Map Minor Jobs
-      if (minorJobsRes.success) {
-        minorJobsRes.data.forEach((j) => {
-          if (j.status === "Completed") return;
-
-          let stage: KanbanTask["stage"] = "todo";
-          if (j.status === "In Progress") stage = "in-progress";
-
-          loadedTasks.push({
-            id: `minorjob-${j.id}`,
-            dbId: j.id!,
-            title: j.description,
-            description: `Scheduled Date: ${j.scheduledDate ? new Date(j.scheduledDate).toLocaleDateString() : "—"}`,
-            priority: "Medium",
-            assignee: j.assignedTo || "Unassigned",
-            assignedStaffIds: j.assignedStaffId ? [j.assignedStaffId] : [],
-            dueDate: j.scheduledDate ? j.scheduledDate.split("T")[0] : "",
-            type: "Minor Job",
-            stage,
-            reference: j.jobNo,
-            rawStatus: j.status,
-            clientName: typeof j.clientRef === "object" && j.clientRef ? j.clientRef.companyName : "—",
-          });
-        });
-      }
-
-      setTasks(loadedTasks);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load Kanban tasks");
@@ -257,7 +241,50 @@ export function Kanban() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [debouncedSearch, typeFilter, priorityFilter]);
+
+  const loadMoreTasks = async (columnId: KanbanTask["stage"]) => {
+    const nextPage = pageByColumn[columnId] + 1;
+    setLoadingMoreByColumn((prev) => ({ ...prev, [columnId]: true }));
+    try {
+      const res = await getKanbanApi({
+        search: debouncedSearch,
+        type: typeFilter,
+        priority: priorityFilter,
+        stage: columnId,
+        page: nextPage,
+        limit: 5,
+      });
+
+      if (res.success && Array.isArray(res.data)) {
+        setTasksByColumn((prev) => ({
+          ...prev,
+          [columnId]: [...prev[columnId], ...res.data],
+        }));
+        setHasMoreByColumn((prev) => ({
+          ...prev,
+          [columnId]: !!res.hasMore,
+        }));
+        setPageByColumn((prev) => ({
+          ...prev,
+          [columnId]: nextPage,
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(`Failed to load more ${columnId} tasks`);
+    } finally {
+      setLoadingMoreByColumn((prev) => ({ ...prev, [columnId]: false }));
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>, columnId: KanbanTask["stage"]) => {
+    const target = e.currentTarget;
+    const isNearBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 20;
+    if (isNearBottom && hasMoreByColumn[columnId] && !loadingMoreByColumn[columnId]) {
+      loadMoreTasks(columnId);
+    }
+  };
 
   useEffect(() => {
     loadAllData(true);
@@ -267,6 +294,17 @@ export function Kanban() {
 
   const handleTransition = async (task: KanbanTask, targetStage: KanbanTask["stage"]) => {
     if (task.stage === targetStage) return;
+
+    if (task.type === "Customer Complaint") {
+      toast("Customer complaints cannot be transitioned directly on the board. Please convert them to a registered complaint first.", {
+        action: {
+          label: "Convert",
+          onClick: () => navigate(`/customer-complaints/${task.dbId}`),
+        },
+        duration: 8000,
+      });
+      return;
+    }
 
     // Handle Schedule completion when moving to review
     if ((task.type === "Schedule" || task.type === "Custom") && targetStage === "review") {
@@ -344,7 +382,14 @@ export function Kanban() {
     setDraggedTaskId(null);
 
     if (!id) return;
-    const task = tasks.find((t) => t.id === id);
+    let task: KanbanTask | undefined;
+    for (const col of Object.values(tasksByColumn)) {
+      const found = col.find((t) => t.id === id);
+      if (found) {
+        task = found;
+        break;
+      }
+    }
     if (!task || task.stage === targetColumnId) return;
 
     await handleTransition(task, targetColumnId);
@@ -406,7 +451,14 @@ export function Kanban() {
     if (!completeTaskId || !completionDateInput) return;
 
     setIsCompleting(true);
-    const targetTask = tasks.find((t) => t.id === completeTaskId);
+    let targetTask: KanbanTask | undefined;
+    for (const col of Object.values(tasksByColumn)) {
+      const found = col.find((t) => t.id === completeTaskId);
+      if (found) {
+        targetTask = found;
+        break;
+      }
+    }
     if (!targetTask) {
       setIsCompleting(false);
       return;
@@ -453,6 +505,7 @@ export function Kanban() {
       Complaint: "bg-red-500/10 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30",
       Project: "bg-green-500/10 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/30",
       "Minor Job": "bg-teal-500/10 text-teal-700 border-teal-200 dark:bg-teal-950/20 dark:text-teal-400 dark:border-teal-900/30",
+      "Customer Complaint": "bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30",
       Custom: "bg-pink-500/10 text-pink-700 border-pink-200 dark:bg-pink-950/20 dark:text-pink-400 dark:border-pink-900/30",
     };
     return map[type] ?? "bg-muted text-muted-foreground border-border";
@@ -478,62 +531,17 @@ export function Kanban() {
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
 
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
-      if (typeFilter !== "all" && t.type !== typeFilter) return false;
-      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          t.title.toLowerCase().includes(q) ||
-          (t.clientName && t.clientName.toLowerCase().includes(q)) ||
-          (t.reference && t.reference.toLowerCase().includes(q))
-        );
-      }
-      return true;
-    });
-  }, [tasks, typeFilter, priorityFilter, searchQuery]);
-
   const currentFilterOptions = useMemo(() => {
-    const baseTasks = tasks.filter((t) => {
-      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        return (
-          t.title.toLowerCase().includes(q) ||
-          (t.clientName && t.clientName.toLowerCase().includes(q)) ||
-          (t.reference && t.reference.toLowerCase().includes(q))
-        );
-      }
-      return true;
-    });
-
     return [
-      { value: "all", label: "All Tasks", count: baseTasks.length, tone: "pink" as const },
-      { value: "Schedule", label: "Schedules", count: baseTasks.filter((t) => t.type === "Schedule").length, tone: "blue" as const },
-      { value: "Complaint", label: "Complaints", count: baseTasks.filter((t) => t.type === "Complaint").length, tone: "red" as const },
-      { value: "Project", label: "Projects", count: baseTasks.filter((t) => t.type === "Project").length, tone: "green" as const },
-      { value: "Minor Job", label: "Minor Jobs", count: baseTasks.filter((t) => t.type === "Minor Job").length, tone: "amber" as const },
-      { value: "Custom", label: "Custom Tasks", count: baseTasks.filter((t) => t.type === "Custom").length, tone: "muted" as const },
+      { value: "all", label: "All Tasks", count: counts.all || 0, tone: "pink" as const },
+      { value: "Schedule", label: "Schedules", count: counts.Schedule || 0, tone: "blue" as const },
+      { value: "Complaint", label: "Complaints", count: counts.Complaint || 0, tone: "red" as const },
+      { value: "Project", label: "Projects", count: counts.Project || 0, tone: "green" as const },
+      { value: "Minor Job", label: "Minor Jobs", count: counts["Minor Job"] || 0, tone: "amber" as const },
+      { value: "Customer Complaint", label: "Customer Complaints", count: counts["Customer Complaint"] || 0, tone: "orange" as const },
+      { value: "Custom", label: "Custom Tasks", count: counts.Custom || 0, tone: "muted" as const },
     ];
-  }, [tasks, priorityFilter, searchQuery]);
-
-  const tasksByColumn = useMemo(() => {
-    return {
-      todo: filteredTasks.filter((t) => t.stage === "todo"),
-      "in-progress": filteredTasks.filter((t) => t.stage === "in-progress"),
-      review: filteredTasks.filter((t) => t.stage === "review"),
-    };
-  }, [filteredTasks]);
-
-  const stats = useMemo(() => {
-    return {
-      total: filteredTasks.length,
-      todo: filteredTasks.filter((t) => t.stage === "todo").length,
-      inProgress: filteredTasks.filter((t) => t.stage === "in-progress").length,
-      review: filteredTasks.filter((t) => t.stage === "review").length,
-    };
-  }, [filteredTasks]);
+  }, [counts]);
 
   if (isLoading) {
     return (
@@ -574,7 +582,7 @@ export function Kanban() {
       </div>
 
       {/* Main Card Wrapper */}
-      <div className="bg-card rounded-lg shadow-sm border border-border p-4 space-y-4">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-4">
         {/* Search & Priority Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -583,14 +591,14 @@ export function Kanban() {
               placeholder="Search tasks by title, client, or reference number..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 rounded-lg text-sm"
+              className="pl-10 h-11 !rounded-xl text-sm"
             />
           </div>
           <Select
             value={priorityFilter}
             onValueChange={setPriorityFilter}
           >
-            <SelectTrigger className="!h-11 rounded-lg px-4 text-sm w-[180px] border-input">
+            <SelectTrigger className="!h-11 !rounded-xl !px-4 text-sm w-[180px] border-input">
               <SelectValue placeholder="All Priorities" />
             </SelectTrigger>
             <SelectContent>
@@ -619,7 +627,7 @@ export function Kanban() {
             return (
               <div
                 key={column.id}
-                className={`flex flex-col min-h-[550px] rounded-lg border border-border border-t-4 ${column.borderColor} ${column.color} transition-all ${
+                className={`flex flex-col h-[calc(100vh-270px)] min-h-[500px] rounded-xl border border-border border-t-4 ${column.borderColor} ${column.color} transition-all ${
                   isOver ? "ring-2 ring-pink-500/20 bg-pink-500/5" : ""
                 }`}
                 onDragOver={(e) => handleDragOver(e, column.id)}
@@ -627,7 +635,7 @@ export function Kanban() {
                 onDragLeave={handleDragLeave}
               >
                 {/* Column Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 rounded-t-lg">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 rounded-t-xl shrink-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-foreground text-sm tracking-wide">{column.title}</h3>
                     <span className="text-xs font-bold text-muted-foreground bg-background border border-border px-2.5 py-0.5 rounded-full shadow-2xs">
@@ -637,146 +645,183 @@ export function Kanban() {
                 </div>
 
                 {/* Tasks List */}
-                <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[70vh]">
+                <div
+                  onScroll={(e) => handleScroll(e, column.id)}
+                  className="p-3 space-y-3 flex-1 overflow-y-auto relative"
+                >
                   {colTasks.length === 0 ? (
                     <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-5 opacity-40 border border-dashed border-border/50 rounded-xl bg-card/10">
                       <AlertCircle className="h-7 w-7 text-muted-foreground mb-1.5" />
                       <p className="text-xs font-semibold">No active tasks here</p>
                     </div>
                   ) : (
-                    colTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task.id)}
-                        className="bg-card rounded-lg border border-border p-3 h-[160px] flex flex-col justify-between shadow-sm hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all cursor-grab active:cursor-grabbing group relative"
-                      >
-                        {/* Section 1: Reference and navigation */}
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-start justify-between gap-1.5 min-w-0">
-                            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase bg-muted/60 px-1.5 py-0.5 rounded border border-border/30 shrink-0">
-                              {task.reference}
-                            </span>
+                    colTasks.map((task) => {
+                      const assignees = task.assignee && task.assignee !== "Unassigned"
+                        ? task.assignee.split(",").map((n) => n.trim()).filter(Boolean)
+                        : [];
 
-                            {/* Transitions Navigation Buttons */}
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                              {column.id !== "todo" && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  title="Move back"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const prev: Record<string, KanbanTask["stage"]> = {
-                                      "in-progress": "todo",
-                                      review: "in-progress",
-                                    };
-                                    handleTransition(task, prev[column.id]);
-                                  }}
-                                >
-                                  <ArrowLeft className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {column.id !== "review" && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                  title="Move forward"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const next: Record<string, KanbanTask["stage"]> = {
-                                      todo: "in-progress",
-                                      "in-progress": "review",
-                                    };
-                                    handleTransition(task, next[column.id]);
-                                  }}
-                                >
-                                  <ArrowRight className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          <h4 className="font-semibold text-foreground text-xs leading-snug group-hover:text-pink-700 transition-colors line-clamp-1 pr-6" title={task.title}>
-                            {task.title}
-                          </h4>
-                        </div>
-
-                        {/* Section 2: Client Subtitle & Description */}
-                        <div className="space-y-1 min-w-0">
-                          {task.clientName && (
-                            <div className="text-[10px] text-muted-foreground truncate font-medium bg-muted/40 px-2 py-0.5 rounded border border-border/20 w-fit">
-                              Client: <span className="font-semibold text-foreground">{task.clientName}</span>
-                            </div>
-                          )}
-                          {task.description ? (
-                            <p className="text-[11px] text-muted-foreground line-clamp-1 leading-normal">
-                              {task.description}
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-muted-foreground/40 italic">No details provided</p>
-                          )}
-                        </div>
-
-                        {/* Section 3: Badges/Tags */}
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border uppercase tracking-wide shrink-0 ${getTypeStyle(task.type)}`}>
-                            {task.type}
-                          </span>
-                          <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border uppercase tracking-wide shrink-0 ${getPriorityStyle(task.priority)}`}>
-                            {task.priority}
-                          </span>
-                        </div>
-
-                        {/* Section 4: Card Footer */}
-                        <div className="flex items-center justify-between pt-1.5 border-t border-border/30 min-w-0">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <User className="h-3 w-3 text-pink-700 shrink-0" />
-                            <span className="text-[10px] font-medium text-muted-foreground truncate" title={task.assignee}>
-                              {task.assignee}
-                            </span>
-                          </div>
-
-                          {task.dueDate && (
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0">
-                              <Calendar className="h-3 w-3 text-pink-650" />
-                              {new Date(task.dueDate).toLocaleDateString("en-IN", {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* View Details Link Overlay */}
-                        {task.type !== "Custom" && (
-                          <div className="absolute right-2 top-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-6 w-6 border-pink-200 text-pink-700 hover:bg-pink-50"
-                              asChild
-                              title="Open Detail Page"
-                            >
-                              <Link to={
+                      return (
+                        <div
+                          key={task.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, task.id)}
+                          onClick={() => {
+                            if (task.type !== "Custom") {
+                              const url =
                                 task.type === "Complaint"
                                   ? `/complaints/${task.dbId}`
+                                  : task.type === "Customer Complaint"
+                                  ? `/customer-complaints/${task.dbId}`
                                   : task.type === "Project"
                                   ? `/projects/${task.dbId}`
                                   : task.type === "Minor Job"
                                   ? `/minor-jobs/${task.dbId}`
-                                  : `/schedules/${task.dbId}`
-                              }>
-                                <Eye className="h-3 w-3" />
-                              </Link>
-                            </Button>
+                                  : `/schedules/${task.dbId}`;
+                              navigate(url);
+                            }
+                          }}
+                          className={`bg-card rounded-xl border border-border p-3 h-[160px] flex flex-col justify-between shadow-sm hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all ${getLeftBorderClass(task.type)} ${
+                            task.type !== "Custom" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                          } group relative`}
+                        >
+                          {/* Section 1: Header (Type with Icon, transitions & Reference ID) */}
+                          <div className="flex items-center justify-between gap-1.5 w-full shrink-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              {getTypeIcon(task.type)}
+                              <span className={`text-[9px] font-bold tracking-wider uppercase truncate ${getTypeTextClass(task.type)}`}>
+                                {task.type === "Schedule" && task.entityType
+                                  ? `${task.type} • ${task.entityType}`
+                                  : task.type}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {/* Navigation arrows (hover visible only) */}
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                {column.id !== "todo" && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    title="Move back"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const prev: Record<string, KanbanTask["stage"]> = {
+                                        "in-progress": "todo",
+                                        review: "in-progress",
+                                      };
+                                      handleTransition(task, prev[column.id]);
+                                    }}
+                                  >
+                                    <ArrowLeft className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {column.id !== "review" && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                    title="Move forward"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const next: Record<string, KanbanTask["stage"]> = {
+                                        todo: "in-progress",
+                                        "in-progress": "review",
+                                      };
+                                      handleTransition(task, next[column.id]);
+                                    }}
+                                  >
+                                    <ArrowRight className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase bg-muted/60 px-1.5 py-0.5 rounded border border-border/30 shrink-0">
+                                {task.reference}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))
+
+                          {/* Section 2: Title */}
+                          <div className="mt-1 min-w-0">
+                            <h4 className="font-bold text-foreground text-xs leading-snug group-hover:text-pink-700 transition-colors line-clamp-1" title={task.title}>
+                              {task.title}
+                            </h4>
+                          </div>
+
+                          {/* Section 3: Client Subtitle & Priority */}
+                          <div className="flex items-center justify-between gap-1.5 w-full mt-1 shrink-0">
+                            {task.clientName ? (
+                              <div className="text-[10px] text-muted-foreground truncate font-medium bg-muted/40 px-2 py-0.5 rounded border border-border/20 max-w-[70%]" title={task.clientName}>
+                                Client: <span className="font-semibold text-foreground">{task.clientName}</span>
+                              </div>
+                            ) : (
+                              <div />
+                            )}
+                            <span className={`px-1.5 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wide shrink-0 ${getPriorityStyle(task.priority)}`}>
+                              {task.priority}
+                            </span>
+                          </div>
+
+                          {/* Section 4: Description (fills space and is line-clamp-1) */}
+                          <div className="flex-1 mt-1 min-w-0">
+                            {task.description ? (
+                              <p className="text-[11px] text-muted-foreground line-clamp-1 leading-normal">
+                                {task.description}
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground/40 italic">No details provided</p>
+                            )}
+                          </div>
+
+                          {/* Section 5: Card Footer (Assignee Initials Stack & Due Date) */}
+                          <div className="flex items-center justify-between pt-1.5 border-t border-border/30 min-w-0 mt-1.5">
+                            {assignees.length === 0 ? (
+                              <div className="flex items-center gap-1 text-muted-foreground/60 text-[10px]">
+                                <User className="h-3.5 w-3.5" />
+                                <span>Unassigned</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center min-w-0" title={task.assignee}>
+                                <div className="flex -space-x-1.5 overflow-hidden mr-1.5 shrink-0">
+                                  {assignees.slice(0, 3).map((name, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-pink-750 dark:bg-pink-850 text-white text-[9px] font-bold ring-1 ring-background shrink-0"
+                                    >
+                                      {getInitials(name)}
+                                    </div>
+                                  ))}
+                                  {assignees.length > 3 && (
+                                    <div className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-muted-foreground text-[8px] font-bold ring-1 ring-background shrink-0">
+                                      +{assignees.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-medium text-muted-foreground truncate max-w-[80px]">
+                                  {assignees.length === 1 ? assignees[0] : `${assignees.length} assigned`}
+                                </span>
+                              </div>
+                            )}
+
+                            {task.dueDate && (
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0">
+                                <Calendar className="h-3 w-3 text-pink-650" />
+                                {new Date(task.dueDate).toLocaleDateString("en-IN", {
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  {loadingMoreByColumn[column.id] && (
+                    <div className="flex justify-center py-2 text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin text-pink-700" />
+                    </div>
                   )}
                 </div>
               </div>
@@ -787,7 +832,7 @@ export function Kanban() {
 
       {/* Add Custom Task Dialog */}
       <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5 rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Plus className="h-4 w-4 text-pink-700" />
@@ -873,7 +918,7 @@ export function Kanban() {
 
       {/* Mark Complete Dialog (Schedules) */}
       <Dialog open={completeTaskId !== null} onOpenChange={(open) => !open && setCompleteTaskId(null)}>
-        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
+        <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5 rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />Mark Schedule as Completed

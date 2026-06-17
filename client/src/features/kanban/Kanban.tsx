@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   RefreshCw,
   FolderDot,
+  Search,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -30,6 +31,7 @@ import {
 } from "../../components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
+import { FilterStatChips } from "../../components/FilterStatChips";
 
 import {
   getSchedulesApi,
@@ -76,9 +78,9 @@ interface Column {
 }
 
 const KANBAN_COLUMNS: Column[] = [
-  { id: "todo", title: "To Do", color: "bg-pink-50/25 dark:bg-pink-950/5", borderColor: "border-pink-200/50 dark:border-pink-900/30" },
-  { id: "in-progress", title: "In Progress", color: "bg-blue-50/25 dark:bg-blue-950/5", borderColor: "border-blue-200/50 dark:border-blue-900/30" },
-  { id: "review", title: "Review / Completion", color: "bg-amber-50/25 dark:bg-amber-950/5", borderColor: "border-amber-200/50 dark:border-amber-900/30" },
+  { id: "todo", title: "To Do", color: "bg-slate-50/50 dark:bg-slate-900/40", borderColor: "border-t-blue-500" },
+  { id: "in-progress", title: "In Progress", color: "bg-slate-50/50 dark:bg-slate-900/40", borderColor: "border-t-amber-500" },
+  { id: "review", title: "Review / Completion", color: "bg-slate-50/50 dark:bg-slate-900/40", borderColor: "border-t-indigo-500" },
 ];
 
 export function Kanban() {
@@ -89,6 +91,7 @@ export function Kanban() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters
+  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
@@ -479,9 +482,41 @@ export function Kanban() {
     return tasks.filter((t) => {
       if (typeFilter !== "all" && t.type !== typeFilter) return false;
       if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.title.toLowerCase().includes(q) ||
+          (t.clientName && t.clientName.toLowerCase().includes(q)) ||
+          (t.reference && t.reference.toLowerCase().includes(q))
+        );
+      }
       return true;
     });
-  }, [tasks, typeFilter, priorityFilter]);
+  }, [tasks, typeFilter, priorityFilter, searchQuery]);
+
+  const currentFilterOptions = useMemo(() => {
+    const baseTasks = tasks.filter((t) => {
+      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          t.title.toLowerCase().includes(q) ||
+          (t.clientName && t.clientName.toLowerCase().includes(q)) ||
+          (t.reference && t.reference.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+
+    return [
+      { value: "all", label: "All Tasks", count: baseTasks.length, tone: "pink" as const },
+      { value: "Schedule", label: "Schedules", count: baseTasks.filter((t) => t.type === "Schedule").length, tone: "blue" as const },
+      { value: "Complaint", label: "Complaints", count: baseTasks.filter((t) => t.type === "Complaint").length, tone: "red" as const },
+      { value: "Project", label: "Projects", count: baseTasks.filter((t) => t.type === "Project").length, tone: "green" as const },
+      { value: "Minor Job", label: "Minor Jobs", count: baseTasks.filter((t) => t.type === "Minor Job").length, tone: "amber" as const },
+      { value: "Custom", label: "Custom Tasks", count: baseTasks.filter((t) => t.type === "Custom").length, tone: "muted" as const },
+    ];
+  }, [tasks, priorityFilter, searchQuery]);
 
   const tasksByColumn = useMemo(() => {
     return {
@@ -500,8 +535,6 @@ export function Kanban() {
     };
   }, [filteredTasks]);
 
-  // ─── Render View ───────────────────────────────────────────────────────────
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-muted-foreground">
@@ -510,34 +543,29 @@ export function Kanban() {
       </div>
     );
   }
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card rounded-2xl border border-border/80 shadow-sm p-4 sm:p-5">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <FolderDot className="h-5 w-5 text-pink-700" />
-            Kanban Task Board
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Kanban Task Board</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Concurrently synchronized task workspace across schedules, complaints, projects, and custom works.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="sm"
             onClick={() => loadAllData(true)}
-            className="h-9 gap-1.5 font-semibold text-xs text-muted-foreground hover:text-foreground"
+            className="h-9 gap-1.5 border-border hover:bg-muted text-muted-foreground hover:text-foreground font-semibold text-sm"
             disabled={isRefreshing}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
           <Button
             onClick={() => setIsAddTaskOpen(true)}
-            className="h-9 bg-pink-700 hover:bg-pink-800 text-white font-semibold text-xs gap-1.5 transition-all shadow-sm"
+            className="bg-pink-700 hover:bg-pink-800 text-white font-semibold h-9 gap-1.5 transition-all text-sm shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Add Custom Task
@@ -545,225 +573,223 @@ export function Kanban() {
         </div>
       </div>
 
-      {/* Filters Toolbar */}
-      <div className="bg-card rounded-2xl shadow-xs border border-border/70 p-4 flex flex-wrap items-center justify-between gap-4">
-        {/* Type Filter Tabs */}
-        <div className="space-y-1">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Filter by Type</span>
-          <div className="flex gap-1.5 flex-wrap">
-            {["all", "Schedule", "Complaint", "Project", "Minor Job", "Custom"].map((type) => (
-              <button
-                key={type}
-                onClick={() => setTypeFilter(type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all border ${
-                  typeFilter === type
-                    ? "bg-pink-700 text-white border-pink-700 shadow-xs"
-                    : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/80 hover:text-foreground"
-                }`}
-              >
-                {type === "all" ? "All Tasks" : type}
-              </button>
-            ))}
+      {/* Main Card Wrapper */}
+      <div className="bg-card rounded-lg shadow-sm border border-border p-4 space-y-4">
+        {/* Search & Priority Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks by title, client, or reference number..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 rounded-lg text-sm"
+            />
           </div>
+          <Select
+            value={priorityFilter}
+            onValueChange={setPriorityFilter}
+          >
+            <SelectTrigger className="!h-11 rounded-lg px-4 text-sm w-[180px] border-input">
+              <SelectValue placeholder="All Priorities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="Critical">Critical</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Priority Filter */}
-        <div className="space-y-1">
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Priority</span>
-          <div className="flex gap-1.5">
-            {["all", "Critical", "High", "Medium", "Low"].map((prio) => (
-              <button
-                key={prio}
-                onClick={() => setPriorityFilter(prio)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                  priorityFilter === prio
-                    ? "bg-pink-50 border-pink-200 text-pink-700 dark:bg-pink-950/40 dark:border-pink-900/50"
-                    : "bg-transparent text-muted-foreground border-transparent hover:bg-muted/30"
+        {/* Type Filter Chips */}
+        <FilterStatChips
+          options={currentFilterOptions}
+          value={typeFilter}
+          onChange={setTypeFilter}
+        />
+
+        {/* Column Boards Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 pt-2">
+          {KANBAN_COLUMNS.map((column) => {
+            const colTasks = tasksByColumn[column.id] || [];
+            const isOver = dragOverColumn === column.id;
+
+            return (
+              <div
+                key={column.id}
+                className={`flex flex-col min-h-[550px] rounded-lg border border-border border-t-4 ${column.borderColor} ${column.color} transition-all ${
+                  isOver ? "ring-2 ring-pink-500/20 bg-pink-500/5" : ""
                 }`}
+                onDragOver={(e) => handleDragOver(e, column.id)}
+                onDrop={(e) => handleDrop(e, column.id)}
+                onDragLeave={handleDragLeave}
               >
-                {prio === "all" ? "All Priorities" : prio}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Column Boards Container */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {KANBAN_COLUMNS.map((column) => {
-          const colTasks = tasksByColumn[column.id] || [];
-          const isOver = dragOverColumn === column.id;
-
-          return (
-            <div
-              key={column.id}
-              className={`flex flex-col min-h-[550px] rounded-2xl border transition-all ${column.borderColor} ${column.color} ${
-                isOver ? "ring-2 ring-pink-500/20 bg-pink-500/5" : ""
-              }`}
-              onDragOver={(e) => handleDragOver(e, column.id)}
-              onDrop={(e) => handleDrop(e, column.id)}
-              onDragLeave={handleDragLeave}
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border/40 bg-card/60 backdrop-blur-xs rounded-t-2xl">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${
-                    column.id === "todo" ? "bg-pink-600" : column.id === "in-progress" ? "bg-blue-600" : "bg-amber-600"
-                  }`} />
-                  <h3 className="font-bold text-foreground text-xs uppercase tracking-widest">{column.title}</h3>
-                  <span className="text-[10px] font-bold text-muted-foreground bg-muted border px-2 py-0.5 rounded-full">
-                    {colTasks.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Tasks List */}
-              <div className="p-3.5 space-y-3.5 flex-1 overflow-y-auto max-h-[70vh]">
-                {colTasks.length === 0 ? (
-                  <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-5 opacity-40 border border-dashed border-border/50 rounded-xl bg-card/10">
-                    <AlertCircle className="h-7 w-7 text-muted-foreground mb-1.5" />
-                    <p className="text-xs font-semibold">No active tasks here</p>
+                {/* Column Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/10 rounded-t-lg">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-foreground text-sm tracking-wide">{column.title}</h3>
+                    <span className="text-xs font-bold text-muted-foreground bg-background border border-border px-2.5 py-0.5 rounded-full shadow-2xs">
+                      {colTasks.length}
+                    </span>
                   </div>
-                ) : (
-                  colTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                      className="bg-card rounded-xl border border-border p-4 shadow-2xs hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all cursor-grab active:cursor-grabbing group relative space-y-3"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-start justify-between gap-1.5">
-                        <div className="space-y-0.5">
-                          <span className="text-[9px] font-bold tracking-wider text-muted-foreground uppercase">
-                            {task.reference}
-                          </span>
-                          <h4 className="font-bold text-foreground text-[13px] leading-snug group-hover:text-pink-700 transition-colors">
+                </div>
+
+                {/* Tasks List */}
+                <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[70vh]">
+                  {colTasks.length === 0 ? (
+                    <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center p-5 opacity-40 border border-dashed border-border/50 rounded-xl bg-card/10">
+                      <AlertCircle className="h-7 w-7 text-muted-foreground mb-1.5" />
+                      <p className="text-xs font-semibold">No active tasks here</p>
+                    </div>
+                  ) : (
+                    colTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task.id)}
+                        className="bg-card rounded-lg border border-border p-3 h-[160px] flex flex-col justify-between shadow-sm hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all cursor-grab active:cursor-grabbing group relative"
+                      >
+                        {/* Section 1: Reference and navigation */}
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-start justify-between gap-1.5 min-w-0">
+                            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase bg-muted/60 px-1.5 py-0.5 rounded border border-border/30 shrink-0">
+                              {task.reference}
+                            </span>
+
+                            {/* Transitions Navigation Buttons */}
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              {column.id !== "todo" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  title="Move back"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const prev: Record<string, KanbanTask["stage"]> = {
+                                      "in-progress": "todo",
+                                      review: "in-progress",
+                                    };
+                                    handleTransition(task, prev[column.id]);
+                                  }}
+                                >
+                                  <ArrowLeft className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {column.id !== "review" && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                  title="Move forward"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const next: Record<string, KanbanTask["stage"]> = {
+                                      todo: "in-progress",
+                                      "in-progress": "review",
+                                    };
+                                    handleTransition(task, next[column.id]);
+                                  }}
+                                >
+                                  <ArrowRight className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <h4 className="font-semibold text-foreground text-xs leading-snug group-hover:text-pink-700 transition-colors line-clamp-1 pr-6" title={task.title}>
                             {task.title}
                           </h4>
                         </div>
 
-                        {/* Transitions Navigation Buttons */}
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {column.id !== "todo" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
-                              title="Move back"
-                              onClick={() => {
-                                const prev: Record<string, KanbanTask["stage"]> = {
-                                  "in-progress": "todo",
-                                  review: "in-progress",
-                                };
-                                handleTransition(task, prev[column.id]);
-                              }}
-                            >
-                              <ArrowLeft className="h-3 w-3" />
-                            </Button>
+                        {/* Section 2: Client Subtitle & Description */}
+                        <div className="space-y-1 min-w-0">
+                          {task.clientName && (
+                            <div className="text-[10px] text-muted-foreground truncate font-medium bg-muted/40 px-2 py-0.5 rounded border border-border/20 w-fit">
+                              Client: <span className="font-semibold text-foreground">{task.clientName}</span>
+                            </div>
                           )}
-                          {column.id !== "review" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted"
-                              title="Move forward"
-                              onClick={() => {
-                                const next: Record<string, KanbanTask["stage"]> = {
-                                  todo: "in-progress",
-                                  "in-progress": "review",
-                                };
-                                handleTransition(task, next[column.id]);
-                              }}
-                            >
-                              <ArrowRight className="h-3 w-3" />
-                            </Button>
+                          {task.description ? (
+                            <p className="text-[11px] text-muted-foreground line-clamp-1 leading-normal">
+                              {task.description}
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-muted-foreground/40 italic">No details provided</p>
                           )}
                         </div>
-                      </div>
 
-                      {/* Client Subtitle */}
-                      {task.clientName && (
-                        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider bg-muted/40 px-2 py-0.5 rounded w-fit border border-border/30">
-                          {task.clientName}
-                        </p>
-                      )}
-
-                      {/* Description */}
-                      {task.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {task.description}
-                        </p>
-                      )}
-
-                      {/* Badges/Tags */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
-                        <span className={`px-2 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wider ${getTypeStyle(task.type)}`}>
-                          {task.type}
-                        </span>
-                        <span className={`px-2 py-0.5 text-[9px] font-bold rounded border uppercase tracking-wider ${getPriorityStyle(task.priority)}`}>
-                          {task.priority}
-                        </span>
-                      </div>
-
-                      {/* Card Footer */}
-                      <div className="flex items-center justify-between pt-2 border-t border-border/40">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <User className="h-3 w-3 text-pink-700 shrink-0" />
-                          <span className="text-[10px] font-semibold text-muted-foreground truncate" title={task.assignee}>
-                            {task.assignee}
+                        {/* Section 3: Badges/Tags */}
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border uppercase tracking-wide shrink-0 ${getTypeStyle(task.type)}`}>
+                            {task.type}
+                          </span>
+                          <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border uppercase tracking-wide shrink-0 ${getPriorityStyle(task.priority)}`}>
+                            {task.priority}
                           </span>
                         </div>
 
-                        {task.dueDate && (
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0">
-                            <Calendar className="h-3.5 w-3.5 text-pink-600" />
-                            {new Date(task.dueDate).toLocaleDateString("en-IN", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                        {/* Section 4: Card Footer */}
+                        <div className="flex items-center justify-between pt-1.5 border-t border-border/30 min-w-0">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <User className="h-3 w-3 text-pink-700 shrink-0" />
+                            <span className="text-[10px] font-medium text-muted-foreground truncate" title={task.assignee}>
+                              {task.assignee}
+                            </span>
+                          </div>
+
+                          {task.dueDate && (
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0">
+                              <Calendar className="h-3 w-3 text-pink-650" />
+                              {new Date(task.dueDate).toLocaleDateString("en-IN", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* View Details Link Overlay */}
+                        {task.type !== "Custom" && (
+                          <div className="absolute right-2 top-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6 border-pink-200 text-pink-700 hover:bg-pink-50"
+                              asChild
+                              title="Open Detail Page"
+                            >
+                              <Link to={
+                                task.type === "Complaint"
+                                  ? `/complaints/${task.dbId}`
+                                  : task.type === "Project"
+                                  ? `/projects/${task.dbId}`
+                                  : task.type === "Minor Job"
+                                  ? `/minor-jobs/${task.dbId}`
+                                  : `/schedules/${task.dbId}`
+                              }>
+                                <Eye className="h-3 w-3" />
+                              </Link>
+                            </Button>
                           </div>
                         )}
                       </div>
-
-                      {/* View Details Link Overlay */}
-                      {task.type !== "Custom" && (
-                        <div className="absolute right-3 top-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6 border-pink-200 text-pink-700 hover:bg-pink-50"
-                            asChild
-                            title="Open Detail Page"
-                          >
-                            <Link to={
-                              task.type === "Complaint"
-                                ? `/complaints/${task.dbId}`
-                                : task.type === "Project"
-                                ? `/projects/${task.dbId}`
-                                : task.type === "Minor Job"
-                                ? `/minor-jobs/${task.dbId}`
-                                : `/schedules/${task.dbId}`
-                            }>
-                              <Eye className="h-3 w-3" />
-                            </Link>
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Add Custom Task Dialog */}
       <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
         <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Plus className="h-4 w-4 text-pink-700" />
               Add Custom Task
             </DialogTitle>
@@ -849,7 +875,7 @@ export function Kanban() {
       <Dialog open={completeTaskId !== null} onOpenChange={(open) => !open && setCompleteTaskId(null)}>
         <DialogContent className="max-w-md bg-card border border-border shadow-lg p-5">
           <DialogHeader>
-            <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Check className="h-4 w-4 text-green-600" />Mark Schedule as Completed
             </DialogTitle>
           </DialogHeader>

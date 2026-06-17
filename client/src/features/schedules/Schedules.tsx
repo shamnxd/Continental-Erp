@@ -52,7 +52,8 @@ export type ScheduleType =
   | "Site Visit"
   | "Complaint Resolution"
   | "Follow-up"
-  | "Project/Minor Job";
+  | "Project"
+  | "Minor Job";
 
 export interface ScheduleItem {
   id: string;
@@ -83,7 +84,8 @@ type VisitTypeFilter =
   | "AMC Visit"
   | "Site Visit"
   | "Complaint Resolution"
-  | "Project/Minor Job";
+  | "Project"
+  | "Minor Job";
 
 type VisitStatusFilter = "all" | "Scheduled" | "In Progress" | "Completed" | "Cancelled";
 
@@ -215,7 +217,8 @@ export function Schedules() {
           let itemType: ScheduleType = "Site Visit";
           if (sch.scheduleType === "AMC Visit") itemType = "AMC Visit";
           else if (sch.scheduleType === "Complaint Resolution") itemType = "Complaint Resolution";
-          else if (sch.scheduleType === "Project Installation" || sch.scheduleType === "Minor Job") itemType = "Project/Minor Job";
+          else if (sch.scheduleType === "Project Installation") itemType = "Project";
+          else if (sch.scheduleType === "Minor Job") itemType = "Minor Job";
           else itemType = "Site Visit";
 
           visits.push({
@@ -272,7 +275,8 @@ export function Schedules() {
     amc: visitItems.filter((i) => i.type === "AMC Visit").length,
     site: visitItems.filter((i) => i.type === "Site Visit").length,
     complaint: visitItems.filter((i) => i.type === "Complaint Resolution").length,
-    project: visitItems.filter((i) => i.type === "Project/Minor Job").length,
+    project: visitItems.filter((i) => i.type === "Project").length,
+    minorJob: visitItems.filter((i) => i.type === "Minor Job").length,
   }), [visitItems]);
 
   const followUpStats = useMemo(() => ({
@@ -398,7 +402,8 @@ export function Schedules() {
   const typeBadgeColor = (type: ScheduleType): string => {
     if (type === "AMC Visit") return "text-purple-700 bg-purple-50 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400";
     if (type === "Complaint Resolution") return "text-red-700 bg-red-50 border-red-200 dark:bg-red-950/20 dark:text-red-400";
-    if (type === "Project/Minor Job") return "text-green-700 bg-green-50 border-green-200 dark:bg-green-950/20 dark:text-green-400";
+    if (type === "Project") return "text-green-700 bg-green-50 border-green-200 dark:bg-green-950/20 dark:text-green-400";
+    if (type === "Minor Job") return "text-teal-700 bg-teal-50 border-teal-200 dark:bg-teal-950/20 dark:text-teal-400";
     return "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400";
   };
 
@@ -691,24 +696,22 @@ export function Schedules() {
         onFilterChange={handleFilterChange}
         extraFilters={
           activeTab === "visits" ? (
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Type:</span>
-              <Select
-                value={visitTypeFilter}
-                onValueChange={(v) => { setVisitTypeFilter(v as VisitTypeFilter); setCurrentPage(1); }}
-              >
-                <SelectTrigger className="h-8 text-xs font-semibold w-[160px] border-border">
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types ({visitStats.all})</SelectItem>
-                  <SelectItem value="AMC Visit">AMC Visit ({visitStats.amc})</SelectItem>
-                  <SelectItem value="Site Visit">Site Visit ({visitStats.site})</SelectItem>
-                  <SelectItem value="Complaint Resolution">Complaints ({visitStats.complaint})</SelectItem>
-                  <SelectItem value="Project/Minor Job">Projects / Minor Jobs ({visitStats.project})</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              value={visitTypeFilter}
+              onValueChange={(v) => { setVisitTypeFilter(v as VisitTypeFilter); setCurrentPage(1); }}
+            >
+              <SelectTrigger className="h-10 rounded-xl px-4 text-sm w-[180px] border-input">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types ({visitStats.all})</SelectItem>
+                <SelectItem value="AMC Visit">AMC Visit ({visitStats.amc})</SelectItem>
+                <SelectItem value="Site Visit">Site Visit ({visitStats.site})</SelectItem>
+                <SelectItem value="Complaint Resolution">Complaints ({visitStats.complaint})</SelectItem>
+                <SelectItem value="Project">Project ({visitStats.project})</SelectItem>
+                <SelectItem value="Minor Job">Minor Job ({visitStats.minorJob})</SelectItem>
+              </SelectContent>
+            </Select>
           ) : null
         }
         onClearFilter={() => handleFilterChange("all")}

@@ -19,6 +19,13 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { StaffSelectDropdown } from "../../components/StaffSelectDropdown";
 import { getAmcApi } from "../../api/amc.api";
 import { getSchedulesApi, createScheduleApi } from "../../api/schedule.api";
@@ -77,6 +84,8 @@ type VisitTypeFilter =
   | "Site Visit"
   | "Complaint Resolution"
   | "Project/Minor Job";
+
+type VisitStatusFilter = "all" | "Scheduled" | "In Progress" | "Completed" | "Cancelled";
 
 type FollowUpStatusFilter = "all" | "Scheduled" | "Pending" | "In Progress" | "Completed" | "Cancelled";
 
@@ -156,7 +165,9 @@ export function Schedules() {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [activeTab, setActiveTab] = useState<ScheduleTab>("visits");
-  const [visitFilter, setVisitFilter] = useState<VisitTypeFilter>("all");
+  // Visit tab: separate type dropdown + status chip filter
+  const [visitTypeFilter, setVisitTypeFilter] = useState<VisitTypeFilter>("all");
+  const [visitStatusFilter, setVisitStatusFilter] = useState<VisitStatusFilter>("Scheduled");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpStatusFilter>("all");
   const [preferredFilter, setPreferredFilter] = useState<PreferredContractFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -222,7 +233,7 @@ export function Schedules() {
           });
         }
       }
-      visits.sort(compareByDateDesc);
+      visits.sort(compareByDateAsc); // ascending = most urgent/nearest first
       followUps.sort(compareByDateDesc);
       setVisitItems(visits);
       setFollowUpItems(followUps);
@@ -246,12 +257,18 @@ export function Schedules() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, activeTab, visitTypeFilter, visitStatusFilter, followUpFilter, preferredFilter]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   const visitStats = useMemo(() => ({
+    // counts by status (for chip display)
     all: visitItems.length,
+    scheduled: visitItems.filter((i) => i.status === "Scheduled").length,
+    inProgress: visitItems.filter((i) => i.status === "In Progress").length,
+    completed: visitItems.filter((i) => i.status === "Completed").length,
+    cancelled: visitItems.filter((i) => i.status === "Cancelled").length,
+    // counts by type (for dropdown labels)
     amc: visitItems.filter((i) => i.type === "AMC Visit").length,
     site: visitItems.filter((i) => i.type === "Site Visit").length,
     complaint: visitItems.filter((i) => i.type === "Complaint Resolution").length,
@@ -283,7 +300,10 @@ export function Schedules() {
     const q = debouncedSearch.trim().toLowerCase();
     return tabSource.filter((item) => {
       if (activeTab === "visits") {
-        if (visitFilter !== "all" && item.type !== visitFilter) return false;
+        // Type dropdown filter
+        if (visitTypeFilter !== "all" && item.type !== visitTypeFilter) return false;
+        // Status chip filter
+        if (visitStatusFilter !== "all" && item.status !== visitStatusFilter) return false;
       } else if (activeTab === "followups") {
         if (followUpFilter !== "all" && item.status !== followUpFilter) return false;
       } else {
@@ -298,7 +318,7 @@ export function Schedules() {
         (item.visitSlot?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [tabSource, debouncedSearch, activeTab, visitFilter, followUpFilter, preferredFilter]);
+  }, [tabSource, debouncedSearch, activeTab, visitTypeFilter, visitStatusFilter, followUpFilter, preferredFilter]);
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -574,14 +594,15 @@ export function Schedules() {
     activeTab === "followups" ? followUpColumns :
     preferredColumns;
 
+  // Chip filter options: visits = status, followups = status, preferred = contract status
   const currentFilterOptions =
     activeTab === "visits"
       ? [
           { value: "all", label: "All", count: visitStats.all, tone: "primary" as const },
-          { value: "AMC Visit", label: "AMC Visits", count: visitStats.amc, tone: "pink" as const },
-          { value: "Site Visit", label: "Site Visits", count: visitStats.site, tone: "blue" as const },
-          { value: "Complaint Resolution", label: "Complaints", count: visitStats.complaint, tone: "amber" as const },
-          { value: "Project/Minor Job", label: "Projects/Jobs", count: visitStats.project, tone: "green" as const },
+          { value: "Scheduled", label: "Scheduled", count: visitStats.scheduled, tone: "pink" as const },
+          { value: "In Progress", label: "In Progress", count: visitStats.inProgress, tone: "blue" as const },
+          { value: "Completed", label: "Completed", count: visitStats.completed, tone: "green" as const },
+          { value: "Cancelled", label: "Cancelled", count: visitStats.cancelled, tone: "muted" as const },
         ]
       : activeTab === "followups"
       ? [
@@ -598,12 +619,12 @@ export function Schedules() {
         ];
 
   const currentFilterValue =
-    activeTab === "visits" ? visitFilter :
+    activeTab === "visits" ? visitStatusFilter :
     activeTab === "followups" ? followUpFilter :
     preferredFilter;
 
   const handleFilterChange = (v: string) => {
-    if (activeTab === "visits") setVisitFilter(v as VisitTypeFilter);
+    if (activeTab === "visits") setVisitStatusFilter(v as VisitStatusFilter);
     else if (activeTab === "followups") setFollowUpFilter(v as FollowUpStatusFilter);
     else setPreferredFilter(v as PreferredContractFilter);
   };
@@ -668,6 +689,28 @@ export function Schedules() {
         filterOptions={currentFilterOptions}
         filterValue={currentFilterValue}
         onFilterChange={handleFilterChange}
+        extraFilters={
+          activeTab === "visits" ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">Type:</span>
+              <Select
+                value={visitTypeFilter}
+                onValueChange={(v) => { setVisitTypeFilter(v as VisitTypeFilter); setCurrentPage(1); }}
+              >
+                <SelectTrigger className="h-8 text-xs font-semibold w-[160px] border-border">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types ({visitStats.all})</SelectItem>
+                  <SelectItem value="AMC Visit">AMC Visit ({visitStats.amc})</SelectItem>
+                  <SelectItem value="Site Visit">Site Visit ({visitStats.site})</SelectItem>
+                  <SelectItem value="Complaint Resolution">Complaints ({visitStats.complaint})</SelectItem>
+                  <SelectItem value="Project/Minor Job">Projects / Minor Jobs ({visitStats.project})</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null
+        }
         onClearFilter={() => handleFilterChange("all")}
         currentPage={currentPage}
         totalPages={totalPages}

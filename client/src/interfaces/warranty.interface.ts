@@ -16,6 +16,7 @@ export interface Warranty {
 }
 
 export interface PaginatedWarranties {
+  success?: boolean;
   data: Warranty[];
   total: number;
   page: number;

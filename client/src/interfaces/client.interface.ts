@@ -1,5 +1,6 @@
 export interface Client {
   id?: string;
+  _id?: string;
   companyName: string;
   contactPerson: string;
   phone: string;

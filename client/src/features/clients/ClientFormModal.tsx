@@ -10,7 +10,7 @@ interface ClientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (client: Client) => void;
-  client: Client | null;
+  client?: Client | null;
 }
 
 export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFormModalProps) {

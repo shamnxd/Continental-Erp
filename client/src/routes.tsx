@@ -48,6 +48,7 @@ import { AuditLogs } from "./features/audit-logs/AuditLogs";
 import { WarrantyManagement } from "./features/warranty/WarrantyManagement";
 import { WarrantyDetail } from "./features/warranty/WarrantyDetail";
 import { Kanban } from "./features/kanban/Kanban";
+import { CriticalAlertsPage } from "./features/dashboard/CriticalAlertsPage";
 import { Login } from "./features/auth/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppRoute } from "./constants/routes.enum";
@@ -143,6 +144,7 @@ export const router = createBrowserRouter([
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },
       { path: AppRoute.WARRANTY_DETAIL, element: <WarrantyDetail /> },
       { path: AppRoute.ADMIN_MANAGEMENT, element: <AdminManagement /> },
+      { path: AppRoute.CRITICAL_ALERTS, element: <CriticalAlertsPage /> },
     ],
   },
   {

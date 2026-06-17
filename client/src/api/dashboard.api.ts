@@ -58,6 +58,7 @@ export interface DashboardResponse {
   };
 }
 
-export async function getDashboardApi(): Promise<DashboardResponse> {
-  return await api.get("/dashboard");
+export async function getDashboardApi(query?: { allAlerts?: boolean }): Promise<DashboardResponse> {
+  const qs = query?.allAlerts ? "?allAlerts=true" : "";
+  return await api.get(`/dashboard${qs}`);
 }

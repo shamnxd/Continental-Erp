@@ -142,9 +142,12 @@ export function Dashboard() {
         <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold text-foreground">Critical Alerts</h3>
-            <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-              {data.criticalAlerts.length} Active
-            </span>
+            <button
+              onClick={() => navigate("/critical-alerts")}
+              className="text-xs font-semibold text-pink-700 hover:text-pink-800 transition-colors bg-pink-50 dark:bg-pink-950/20 px-2.5 py-1 rounded-lg border border-pink-200/40 hover:border-pink-300 hover:bg-pink-100/50"
+            >
+              View All ({data.criticalAlerts.length})
+            </button>
           </div>
           <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
             {data.criticalAlerts.length === 0 ? (
@@ -204,7 +207,11 @@ export function Dashboard() {
               </div>
             ) : (
               data.upcomingTasks.map((task: any) => (
-                <div key={task.id} className="p-3 bg-muted/30 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
+                <div 
+                  key={task.id} 
+                  onClick={() => navigate(`/schedules/${task.id}`)}
+                  className="p-3 bg-muted/30 rounded-xl hover:bg-muted/50 hover:border-pink-650/30 transition-all border border-transparent cursor-pointer shadow-sm"
+                >
                   <div className="flex items-start justify-between mb-1">
                     <h4 className="font-bold text-foreground text-[13px]">{task.task}</h4>
                     <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />

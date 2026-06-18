@@ -104,6 +104,7 @@ export interface ParentCompanyReportResponse {
       activeComplaintsCount: number;
       activeEnquiriesCount: number;
       revenue: number;
+      logoUrl?: string;
     }>;
   };
 }

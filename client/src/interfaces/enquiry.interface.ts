@@ -49,6 +49,7 @@ export interface Enquiry {
   date: string;
   clientId: string;
   clientName: string;
+  clientLogoUrl?: string;
   contactPerson: string;
   phone: string;
   email: string;

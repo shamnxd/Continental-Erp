@@ -11,6 +11,7 @@ export interface Complaint {
   date: string;
   clientId: string;
   clientName: string;
+  clientLogoUrl?: string;
   contactPerson: string;
   phone: string;
   issue: string;

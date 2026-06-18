@@ -4,6 +4,7 @@ export interface Schedule {
   entityId: string;
   entityNo: string;
   clientName: string;
+  clientLogoUrl?: string;
   clientRef?: string | null;
   title: string;
   scheduleType:

@@ -30,6 +30,7 @@ export interface Quotation {
   validUntil: string;
   clientId: string;
   clientName: string;
+  clientLogoUrl?: string;
   enquiryId?: string;
   enquiryNo?: string;
   amount: number;

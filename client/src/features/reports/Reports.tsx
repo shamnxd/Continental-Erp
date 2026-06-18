@@ -1,5 +1,21 @@
-import { useState } from "react";
-import { FileText, Download, TrendingUp, DollarSign, Users, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import {
+  FileText,
+  Download,
+  TrendingUp,
+  DollarSign,
+  Users,
+  Calendar,
+  ArrowLeft,
+  ArrowRight,
+  Building,
+  Layers,
+  AlertCircle,
+  MapPin,
+  Loader2,
+  CheckCircle,
+} from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
   Select,
@@ -21,6 +37,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import {
+  getParentCompaniesSummaryApi,
+  getParentCompanyReportApi,
+  ParentCompanySummary,
+} from "../../api/client.api";
 
 const monthlyRevenueData = [
   { month: "Jan", revenue: 850000, target: 900000 },
@@ -78,114 +99,224 @@ const recentReports = [
 ];
 
 export function Reports() {
+  const navigate = useNavigate();
   const [selectedMonth, setSelectedMonth] = useState("may");
   const [selectedReportType, setSelectedReportType] = useState("revenue");
+  
+  // Corporate Reports tab state
+  const [activeTab, setActiveTab] = useState("revenue");
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [companiesSummary, setCompaniesSummary] = useState<ParentCompanySummary[]>([]);
+  const [companyReport, setCompanyReport] = useState<any | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeTab === "corporate") {
+      fetchCompaniesSummary();
+    }
+  }, [activeTab]);
+
+  const fetchCompaniesSummary = async () => {
+    setLoadingSummary(true);
+    setError(null);
+    try {
+      const res = await getParentCompaniesSummaryApi();
+      if (res.success) {
+        setCompaniesSummary(res.data);
+      } else {
+        setError("Failed to fetch corporate companies summary.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("An error occurred while loading corporate reports.");
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  const handleSelectCompany = async (companyName: string) => {
+    setSelectedCompany(companyName);
+    setLoadingReport(true);
+    setError(null);
+    try {
+      const res = await getParentCompanyReportApi(companyName);
+      if (res.success) {
+        setCompanyReport(res.data);
+      } else {
+        setError(`Failed to fetch report for ${companyName}`);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(`An error occurred while loading report for ${companyName}`);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const handleBackToCompanies = () => {
+    setSelectedCompany(null);
+    setCompanyReport(null);
+    setError(null);
+    fetchCompaniesSummary();
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Reports & Analytics</h2>
-          <p className="text-gray-600 mt-1">Generate business reports and insights</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Reports & Analytics</h2>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Generate business reports and insights</p>
         </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-pink-700 to-pink-600 rounded-2xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1 */}
+        <div className="group relative bg-gradient-to-br from-pink-700 via-pink-600 to-pink-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
+            <DollarSign className="h-32 w-32" />
+          </div>
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-pink-100 text-sm">Total Revenue</p>
-              <p className="text-3xl font-bold mt-1">₹52.5L</p>
-              <p className="text-pink-100 text-xs mt-2">This Year</p>
+              <p className="text-pink-100 text-xs font-semibold uppercase tracking-wider">Total Revenue</p>
+              <p className="text-3xl font-extrabold mt-1">₹52.5L</p>
+              <p className="text-pink-100/85 text-xs mt-2.5 flex items-center gap-1">
+                <TrendingUp className="h-3.5 w-3.5" />
+                This Financial Year
+              </p>
             </div>
-            <DollarSign className="h-12 w-12 text-pink-200" />
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
+              <DollarSign className="h-6 w-6 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-pink-600 to-pink-700 rounded-2xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
+        {/* Card 2 */}
+        <div className="group relative bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
+            <Users className="h-32 w-32" />
+          </div>
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-pink-100 text-sm">Active Clients</p>
-              <p className="text-3xl font-bold mt-1">89</p>
-              <p className="text-pink-100 text-xs mt-2">+7% from last month</p>
+              <p className="text-indigo-100 text-xs font-semibold uppercase tracking-wider">Active Clients</p>
+              <p className="text-3xl font-extrabold mt-1">89</p>
+              <p className="text-indigo-100/85 text-xs mt-2.5 flex items-center gap-1">
+                <TrendingUp className="h-3.5 w-3.5 animate-pulse" />
+                +7% from last month
+              </p>
             </div>
-            <Users className="h-12 w-12 text-pink-200" />
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
+              <Users className="h-6 w-6 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-pink-700 to-pink-800 rounded-2xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
+        {/* Card 3 */}
+        <div className="group relative bg-gradient-to-br from-violet-700 via-violet-600 to-violet-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
+            <Calendar className="h-32 w-32" />
+          </div>
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-pink-100 text-sm">Active AMC</p>
-              <p className="text-3xl font-bold mt-1">68</p>
-              <p className="text-pink-100 text-xs mt-2">Contract Value: ₹77L</p>
+              <p className="text-violet-100 text-xs font-semibold uppercase tracking-wider">Active AMC</p>
+              <p className="text-3xl font-extrabold mt-1">68</p>
+              <p className="text-violet-100/85 text-xs mt-2.5 flex items-center gap-1">
+                <span>Contract Value: </span>
+                <span className="font-semibold text-white">₹77L</span>
+              </p>
             </div>
-            <Calendar className="h-12 w-12 text-pink-200" />
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
+              <Calendar className="h-6 w-6 text-white" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-pink-600 to-pink-700 rounded-2xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
+        {/* Card 4 */}
+        <div className="group relative bg-gradient-to-br from-fuchsia-700 via-fuchsia-600 to-fuchsia-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
+            <TrendingUp className="h-32 w-32" />
+          </div>
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-pink-100 text-sm">Growth Rate</p>
-              <p className="text-3xl font-bold mt-1">+18%</p>
-              <p className="text-pink-100 text-xs mt-2">Month over Month</p>
+              <p className="text-fuchsia-100 text-xs font-semibold uppercase tracking-wider">Growth Rate</p>
+              <p className="text-3xl font-extrabold mt-1">+18%</p>
+              <p className="text-fuchsia-100/85 text-xs mt-2.5 flex items-center gap-1">
+                <span>Month over Month</span>
+              </p>
             </div>
-            <TrendingUp className="h-12 w-12 text-pink-200" />
+            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Report Generator */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Report</h3>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Select value={selectedReportType} onValueChange={setSelectedReportType}>
-            <SelectTrigger className="w-full sm:w-[250px]">
-              <SelectValue placeholder="Select report type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="revenue">Revenue Report</SelectItem>
-              <SelectItem value="amc">AMC Summary</SelectItem>
-              <SelectItem value="complaints">Complaint Report</SelectItem>
-              <SelectItem value="invoices">Invoice Status</SelectItem>
-              <SelectItem value="expenses">Expense Report</SelectItem>
-            </SelectContent>
-          </Select>
+      <div className="bg-card/75 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6 hover:shadow transition-shadow">
+        <h3 className="text-base font-bold text-foreground mb-4">Generate Business Report</h3>
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          <div className="flex-1 min-w-[200px]">
+            <Select value={selectedReportType} onValueChange={setSelectedReportType}>
+              <SelectTrigger className="w-full bg-background/50 border-border">
+                <SelectValue placeholder="Select report type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="revenue">Revenue Report</SelectItem>
+                <SelectItem value="amc">AMC Summary</SelectItem>
+                <SelectItem value="complaints">Complaint Report</SelectItem>
+                <SelectItem value="invoices">Invoice Status</SelectItem>
+                <SelectItem value="expenses">Expense Report</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="may">May 2026</SelectItem>
-              <SelectItem value="apr">April 2026</SelectItem>
-              <SelectItem value="mar">March 2026</SelectItem>
-              <SelectItem value="q1">Q1 2026</SelectItem>
-              <SelectItem value="ytd">Year to Date</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex-1 min-w-[150px]">
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full bg-background/50 border-border">
+                <SelectValue placeholder="Select period" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="may">May 2026</SelectItem>
+                <SelectItem value="apr">April 2026</SelectItem>
+                <SelectItem value="mar">March 2026</SelectItem>
+                <SelectItem value="q1">Q1 2026</SelectItem>
+                <SelectItem value="ytd">Year to Date</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Generate PDF
-          </Button>
+          <div className="flex gap-3">
+            <Button className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-pink-700 hover:bg-pink-800 text-white rounded-xl shadow-sm font-semibold transition-all">
+              <FileText className="h-4 w-4" />
+              Generate PDF
+            </Button>
 
-          <Button variant="outline" className="flex items-center gap-2">
-            <Download className="h-4 w-4" />
-            Export Excel
-          </Button>
+            <Button variant="outline" className="flex-1 sm:flex-none flex items-center justify-center gap-2 border-border rounded-xl font-semibold bg-background hover:bg-muted text-foreground transition-all">
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Charts */}
-      <Tabs defaultValue="revenue" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-3">
-          <TabsTrigger value="revenue">Revenue Analytics</TabsTrigger>
-          <TabsTrigger value="complaints">Complaint Trends</TabsTrigger>
-          <TabsTrigger value="amc">AMC Performance</TabsTrigger>
+      {/* Analytics Tabs */}
+      <Tabs defaultValue="revenue" value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-3xl grid-cols-2 md:grid-cols-4 p-1 bg-muted rounded-xl">
+          <TabsTrigger value="revenue" className="rounded-lg text-xs font-semibold py-2">Revenue Analytics</TabsTrigger>
+          <TabsTrigger value="complaints" className="rounded-lg text-xs font-semibold py-2">Complaint Trends</TabsTrigger>
+          <TabsTrigger value="amc" className="rounded-lg text-xs font-semibold py-2">AMC Performance</TabsTrigger>
+          <TabsTrigger value="corporate" className="rounded-lg text-xs font-semibold py-2">Corporate Reports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="mt-6">
@@ -193,34 +324,36 @@ export function Reports() {
             <h3 className="text-lg font-semibold text-foreground mb-6">
               Monthly Revenue vs Target
             </h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <LineChart data={monthlyRevenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
-                <Legend />
-                <Line
-                  key="revenue-line"
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#be185d"
-                  strokeWidth={3}
-                  name="Actual Revenue"
-                  dot={{ fill: "#be185d", r: 5 }}
-                />
-                <Line
-                  key="target-line"
-                  type="monotone"
-                  dataKey="target"
-                  stroke="#9f1239"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Target"
-                  dot={{ fill: "#9f1239", r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={monthlyRevenueData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="month" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Amount"]} />
+                  <Legend />
+                  <Line
+                    key="revenue-line"
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#be185d"
+                    strokeWidth={3}
+                    name="Actual Revenue"
+                    dot={{ fill: "#be185d", r: 5 }}
+                  />
+                  <Line
+                    key="target-line"
+                    type="monotone"
+                    dataKey="target"
+                    stroke="#9f1239"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="Target"
+                    dot={{ fill: "#9f1239", r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </TabsContent>
 
@@ -229,17 +362,19 @@ export function Reports() {
             <h3 className="text-lg font-semibold text-foreground mb-6">
               Complaint Registration vs Resolution Trends
             </h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={complaintTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
-                <Legend />
-                <Bar key="registered-bar" dataKey="registered" fill="#f59e0b" name="Registered" radius={[8, 8, 0, 0]} />
-                <Bar key="resolved-bar" dataKey="resolved" fill="#be185d" name="Resolved" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={complaintTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="month" stroke="#6b7280" />
+                  <YAxis stroke="#6b7280" />
+                  <Tooltip />
+                  <Legend />
+                  <Bar key="registered-bar" dataKey="registered" fill="#f59e0b" name="Registered" radius={[8, 8, 0, 0]} />
+                  <Bar key="resolved-bar" dataKey="resolved" fill="#be185d" name="Resolved" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </TabsContent>
 
@@ -248,67 +383,376 @@ export function Reports() {
             <h3 className="text-lg font-semibold text-foreground mb-6">
               AMC Revenue by Client (Top 5)
             </h3>
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={amcRevenueData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis type="number" stroke="#6b7280" />
-                <YAxis dataKey="client" type="category" width={100} stroke="#6b7280" />
-                <Tooltip />
-                <Legend />
-                <Bar key="amc-revenue-bar" dataKey="revenue" fill="#be185d" name="AMC Revenue (₹)" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={amcRevenueData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                  <XAxis type="number" stroke="#6b7280" />
+                  <YAxis dataKey="client" type="category" width={100} stroke="#6b7280" />
+                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                  <Legend />
+                  <Bar key="amc-revenue-bar" dataKey="revenue" fill="#be185d" name="AMC Revenue" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="corporate" className="mt-6 space-y-6">
+          {error && (
+            <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 text-rose-700 dark:text-rose-300 rounded-xl p-4 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">Error Loading Corporate Data</p>
+                <p className="text-xs opacity-90 mt-0.5">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {selectedCompany ? (
+            /* Corporate Detailed Report */
+            loadingReport ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                <Loader2 className="h-10 w-10 animate-spin text-pink-700" />
+                <span className="text-sm font-semibold">Consolidating parent company reports...</span>
+              </div>
+            ) : companyReport ? (
+              <div className="space-y-6">
+                {/* Header card with back button */}
+                <div className="bg-card rounded-2xl shadow-sm border border-border p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={handleBackToCompanies}
+                      className="p-2 border border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl transition-all"
+                      title="Back to Corporate Groups"
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </button>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-pink-700 bg-pink-50 px-2 py-0.5 rounded-md border border-pink-200/40">
+                          Corporate Group
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-foreground mt-1">
+                        {selectedCompany} Report
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Consolidated data across {companyReport.overview.totalBranches} branches
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="flex items-center gap-2 border-border" onClick={() => window.print()}>
+                      <Download className="h-4 w-4" />
+                      Print Summary
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Consolidated KPIs */}
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* KPI 1 */}
+                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Branches</span>
+                        <p className="text-2xl font-bold text-foreground mt-1">{companyReport.overview.totalBranches}</p>
+                      </div>
+                      <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg text-indigo-700 dark:text-indigo-300">
+                        <Building className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 2 */}
+                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Combined Projects</span>
+                        <p className="text-2xl font-bold text-foreground mt-1">{companyReport.overview.totalProjects}</p>
+                      </div>
+                      <div className="p-2 bg-violet-50 dark:bg-violet-950/30 rounded-lg text-violet-700 dark:text-violet-300">
+                        <Layers className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 3 */}
+                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active AMCs</span>
+                        <p className="text-2xl font-bold text-foreground mt-1">{companyReport.overview.totalActiveAmc}</p>
+                      </div>
+                      <div className="p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 4 */}
+                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Open Complaints</span>
+                        <p className="text-2xl font-bold text-foreground mt-1">{companyReport.overview.totalPendingComplaints}</p>
+                      </div>
+                      <div className="p-2 bg-rose-50 dark:bg-rose-950/30 rounded-lg text-rose-700 dark:text-rose-300">
+                        <AlertCircle className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KPI 5 */}
+                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow col-span-2 lg:col-span-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Revenue</span>
+                        <p className="text-2xl font-bold text-foreground mt-1">{formatCurrency(companyReport.overview.totalRevenue)}</p>
+                      </div>
+                      <div className="p-2 bg-pink-50 dark:bg-pink-950/30 rounded-lg text-pink-700 dark:text-pink-300">
+                        <DollarSign className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Charts Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Revenue Chart */}
+                  <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
+                    <h4 className="text-sm font-bold text-foreground mb-4">Consolidated Revenue by Branch</h4>
+                    <div className="h-72">
+                      {companyReport.branches.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={companyReport.branches}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                            <XAxis dataKey="companyName" tickFormatter={(v) => v.replace(selectedCompany, "").trim() || v} stroke="#6b7280" fontSize={11} />
+                            <YAxis stroke="#6b7280" fontSize={11} tickFormatter={(v) => `₹${v >= 100000 ? (v / 100000).toFixed(1) + "L" : v}`} />
+                            <Tooltip formatter={(value: any) => [formatCurrency(value), "Approved Revenue"]} />
+                            <Bar key="branch-revenue" dataKey="revenue" fill="#be185d" radius={[6, 6, 0, 0]} maxBarSize={50} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-xs text-muted-foreground">No branch data available</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Complaints/Enquiries Chart */}
+                  <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
+                    <h4 className="text-sm font-bold text-foreground mb-4">Complaints & Enquiries by Branch</h4>
+                    <div className="h-72">
+                      {companyReport.branches.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={companyReport.branches}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                            <XAxis dataKey="companyName" tickFormatter={(v) => v.replace(selectedCompany, "").trim() || v} stroke="#6b7280" fontSize={11} />
+                            <YAxis stroke="#6b7280" fontSize={11} allowDecimals={false} />
+                            <Tooltip />
+                            <Legend verticalAlign="top" height={36} iconType="circle" />
+                            <Bar key="active-complaints" dataKey="activeComplaintsCount" fill="#f59e0b" name="Complaints" radius={[4, 4, 0, 0]} maxBarSize={25} />
+                            <Bar key="active-enquiries" dataKey="activeEnquiriesCount" fill="#3b82f6" name="Enquiries" radius={[4, 4, 0, 0]} maxBarSize={25} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-xs text-muted-foreground">No branch data available</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Branches Detail Table */}
+                <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+                  <div className="p-5 border-b border-border">
+                    <h4 className="text-base font-bold text-foreground">Branches Breakdown</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-muted/40 border-b border-border">
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Branch Name</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Location</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Contact Person</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center">Projects</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center">Complaints</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center">AMC Status</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-right">Revenue</th>
+                          <th className="px-6 py-3.5 text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {companyReport.branches.map((branch: any) => (
+                          <tr key={branch.id} className="hover:bg-muted/20 transition-colors">
+                            <td className="px-6 py-4 text-sm font-semibold text-foreground">{branch.companyName}</td>
+                            <td className="px-6 py-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                {branch.city}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-muted-foreground">{branch.contactPerson}</td>
+                            <td className="px-6 py-4 text-sm text-foreground text-center font-medium">{branch.projectsCount}</td>
+                            <td className="px-6 py-4 text-sm text-center">
+                              {branch.activeComplaintsCount > 0 ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-300 border border-rose-200/30">
+                                  {branch.activeComplaintsCount} Active
+                                </span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">None</span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-center">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                                branch.amcStatus === "Active"
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-200/40"
+                                  : branch.amcStatus === "Expired"
+                                  ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-300 border-rose-200/40"
+                                  : "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-300 border-amber-200/40"
+                              }`}>
+                                {branch.amcStatus}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-foreground font-semibold text-right">{formatCurrency(branch.revenue)}</td>
+                            <td className="px-6 py-4 text-sm text-center">
+                              <button
+                                onClick={() => navigate(`/clients/${branch.id}`)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-pink-700 hover:text-pink-800 bg-pink-50 hover:bg-pink-100 border border-pink-200/30 hover:border-pink-300/60 rounded-lg transition-colors"
+                              >
+                                View Branch
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : null
+          ) : (
+            /* Corporate Groups Summary */
+            loadingSummary ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+                <Loader2 className="h-10 w-10 animate-spin text-pink-700" />
+                <span className="text-sm font-semibold">Loading corporate structure...</span>
+              </div>
+            ) : companiesSummary.length > 0 ? (
+              <div className="space-y-4">
+                <div className="border border-border/85 bg-indigo-50/50 dark:bg-indigo-950/10 p-4 rounded-xl flex items-center gap-3">
+                  <Building className="h-5 w-5 text-indigo-500" />
+                  <div>
+                    <h4 className="text-xs font-bold text-foreground">Multi-Branch Corporate Groups</h4>
+                    <p className="text-[10.5px] text-muted-foreground mt-0.5">
+                      Select a parent company to view consolidated statistics, project summaries, pending complaints, and total combined revenue across all its registered branches.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {companiesSummary.map((c) => (
+                    <div
+                      key={c.parentCompany}
+                      onClick={() => handleSelectCompany(c.parentCompany)}
+                      className="group relative bg-card/65 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6 hover:shadow-md hover:border-pink-500/30 cursor-pointer transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="h-12 w-12 rounded-xl bg-pink-100 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
+                          {c.parentCompany.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 border border-indigo-100">
+                            {c.branchesCount} Branches
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h4 className="text-lg font-bold text-foreground group-hover:text-pink-700 transition-colors">
+                          {c.parentCompany}
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">Consolidated branch group</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-border/60">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Projects</span>
+                          <p className="text-sm font-semibold text-foreground mt-0.5">{c.totalProjects}</p>
+                        </div>
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Active AMC</span>
+                          <p className="text-sm font-semibold text-foreground mt-0.5">{c.activeAmc}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 flex items-center justify-between text-xs font-semibold text-pink-700 group-hover:translate-x-1 transition-transform">
+                        <span>View Consolidated Analytics</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-2xl bg-card">
+                <Building className="h-12 w-12 text-muted-foreground mb-3 animate-bounce" />
+                <h3 className="text-lg font-semibold text-foreground">No Corporate Groups Found</h3>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                  To group clients under a parent company, edit a client profile and assign them a "Parent Company" name (e.g., SBI or TATA).
+                </p>
+              </div>
+            ))}
         </TabsContent>
       </Tabs>
 
       {/* Recent Reports */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border">
-        <div className="p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Recently Generated Reports</h3>
+      <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="p-6 border-b border-border bg-muted/20">
+          <h3 className="text-lg font-semibold text-foreground">Recently Generated Reports</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-muted/40 border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Report Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Generated On
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-border/60">
               {recentReports.map((report) => (
-                <tr key={report.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                <tr key={report.id} className="hover:bg-muted/20 transition-colors">
+                  <td className="px-6 py-4 text-sm font-semibold text-foreground">
                     {report.name}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                    <span className="inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300 border border-blue-100">
                       {report.type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {new Date(report.date).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                    <span className="inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-300 border border-emerald-100">
                       {report.status}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <Button size="sm" variant="outline" className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" className="flex items-center gap-2 border-border">
                       <Download className="h-3 w-3" />
                       Download
                     </Button>

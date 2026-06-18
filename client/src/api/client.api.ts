@@ -68,4 +68,53 @@ export async function getClientsStatsApi(): Promise<{
   return await api.get(`${ApiRoute.CLIENTS}/stats`);
 }
 
+export async function uploadClientLogoApi(file: File): Promise<{ success: boolean; url: string }> {
+  const formData = new FormData();
+  formData.append("logo", file);
+  return await api.post(`${ApiRoute.CLIENTS}/upload-logo`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+}
+
+export interface ParentCompanySummary {
+  parentCompany: string;
+  branchesCount: number;
+  totalProjects: number;
+  activeAmc: number;
+}
+
+export interface ParentCompanyReportResponse {
+  success: boolean;
+  data: {
+    overview: {
+      totalBranches: number;
+      totalProjects: number;
+      totalActiveAmc: number;
+      totalPendingComplaints: number;
+      totalActiveEnquiries: number;
+      totalRevenue: number;
+    };
+    branches: Array<{
+      id: string;
+      companyName: string;
+      city: string;
+      contactPerson: string;
+      projectsCount: number;
+      amcStatus: "Active" | "Inactive" | "Expired";
+      activeComplaintsCount: number;
+      activeEnquiriesCount: number;
+      revenue: number;
+    }>;
+  };
+}
+
+export async function getParentCompaniesSummaryApi(): Promise<{ success: boolean; data: ParentCompanySummary[] }> {
+  return await api.get(`${ApiRoute.CLIENTS}/parent-companies/report`);
+}
+
+export async function getParentCompanyReportApi(parentCompany: string): Promise<ParentCompanyReportResponse> {
+  return await api.get(`${ApiRoute.CLIENTS}/parent-companies/report?parentCompany=${encodeURIComponent(parentCompany)}`);
+}
+
+
 

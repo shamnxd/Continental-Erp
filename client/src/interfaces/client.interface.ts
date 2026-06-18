@@ -10,6 +10,8 @@ export interface Client {
   address?: string;
   projectsCount: number;
   amcStatus: "Active" | "Inactive" | "Expired";
+  parentCompany?: string;
+  logoUrl?: string;
   createdAt?: string;
   updatedAt?: string;
   activeComplaintsCount?: number;

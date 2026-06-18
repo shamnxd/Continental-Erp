@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../componen
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { Loader2 } from "lucide-react";
 import { Client } from "../../interfaces/client.interface";
-import { createClientApi, updateClientApi } from "../../api/client.api";
+import { createClientApi, updateClientApi, uploadClientLogoApi } from "../../api/client.api";
 
 interface ClientFormModalProps {
   isOpen: boolean;
@@ -22,10 +23,13 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
     gst: "",
     city: "",
     address: "",
+    parentCompany: "",
+    logoUrl: "",
   };
 
   const [formData, setFormData] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
     if (client) {
@@ -37,11 +41,33 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
         gst: client.gst || "",
         city: client.city,
         address: client.address || "",
+        parentCompany: client.parentCompany || "",
+        logoUrl: client.logoUrl || "",
       });
     } else {
       setFormData(initialFormState);
     }
   }, [client, isOpen]);
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingLogo(true);
+    try {
+      const res = await uploadClientLogoApi(file);
+      if (res.success) {
+        setFormData((prev) => ({ ...prev, logoUrl: res.url }));
+      } else {
+        alert("Failed to upload logo");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload logo. Please check server logs.");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +110,31 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            
+            {/* Logo upload row */}
+            <div className="sm:col-span-2 border-b border-border pb-4 mb-2 flex items-center gap-4">
+              <div className="h-16 w-16 rounded-full overflow-hidden shrink-0 border border-border shadow-sm flex items-center justify-center bg-muted">
+                {formData.logoUrl ? (
+                  <img src={formData.logoUrl} alt="Preview" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs text-muted-foreground">No Logo</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="logoUpload">Company Logo (Optional)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="logoUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                    className="max-w-[250px] text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                  />
+                  {isUploadingLogo && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+              </div>
+            </div>
+
             <div>
               <Label htmlFor="companyName">Company Name *</Label>
               <Input
@@ -93,6 +144,16 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
                 placeholder="Enter company name"
                 className="mt-1"
                 required
+              />
+            </div>
+            <div>
+              <Label htmlFor="parentCompany">Parent Company (e.g. SBI, TATA - Optional)</Label>
+              <Input
+                id="parentCompany"
+                value={formData.parentCompany}
+                onChange={(e) => setFormData({ ...formData, parentCompany: e.target.value })}
+                placeholder="e.g. SBI"
+                className="mt-1"
               />
             </div>
             <div>
@@ -163,10 +224,10 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
           </div>
           
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 sm:pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting} className="w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+            <Button type="submit" disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto">
               {isSubmitting ? "Saving..." : "Save Client"}
             </Button>
           </div>

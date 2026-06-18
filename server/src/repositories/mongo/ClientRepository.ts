@@ -24,6 +24,8 @@ export class ClientRepository extends BaseRepository<IClientDocument, IClient> i
       address: clientDoc.address,
       projectsCount: clientDoc.projectsCount,
       amcStatus: clientDoc.amcStatus,
+      parentCompany: clientDoc.parentCompany,
+      logoUrl: clientDoc.logoUrl,
       createdAt: clientDoc.createdAt,
       updatedAt: clientDoc.updatedAt
     };

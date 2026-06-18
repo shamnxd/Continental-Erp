@@ -16,7 +16,9 @@ const clientSchema = new Schema<IClientDocument>(
     city: { type: String, required: true, trim: true },
     address: { type: String, trim: true, default: "" },
     projectsCount: { type: Number, default: 0 },
-    amcStatus: { type: String, enum: ["Active", "Inactive", "Expired"], default: "Inactive" }
+    amcStatus: { type: String, enum: ["Active", "Inactive", "Expired"], default: "Inactive" },
+    parentCompany: { type: String, trim: true, default: "" },
+    logoUrl: { type: String, trim: true, default: "" }
   },
   { timestamps: true }
 );

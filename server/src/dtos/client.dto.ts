@@ -10,6 +10,8 @@ export const CreateClientSchema = z.object({
   address: z.string().optional().or(z.literal("")),
   projectsCount: z.number().optional().default(0),
   amcStatus: z.enum(["Active", "Inactive", "Expired"]).optional().default("Inactive"),
+  parentCompany: z.string().optional().or(z.literal("")),
+  logoUrl: z.string().optional().or(z.literal(""))
 });
 
 export type CreateClientDto = z.infer<typeof CreateClientSchema>;

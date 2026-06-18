@@ -9,6 +9,8 @@ export interface IClient {
   address?: string;
   projectsCount: number;
   amcStatus: "Active" | "Inactive" | "Expired";
+  parentCompany?: string;
+  logoUrl?: string;
   createdAt?: Date;
   updatedAt?: Date;
   activeComplaintsCount?: number;

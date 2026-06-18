@@ -244,12 +244,20 @@ export function Quotations() {
       header: "Client",
       accessor: (row: Quotation) => (
         <div className="flex items-center gap-2 min-w-0">
-          <div className="h-7 w-7 rounded-full overflow-hidden shrink-0 border border-border shadow-sm">
-            <img
-              src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(row.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-              alt={row.clientName}
-              className="h-full w-full object-cover"
-            />
+          <div className="h-7 w-7 rounded-full overflow-hidden shrink-0 border border-border shadow-sm bg-muted flex items-center justify-center">
+            {row.clientLogoUrl ? (
+              <img
+                src={row.clientLogoUrl}
+                alt={row.clientName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <img
+                src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(row.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                alt={row.clientName}
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
           <p className="font-medium text-foreground leading-tight truncate max-w-[140px]">{row.clientName}</p>
         </div>

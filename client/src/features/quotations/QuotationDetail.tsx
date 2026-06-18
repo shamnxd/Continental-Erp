@@ -228,30 +228,47 @@ export function QuotationDetail() {
                       <span className="font-medium">Back</span>
                     </Button>
                     <div className="h-8 w-px bg-border hidden md:block" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-xl font-bold text-foreground tracking-tight">{quotation.quotationNo}</h1>
-                        {revisions.length > 0 && (
-                          <Select
-                            value={quotation.id}
-                            onValueChange={(val) => {
-                              navigate(`/quotations/${val}`);
-                            }}
-                          >
-                            <SelectTrigger className="h-7 w-[140px] text-xs font-bold border border-border bg-white text-foreground hover:bg-muted/50 rounded-md focus-visible:ring-1 focus-visible:ring-pink-700/50">
-                              <SelectValue placeholder="Select Revision" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {revisions.map((rev) => (
-                                <SelectItem key={rev.id} value={rev.id || ""}>
-                                  Rev {rev.revision ?? 0} {rev.isActive ? "(Active)" : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow bg-card flex items-center justify-center">
+                        {quotation.clientLogoUrl ? (
+                          <img
+                            src={quotation.clientLogoUrl}
+                            alt={quotation.clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(quotation.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                            alt={quotation.clientName}
+                            className="h-full w-full object-cover"
+                          />
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">{quotation.clientName}</p>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-xl font-bold text-foreground tracking-tight">{quotation.quotationNo}</h1>
+                          {revisions.length > 0 && (
+                            <Select
+                              value={quotation.id}
+                              onValueChange={(val) => {
+                                navigate(`/quotations/${val}`);
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-[140px] text-xs font-bold border border-border bg-white text-foreground hover:bg-muted/50 rounded-md focus-visible:ring-1 focus-visible:ring-pink-700/50">
+                                <SelectValue placeholder="Select Revision" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {revisions.map((rev) => (
+                                  <SelectItem key={rev.id} value={rev.id || ""}>
+                                    Rev {rev.revision ?? 0} {rev.isActive ? "(Active)" : ""}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">{quotation.clientName}</p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
@@ -546,11 +563,29 @@ export function QuotationDetail() {
                   <div className="space-y-4">
                     <div className="bg-card rounded-xl border border-border p-5 space-y-3">
                       <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Summary</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                          <span>{quotation.clientName}</span>
+                      
+                      <div className="flex items-center gap-3 pb-3 border-b border-border/40 mb-1.5">
+                        <div className="h-10 w-10 rounded-full overflow-hidden shrink-0 border-2 border-pink-500/20 shadow-sm bg-pink-100 flex items-center justify-center">
+                          {quotation.clientLogoUrl ? (
+                            <img
+                              src={quotation.clientLogoUrl}
+                              alt={quotation.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(quotation.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                              alt={quotation.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
                         </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">{quotation.clientName}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 text-sm">
                         {quotation.enquiryNo && (
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />

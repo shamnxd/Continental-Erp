@@ -165,12 +165,20 @@ export function Clients() {
       header: "Company",
       accessor: (client: Client) => (
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border shadow-sm">
-            <img
-              src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(client.companyName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-              alt={client.companyName}
-              className="h-full w-full object-cover"
-            />
+          <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border shadow-sm bg-muted flex items-center justify-center">
+            {client.logoUrl ? (
+              <img
+                src={client.logoUrl}
+                alt={client.companyName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <img
+                src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(client.companyName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                alt={client.companyName}
+                className="h-full w-full object-cover"
+              />
+            )}
           </div>
           <div>
             <p className="font-medium text-foreground leading-tight">{client.companyName}</p>

@@ -113,7 +113,7 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
             
             {/* Logo upload row */}
             <div className="sm:col-span-2 border-b border-border pb-4 mb-2 flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full overflow-hidden shrink-0 border border-border shadow-sm flex items-center justify-center bg-muted">
+              <div className="h-16 w-16 rounded-xl overflow-hidden shrink-0 border border-border shadow-sm flex items-center justify-center bg-muted">
                 {formData.logoUrl ? (
                   <img src={formData.logoUrl} alt="Preview" className="h-full w-full object-cover" />
                 ) : (
@@ -123,14 +123,14 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
               <div className="flex-1 space-y-1">
                 <Label htmlFor="logoUpload">Company Logo (Optional)</Label>
                 <div className="flex items-center gap-2">
-                  <Input
+                  <input
                     id="logoUpload"
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
-                    className="max-w-[250px] text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                    className="max-w-[280px] text-xs text-muted-foreground focus:outline-none file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 transition-colors cursor-pointer"
                   />
-                  {isUploadingLogo && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                  {isUploadingLogo && <Loader2 className="h-4 w-4 animate-spin text-pink-700" />}
                 </div>
               </div>
             </div>
@@ -224,10 +224,10 @@ export function ClientFormModal({ isOpen, onClose, onSuccess, client }: ClientFo
           </div>
           
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-3 sm:pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto rounded-xl">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto">
+            <Button type="submit" disabled={isSubmitting || isUploadingLogo} className="w-full sm:w-auto bg-pink-700 hover:bg-pink-800 text-white font-semibold rounded-xl transition-colors">
               {isSubmitting ? "Saving..." : "Save Client"}
             </Button>
           </div>

@@ -376,11 +376,28 @@ export function EnquiryDetail() {
                       <span className="font-medium">Back</span>
                     </Button>
                     <div className="h-8 w-px bg-border hidden md:block" />
-                    <div>
-                      <h1 className="text-xl font-bold text-foreground tracking-tight">{enquiry.enquiryNo}</h1>
-                      <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
-                        {enquiry.clientName}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow bg-card flex items-center justify-center">
+                        {enquiry.clientLogoUrl ? (
+                          <img
+                            src={enquiry.clientLogoUrl}
+                            alt={enquiry.clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(enquiry.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                            alt={enquiry.clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold text-foreground tracking-tight">{enquiry.enquiryNo}</h1>
+                        <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
+                          {enquiry.clientName}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
@@ -557,6 +574,28 @@ export function EnquiryDetail() {
                         </div>
                         <h3 className="text-base font-semibold text-foreground">Client Information</h3>
                       </div>
+                      
+                      <div className="flex items-center gap-3 pb-3 border-b border-border/40 mb-3">
+                        <div className="h-10 w-10 rounded-full overflow-hidden shrink-0 border-2 border-pink-500/20 shadow-sm bg-pink-100 flex items-center justify-center">
+                          {enquiry.clientLogoUrl ? (
+                            <img
+                              src={enquiry.clientLogoUrl}
+                              alt={enquiry.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(enquiry.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                              alt={enquiry.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">{enquiry.clientName}</p>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 lg:grid-cols-1 gap-y-3 gap-x-4">
                         <div>
                           <label className="text-xs font-medium text-gray-500 uppercase">Client Name</label>

@@ -92,6 +92,7 @@ export function MinorJobDetail() {
   }
 
   const clientName = typeof job.clientRef === "object" ? job.clientRef.companyName : "Unknown Client";
+  const clientLogoUrl = typeof job.clientRef === "object" ? job.clientRef.logoUrl : undefined;
   const clientContact = typeof job.clientRef === "object" ? job.clientRef.contactPerson : "—";
   const clientPhone = typeof job.clientRef === "object" ? job.clientRef.phone : "";
   const clientEmail = typeof job.clientRef === "object" ? job.clientRef.email : "";
@@ -166,11 +167,28 @@ export function MinorJobDetail() {
                       <span className="font-medium">Back</span>
                     </Button>
                     <div className="h-8 w-px bg-border hidden md:block" />
-                    <div>
-                      <h1 className="text-xl font-bold text-foreground tracking-tight">{job.jobNo}</h1>
-                      <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
-                        {clientName}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow bg-card flex items-center justify-center">
+                        {clientLogoUrl ? (
+                          <img
+                            src={clientLogoUrl}
+                            alt={clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                            alt={clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <h1 className="text-xl font-bold text-foreground tracking-tight">{job.jobNo}</h1>
+                        <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
+                          {clientName}
+                        </p>
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 self-end md:self-auto">
@@ -275,7 +293,28 @@ export function MinorJobDetail() {
                       <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Client Info</h3>
                     </div>
                     
-                    <div className="text-sm space-y-3">
+                    <div className="flex items-center gap-3 pb-3 border-b border-border/40 mb-3">
+                      <div className="h-10 w-10 rounded-full overflow-hidden shrink-0 border-2 border-pink-500/20 shadow-sm bg-pink-100 flex items-center justify-center">
+                        {clientLogoUrl ? (
+                          <img
+                            src={clientLogoUrl}
+                            alt={clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                            alt={clientName}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{clientName}</p>
+                      </div>
+                    </div>
+
+                    <div className="text-sm space-y-3 text-left">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground block">Company / Client</span>
                         <span className="font-semibold text-foreground text-base">{clientName}</span>

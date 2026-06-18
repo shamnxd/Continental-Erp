@@ -30,6 +30,9 @@ import {
   Bar,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -42,6 +45,8 @@ import {
   getParentCompanyReportApi,
   ParentCompanySummary,
 } from "../../api/client.api";
+
+const COLORS = ["#be185d", "#4f46e5", "#10b981", "#f59e0b", "#ef4444"];
 
 const monthlyRevenueData = [
   { month: "Jan", revenue: 850000, target: 900000 },
@@ -65,6 +70,25 @@ const amcRevenueData = [
   { client: "DEF Sol", revenue: 150000 },
   { client: "GHI Ent", revenue: 80000 },
   { client: "JKL Ltd", revenue: 180000 },
+];
+
+const revenueByCategoryData = [
+  { name: "AMC Contracts", value: 3450000 },
+  { name: "Repair Jobs", value: 1250000 },
+  { name: "Projects", value: 2500000 },
+];
+
+const complaintsByCategoryData = [
+  { name: "Electrical", count: 45 },
+  { name: "HVAC/AC", count: 30 },
+  { name: "Mechanical", count: 25 },
+  { name: "Plumbing", count: 18 },
+];
+
+const amcStatusBreakdownData = [
+  { name: "Active", count: 68, color: "#10b981" },
+  { name: "Due for Renewal", count: 12, color: "#f59e0b" },
+  { name: "Expired", count: 8, color: "#ef4444" },
 ];
 
 const recentReports = [
@@ -180,90 +204,77 @@ export function Reports() {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats Grid - Matched with Dashboard Layout & Sizes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="group relative bg-gradient-to-br from-pink-700 via-pink-600 to-pink-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
-            <DollarSign className="h-32 w-32" />
-          </div>
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <p className="text-pink-100 text-xs font-semibold uppercase tracking-wider">Total Revenue</p>
-              <p className="text-3xl font-extrabold mt-1">₹52.5L</p>
-              <p className="text-pink-100/85 text-xs mt-2.5 flex items-center gap-1">
-                <TrendingUp className="h-3.5 w-3.5" />
-                This Financial Year
-              </p>
+        <div className="bg-card rounded-xl border border-border p-3.5 hover:shadow transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Total Revenue</p>
+              <p className="text-2xl font-bold text-foreground leading-tight">₹52.5L</p>
+              <div className="flex items-center gap-1 mt-2">
+                <TrendingUp className="h-3.5 w-3.5 text-pink-700 animate-pulse" />
+                <span className="text-xs font-semibold text-pink-700">This Year</span>
+              </div>
             </div>
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
-              <DollarSign className="h-6 w-6 text-white" />
+            <div className="p-3 bg-pink-100 dark:bg-pink-950/30 rounded-xl shrink-0 text-pink-700 dark:text-pink-300">
+              <DollarSign className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         {/* Card 2 */}
-        <div className="group relative bg-gradient-to-br from-indigo-700 via-indigo-600 to-indigo-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
-            <Users className="h-32 w-32" />
-          </div>
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <p className="text-indigo-100 text-xs font-semibold uppercase tracking-wider">Active Clients</p>
-              <p className="text-3xl font-extrabold mt-1">89</p>
-              <p className="text-indigo-100/85 text-xs mt-2.5 flex items-center gap-1">
-                <TrendingUp className="h-3.5 w-3.5 animate-pulse" />
-                +7% from last month
-              </p>
+        <div className="bg-card rounded-xl border border-border p-3.5 hover:shadow transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Active Clients</p>
+              <p className="text-2xl font-bold text-foreground leading-tight">89</p>
+              <div className="flex items-center gap-1 mt-2">
+                <TrendingUp className="h-3.5 w-3.5 text-indigo-600" />
+                <span className="text-xs font-semibold text-indigo-600">+7% this month</span>
+              </div>
             </div>
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
-              <Users className="h-6 w-6 text-white" />
+            <div className="p-3 bg-indigo-100 dark:bg-indigo-950/30 rounded-xl shrink-0 text-indigo-700 dark:text-indigo-300">
+              <Users className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         {/* Card 3 */}
-        <div className="group relative bg-gradient-to-br from-violet-700 via-violet-600 to-violet-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
-            <Calendar className="h-32 w-32" />
-          </div>
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <p className="text-violet-100 text-xs font-semibold uppercase tracking-wider">Active AMC</p>
-              <p className="text-3xl font-extrabold mt-1">68</p>
-              <p className="text-violet-100/85 text-xs mt-2.5 flex items-center gap-1">
-                <span>Contract Value: </span>
-                <span className="font-semibold text-white">₹77L</span>
-              </p>
+        <div className="bg-card rounded-xl border border-border p-3.5 hover:shadow transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Active AMC</p>
+              <p className="text-2xl font-bold text-foreground leading-tight">68</p>
+              <div className="flex items-center gap-1 mt-2">
+                <span className="text-xs font-semibold text-emerald-600">Contract Value: ₹77L</span>
+              </div>
             </div>
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
-              <Calendar className="h-6 w-6 text-white" />
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-950/30 rounded-xl shrink-0 text-emerald-700 dark:text-emerald-300">
+              <Calendar className="h-5 w-5" />
             </div>
           </div>
         </div>
 
         {/* Card 4 */}
-        <div className="group relative bg-gradient-to-br from-fuchsia-700 via-fuchsia-600 to-fuchsia-500 rounded-2xl shadow-md border border-white/10 backdrop-blur-md p-6 text-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-          <div className="absolute -right-6 -bottom-6 opacity-10 text-white group-hover:scale-110 transition-transform duration-300">
-            <TrendingUp className="h-32 w-32" />
-          </div>
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <p className="text-fuchsia-100 text-xs font-semibold uppercase tracking-wider">Growth Rate</p>
-              <p className="text-3xl font-extrabold mt-1">+18%</p>
-              <p className="text-fuchsia-100/85 text-xs mt-2.5 flex items-center gap-1">
-                <span>Month over Month</span>
-              </p>
+        <div className="bg-card rounded-xl border border-border p-3.5 hover:shadow transition-all duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground mb-1 font-medium uppercase tracking-wider">Growth Rate</p>
+              <p className="text-2xl font-bold text-foreground leading-tight">+18%</p>
+              <div className="flex items-center gap-1 mt-2">
+                <span className="text-xs font-semibold text-fuchsia-600">Month over Month</span>
+              </div>
             </div>
-            <div className="p-3 bg-white/10 backdrop-blur-md rounded-xl shadow-inner shrink-0">
-              <TrendingUp className="h-6 w-6 text-white" />
+            <div className="p-3 bg-fuchsia-100 dark:bg-fuchsia-950/30 rounded-xl shrink-0 text-fuchsia-700 dark:text-fuchsia-300">
+              <TrendingUp className="h-5 w-5" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Report Generator */}
-      <div className="bg-card/75 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6 hover:shadow transition-shadow">
+      <div className="bg-card rounded-xl shadow-sm border border-border p-6 hover:shadow transition-shadow">
         <h3 className="text-base font-bold text-foreground mb-4">Generate Business Report</h3>
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
           <div className="flex-1 min-w-[200px]">
@@ -319,85 +330,235 @@ export function Reports() {
           <TabsTrigger value="corporate" className="rounded-lg text-xs font-semibold py-2">Corporate Reports</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="revenue" className="mt-6">
-          <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-6">
-              Monthly Revenue vs Target
-            </h3>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={monthlyRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Amount"]} />
-                  <Legend />
-                  <Line
-                    key="revenue-line"
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#be185d"
-                    strokeWidth={3}
-                    name="Actual Revenue"
-                    dot={{ fill: "#be185d", r: 5 }}
-                  />
-                  <Line
-                    key="target-line"
-                    type="monotone"
-                    dataKey="target"
-                    stroke="#9f1239"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Target"
-                    dot={{ fill: "#9f1239", r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* Revenue Analytics Tab Content */}
+        <TabsContent value="revenue" className="mt-6 space-y-6">
+          {/* Revenue specific KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Average Monthly</p>
+              <p className="text-xl font-bold text-foreground mt-1">₹10.5L</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Target Achieved</p>
+              <p className="text-xl font-bold text-emerald-600 mt-1">94.2%</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Outstanding Invoices</p>
+              <p className="text-xl font-bold text-amber-600 mt-1">₹4.8L</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">YoY Growth</p>
+              <p className="text-xl font-bold text-pink-700 mt-1">+24.8%</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                Monthly Revenue vs Target
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyRevenueData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="month" stroke="#6b7280" fontSize={11} />
+                    <YAxis stroke="#6b7280" fontSize={11} />
+                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Amount"]} />
+                    <Legend />
+                    <Line
+                      key="revenue-line"
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#be185d"
+                      strokeWidth={3}
+                      name="Actual Revenue"
+                      dot={{ fill: "#be185d", r: 5 }}
+                    />
+                    <Line
+                      key="target-line"
+                      type="monotone"
+                      dataKey="target"
+                      stroke="#9f1239"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Target"
+                      dot={{ fill: "#9f1239", r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                Revenue Share by Category (Advanced)
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={revenueByCategoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {revenueByCategoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="complaints" className="mt-6">
-          <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-6">
-              Complaint Registration vs Resolution Trends
-            </h3>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={complaintTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip />
-                  <Legend />
-                  <Bar key="registered-bar" dataKey="registered" fill="#f59e0b" name="Registered" radius={[8, 8, 0, 0]} />
-                  <Bar key="resolved-bar" dataKey="resolved" fill="#be185d" name="Resolved" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+        {/* Complaint Trends Tab Content */}
+        <TabsContent value="complaints" className="mt-6 space-y-6">
+          {/* Complaints specific KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Avg Resolution Time</p>
+              <p className="text-xl font-bold text-foreground mt-1">1.8 Days</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">First Response Rate</p>
+              <p className="text-xl font-bold text-indigo-600 mt-1">92.4%</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Customer Satisfaction</p>
+              <p className="text-xl font-bold text-emerald-600 mt-1">4.8 / 5.0</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Reopened Complaints</p>
+              <p className="text-xl font-bold text-rose-600 mt-1">2.3%</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                Complaint Registration vs Resolution Trends
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={complaintTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <XAxis dataKey="month" stroke="#6b7280" fontSize={11} />
+                    <YAxis stroke="#6b7280" fontSize={11} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar key="registered-bar" dataKey="registered" fill="#f59e0b" name="Registered" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                    <Bar key="resolved-bar" dataKey="resolved" fill="#be185d" name="Resolved" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                Complaints Share by Category (Advanced)
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={complaintsByCategoryData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={85}
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      dataKey="count"
+                    >
+                      {complaintsByCategoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, "Complaints"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="amc" className="mt-6">
-          <div className="bg-card rounded-2xl shadow-sm border border-border p-6">
-            <h3 className="text-lg font-semibold text-foreground mb-6">
-              AMC Revenue by Client (Top 5)
-            </h3>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={amcRevenueData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-                  <XAxis type="number" stroke="#6b7280" />
-                  <YAxis dataKey="client" type="category" width={100} stroke="#6b7280" />
-                  <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
-                  <Legend />
-                  <Bar key="amc-revenue-bar" dataKey="revenue" fill="#be185d" name="AMC Revenue" radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+        {/* AMC Performance Tab Content */}
+        <TabsContent value="amc" className="mt-6 space-y-6">
+          {/* AMC specific KPIs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Renewal Rate</p>
+              <p className="text-xl font-bold text-emerald-600 mt-1">94.8%</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Active Contracts</p>
+              <p className="text-xl font-bold text-foreground mt-1">68 Contracts</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Avg Contract Value</p>
+              <p className="text-xl font-bold text-indigo-600 mt-1">₹1.13L</p>
+            </div>
+            <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm">
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Expiring in 30 Days</p>
+              <p className="text-xl font-bold text-rose-600 mt-1">5 Contracts</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                AMC Revenue by Client (Top 5)
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={amcRevenueData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                    <XAxis type="number" stroke="#6b7280" fontSize={11} />
+                    <YAxis dataKey="client" type="category" width={90} stroke="#6b7280" fontSize={11} />
+                    <Tooltip formatter={(value) => [formatCurrency(Number(value)), "Revenue"]} />
+                    <Legend />
+                    <Bar key="amc-revenue-bar" dataKey="revenue" fill="#be185d" name="AMC Revenue" radius={[0, 6, 6, 0]} maxBarSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl shadow-sm border border-border p-6">
+              <h3 className="text-sm font-bold text-foreground mb-6">
+                AMC Contract Status Breakdown (Advanced)
+              </h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={amcStatusBreakdownData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={4}
+                      dataKey="count"
+                    >
+                      {amcStatusBreakdownData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, "Contracts"]} />
+                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </TabsContent>
 
+        {/* Corporate aggregation report */}
         <TabsContent value="corporate" className="mt-6 space-y-6">
           {error && (
             <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200/50 text-rose-700 dark:text-rose-300 rounded-xl p-4 flex items-start gap-3">
@@ -419,7 +580,7 @@ export function Reports() {
             ) : companyReport ? (
               <div className="space-y-6">
                 {/* Header card with back button */}
-                <div className="bg-card rounded-2xl shadow-sm border border-border p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="bg-card rounded-xl shadow-sm border border-border p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={handleBackToCompanies}
@@ -453,7 +614,7 @@ export function Reports() {
                 {/* Consolidated KPIs */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   {/* KPI 1 */}
-                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                  <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm hover:shadow transition-shadow">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Branches</span>
@@ -466,7 +627,7 @@ export function Reports() {
                   </div>
 
                   {/* KPI 2 */}
-                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                  <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm hover:shadow transition-shadow">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Combined Projects</span>
@@ -479,7 +640,7 @@ export function Reports() {
                   </div>
 
                   {/* KPI 3 */}
-                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                  <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm hover:shadow transition-shadow">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Active AMCs</span>
@@ -492,7 +653,7 @@ export function Reports() {
                   </div>
 
                   {/* KPI 4 */}
-                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow">
+                  <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm hover:shadow transition-shadow">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Open Complaints</span>
@@ -505,7 +666,7 @@ export function Reports() {
                   </div>
 
                   {/* KPI 5 */}
-                  <div className="bg-card rounded-xl border border-border p-4 shadow-sm hover:shadow transition-shadow col-span-2 lg:col-span-1">
+                  <div className="bg-card rounded-xl border border-border p-4.5 shadow-sm hover:shadow transition-shadow col-span-2 lg:col-span-1">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total Revenue</span>
@@ -521,7 +682,7 @@ export function Reports() {
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Revenue Chart */}
-                  <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
+                  <div className="bg-card rounded-xl shadow-sm border border-border p-5">
                     <h4 className="text-sm font-bold text-foreground mb-4">Consolidated Revenue by Branch</h4>
                     <div className="h-72">
                       {companyReport.branches.length > 0 ? (
@@ -541,7 +702,7 @@ export function Reports() {
                   </div>
 
                   {/* Complaints/Enquiries Chart */}
-                  <div className="bg-card rounded-2xl shadow-sm border border-border p-5">
+                  <div className="bg-card rounded-xl shadow-sm border border-border p-5">
                     <h4 className="text-sm font-bold text-foreground mb-4">Complaints & Enquiries by Branch</h4>
                     <div className="h-72">
                       {companyReport.branches.length > 0 ? (
@@ -564,7 +725,7 @@ export function Reports() {
                 </div>
 
                 {/* Branches Detail Table */}
-                <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+                <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
                   <div className="p-5 border-b border-border">
                     <h4 className="text-base font-bold text-foreground">Branches Breakdown</h4>
                   </div>
@@ -585,7 +746,22 @@ export function Reports() {
                       <tbody className="divide-y divide-border/60">
                         {companyReport.branches.map((branch: any) => (
                           <tr key={branch.id} className="hover:bg-muted/20 transition-colors">
-                            <td className="px-6 py-4 text-sm font-semibold text-foreground">{branch.companyName}</td>
+                            <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full overflow-hidden shrink-0 border border-border shadow-sm bg-muted flex items-center justify-center">
+                                  {branch.logoUrl ? (
+                                    <img src={branch.logoUrl} alt={branch.companyName} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <img
+                                      src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(branch.companyName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                                      alt={branch.companyName}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                                <span>{branch.companyName}</span>
+                              </div>
+                            </td>
                             <td className="px-6 py-4 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1.5">
                                 <MapPin className="h-3.5 w-3.5 shrink-0" />
@@ -695,7 +871,7 @@ export function Reports() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-2xl bg-card">
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border rounded-xl bg-card">
                 <Building className="h-12 w-12 text-muted-foreground mb-3 animate-bounce" />
                 <h3 className="text-lg font-semibold text-foreground">No Corporate Groups Found</h3>
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm">
@@ -707,7 +883,7 @@ export function Reports() {
       </Tabs>
 
       {/* Recent Reports */}
-      <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
+      <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
         <div className="p-6 border-b border-border bg-muted/20">
           <h3 className="text-lg font-semibold text-foreground">Recently Generated Reports</h3>
         </div>

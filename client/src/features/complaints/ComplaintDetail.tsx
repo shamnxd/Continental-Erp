@@ -264,12 +264,20 @@ export function ComplaintDetail() {
               </Button>
               <div className="h-8 w-px bg-border hidden sm:block shrink-0" />
               <div className="flex items-center gap-3 min-w-0">
-                <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow">
-                  <img
-                    src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(complaint.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                    alt={complaint.clientName}
-                    className="h-full w-full object-cover"
-                  />
+                <div className="h-11 w-11 rounded-full overflow-hidden shrink-0 border-2 border-primary/20 shadow bg-card flex items-center justify-center">
+                  {client?.logoUrl || complaint.clientLogoUrl ? (
+                    <img
+                      src={client?.logoUrl || complaint.clientLogoUrl}
+                      alt={complaint.clientName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(complaint.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                      alt={complaint.clientName}
+                      className="h-full w-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-lg sm:text-xl font-bold text-foreground truncate leading-tight">
@@ -406,12 +414,20 @@ export function ComplaintDetail() {
                       </div>
                       
                       <div className="flex items-center gap-3 pb-3 border-b border-border/40">
-                        <div className="h-10 w-10 rounded-full overflow-hidden shrink-0 border-2 border-pink-500/20 shadow-sm bg-pink-100">
-                          <img
-                            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(complaint.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-                            alt={complaint.clientName}
-                            className="h-full w-full object-cover"
-                          />
+                        <div className="h-10 w-10 rounded-full overflow-hidden shrink-0 border-2 border-pink-500/20 shadow-sm bg-pink-100 flex items-center justify-center">
+                          {client?.logoUrl || complaint.clientLogoUrl ? (
+                            <img
+                              src={client?.logoUrl || complaint.clientLogoUrl}
+                              alt={complaint.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(complaint.clientName)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+                              alt={complaint.clientName}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-bold text-foreground truncate">{complaint.clientName}</p>

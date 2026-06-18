@@ -27,20 +27,30 @@ export function TableClientCell({
   name,
   subtitle,
   seed,
+  logoUrl,
 }: {
   name: string;
   subtitle?: string;
   seed?: string;
+  logoUrl?: string;
 }) {
   const avatarSeed = seed ?? name;
   return (
     <div className="flex items-center gap-3 min-w-0">
-      <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border shadow-sm">
-        <img
-          src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
-          alt={name}
-          className="h-full w-full object-cover"
-        />
+      <div className="h-9 w-9 rounded-full overflow-hidden shrink-0 border border-border shadow-sm bg-muted flex items-center justify-center">
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <img
+            src={`https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=be185d&fontSize=40&fontWeight=700`}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
+        )}
       </div>
       <TablePrimarySecondary
         primary={name}

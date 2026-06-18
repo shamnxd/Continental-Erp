@@ -37,6 +37,7 @@ import { AmcFormModal } from "../../components/AmcFormModal";
 import { canRenewAmc } from "../../utils/amcRenewal";
 import { RefreshCw } from "lucide-react";
 import { NextVisitCell } from "../../components/NextVisitCell";
+import { TableClientCell } from "../../components/tableCells";
 import { calculateNextPreferredVisitDate } from "../../utils/calculateAmcVisits";
 import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
@@ -242,14 +243,11 @@ export function AMC() {
     {
       header: "Client",
       accessor: (c: AmcContract) => (
-        <div className="min-w-0">
-          <p className="font-semibold text-foreground leading-tight truncate max-w-[180px]">
-            {c.clientName}
-          </p>
-          {c.email?.trim() && (
-            <p className="text-xs text-muted-foreground truncate max-w-[180px]">{c.email}</p>
-          )}
-        </div>
+        <TableClientCell
+          name={c.clientName}
+          subtitle={c.email || undefined}
+          logoUrl={c.clientLogoUrl}
+        />
       ),
       className: "px-4 py-4 w-[180px] min-w-[150px]",
     },

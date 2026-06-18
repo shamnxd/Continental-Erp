@@ -171,7 +171,8 @@ export function Projects() {
       header: "Client",
       accessor: (row) => {
         const clientName = typeof row.clientRef === "object" ? row.clientRef.companyName : "Unknown Client";
-        return <TableClientCell name={clientName} subtitle={fmtCurrency(row.value)} />;
+        const clientLogoUrl = typeof row.clientRef === "object" ? row.clientRef.logoUrl : undefined;
+        return <TableClientCell name={clientName} subtitle={fmtCurrency(row.value)} logoUrl={clientLogoUrl} />;
       },
       className: tableCellClass.wide,
     },

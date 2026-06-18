@@ -189,11 +189,15 @@ export function WarrantyManagement() {
           typeof row.clientRef === "object" && row.clientRef
             ? row.clientRef.companyName
             : "Unknown Client";
+        const clientLogoUrl =
+          typeof row.clientRef === "object" && row.clientRef
+            ? row.clientRef.logoUrl
+            : undefined;
         const projNo =
           typeof row.projectRef === "object" && row.projectRef
             ? row.projectRef.projectNo
             : "";
-        return <TableClientCell name={clientName} subtitle={projNo || undefined} />;
+        return <TableClientCell name={clientName} subtitle={projNo || undefined} logoUrl={clientLogoUrl} />;
       },
       className: tableCellClass.wide,
     },

@@ -62,6 +62,7 @@ export interface ScheduleItem {
   type: ScheduleType;
   title: string;
   clientName: string;
+  clientLogoUrl?: string;
   status: string;
   reference: string;
   clientSubtitle?: string;
@@ -122,6 +123,7 @@ function buildNextPreferredVisitItem(contract: AmcContract): ScheduleItem | null
     visitIndex: nextIndex,
     totalVisits: total,
     clientName: contract.clientName,
+    clientLogoUrl: contract.clientLogoUrl,
     clientSubtitle: contract.email?.trim() || contract.contactPerson,
     eventSubtitle: contract.serviceType,
     status: "Preferred",
@@ -206,6 +208,7 @@ export function Schedules() {
               type: "Follow-up",
               title: sch.title,
               clientName: sch.clientName,
+              clientLogoUrl: sch.clientLogoUrl,
               clientSubtitle: sch.assignedTo?.length ? `Assigned: ${sch.assignedTo.join(", ")}` : "",
               eventSubtitle: sch.notes || "",
               status: sch.status,
@@ -228,6 +231,7 @@ export function Schedules() {
             type: itemType,
             title: sch.title,
             clientName: sch.clientName,
+            clientLogoUrl: sch.clientLogoUrl,
             clientSubtitle: sch.assignedTo?.length ? `Assigned: ${sch.assignedTo.join(", ")}` : "",
             eventSubtitle: sch.notes || "",
             status: sch.status,
@@ -430,7 +434,7 @@ export function Schedules() {
     },
     {
       header: "Client",
-      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} logoUrl={row.clientLogoUrl} />,
       className: tableCellClass.wide,
     },
     {
@@ -493,7 +497,7 @@ export function Schedules() {
     },
     {
       header: "Client",
-      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} logoUrl={row.clientLogoUrl} />,
       className: tableCellClass.wide,
     },
     {
@@ -559,7 +563,7 @@ export function Schedules() {
     },
     {
       header: "Client",
-      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} />,
+      accessor: (row) => <TableClientCell name={row.clientName} subtitle={row.clientSubtitle} logoUrl={row.clientLogoUrl} />,
       className: tableCellClass.wide,
     },
     {

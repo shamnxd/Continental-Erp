@@ -79,10 +79,12 @@ export function MinorJobs() {
       accessor: (row) => {
         const clientName = typeof row.clientRef === "object" ? row.clientRef.companyName : "Unknown Client";
         const contactName = typeof row.clientRef === "object" ? row.clientRef.contactPerson : "";
+        const clientLogoUrl = typeof row.clientRef === "object" ? row.clientRef.logoUrl : undefined;
         return (
           <TableClientCell
             name={clientName}
             subtitle={contactName ?? `Assigned: ${row.assignedTo}`}
+            logoUrl={clientLogoUrl}
           />
         );
       },

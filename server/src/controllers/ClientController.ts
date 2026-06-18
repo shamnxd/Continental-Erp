@@ -10,6 +10,8 @@ import { AuditLogger } from "../utils/AuditLogger";
 import { ClientModel } from "../models/Client";
 import { ComplaintModel } from "../models/Complaint";
 import { EnquiryModel } from "../models/Enquiry";
+import { ClientInvoiceModel } from "../models/ClientInvoice";
+import { getFileStorage } from "../storage";
 
 @autoInjectable()
 export class ClientController {
@@ -155,6 +157,136 @@ export class ClientController {
         success: true,
         message: "Client deleted successfully"
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public getParentCompanyReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parentCompany = req.query.parentCompany as string | undefined;
+
+      if (!parentCompany || !parentCompany.trim()) {
+        // Return summary list of all unique parent companies
+        const parentCompanies = await ClientModel.aggregate([
+          {
+            $match: {
+              parentCompany: { $nin: [null, ""] }
+            }
+          },
+          {
+            $group: {
+              _id: "$parentCompany",
+              branchesCount: { $sum: 1 },
+              totalProjects: { $sum: "$projectsCount" },
+              activeAmcCount: {
+                $sum: {
+                  $cond: [{ $eq: ["$amcStatus", "Active"] }, 1, 0]
+                }
+              }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              parentCompany: "$_id",
+              branchesCount: 1,
+              totalProjects: 1,
+              activeAmc: "$activeAmcCount"
+            }
+          },
+          {
+            $sort: { parentCompany: 1 }
+          }
+        ]).exec();
+
+        res.status(StatusCode.OK).json({
+          success: true,
+          data: parentCompanies
+        });
+        return;
+      }
+
+      // Detailed company report
+      const trimmedParent = parentCompany.trim();
+      const branches = await ClientModel.find({ parentCompany: trimmedParent }).exec();
+
+      const branchDetails = await Promise.all(
+        branches.map(async (branch) => {
+          const [activeComplaintsCount, activeEnquiriesCount, invoices] = await Promise.all([
+            ComplaintModel.countDocuments({
+              $or: [{ clientId: branch._id.toString() }, { clientName: branch.companyName }],
+              status: { $in: ["Pending", "In Progress"] }
+            }),
+            EnquiryModel.countDocuments({
+              $or: [{ clientId: branch._id.toString() }, { clientName: branch.companyName }],
+              status: { $in: ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] }
+            }),
+            ClientInvoiceModel.find({
+              clientName: branch.companyName,
+              documentStatus: "Approved"
+            }).select("grandTotal").exec()
+          ]);
+
+          const revenue = invoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+
+          return {
+            id: branch._id.toString(),
+            companyName: branch.companyName,
+            city: branch.city,
+            contactPerson: branch.contactPerson,
+            projectsCount: branch.projectsCount,
+            amcStatus: branch.amcStatus,
+            activeComplaintsCount,
+            activeEnquiriesCount,
+            revenue
+          };
+        })
+      );
+
+      // Consolidated metrics
+      const totalBranches = branches.length;
+      const totalProjects = branchDetails.reduce((sum, b) => sum + b.projectsCount, 0);
+      const totalActiveAmc = branchDetails.filter(b => b.amcStatus === "Active").length;
+      const totalPendingComplaints = branchDetails.reduce((sum, b) => sum + b.activeComplaintsCount, 0);
+      const totalActiveEnquiries = branchDetails.reduce((sum, b) => sum + b.activeEnquiriesCount, 0);
+      const totalRevenue = branchDetails.reduce((sum, b) => sum + b.revenue, 0);
+
+      res.status(StatusCode.OK).json({
+        success: true,
+        data: {
+          overview: {
+            totalBranches,
+            totalProjects,
+            totalActiveAmc,
+            totalPendingComplaints,
+            totalActiveEnquiries,
+            totalRevenue
+          },
+          branches: branchDetails
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public uploadLogo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const file = req.file;
+      if (!file) {
+        res.status(StatusCode.BAD_REQUEST).json({ success: false, message: "No logo file uploaded" });
+        return;
+      }
+      const storage = getFileStorage();
+      const stored = await storage.save({
+        tempPath: file.path,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        folder: "logos"
+      });
+      res.status(StatusCode.OK).json({ success: true, url: stored.url });
     } catch (error) {
       next(error);
     }

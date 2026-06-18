@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Calendar,
   UserCog,
-  Receipt,
   BarChart3,
   Menu,
   X,
@@ -88,39 +87,6 @@ const navigation: NavSection[] = [
   {
     title: "Finance & Analytics",
     items: [
-      {
-        name: "Finance",
-        icon: Receipt,
-        submenu: [
-          { name: "Overview", href: AppRoute.FINANCE },
-          {
-            name: "Receivables",
-            children: [
-              { name: "Customer Invoices", href: AppRoute.FINANCE_RECEIVABLES_INVOICES },
-              { name: "Customer Payments", href: AppRoute.FINANCE_RECEIVABLES_PAYMENTS },
-              { name: "Outstanding Receivables", href: AppRoute.FINANCE_RECEIVABLES_OUTSTANDING },
-            ],
-          },
-          {
-            name: "Payables",
-            children: [
-              { name: "Vendor Bills", href: AppRoute.FINANCE_PAYABLES_BILLS },
-              { name: "Vendor Payments", href: AppRoute.FINANCE_PAYABLES_PAYMENTS },
-              { name: "Outstanding Payables", href: AppRoute.FINANCE_PAYABLES_OUTSTANDING },
-            ],
-          },
-          {
-            name: "Expenses",
-            children: [
-              { name: "Direct Expenses", href: AppRoute.FINANCE_EXPENSES_DIRECT },
-              { name: "Travel", href: AppRoute.FINANCE_EXPENSES_TRAVEL },
-              { name: "Fuel", href: AppRoute.FINANCE_EXPENSES_FUEL },
-              { name: "Misc Expenses", href: AppRoute.FINANCE_EXPENSES_MISC },
-            ],
-          },
-          { name: "Cash & Ledger", href: AppRoute.FINANCE_LEDGER },
-        ],
-      },
       { name: "Reports", href: AppRoute.REPORTS, icon: BarChart3 },
     ],
   },
@@ -135,57 +101,31 @@ const navigation: NavSection[] = [
   },
 ];
 
-function isFinancePath(pathname: string) {
-  return pathname === AppRoute.FINANCE || pathname.startsWith(`${AppRoute.FINANCE}/`);
-}
-
-function isSubNavActive(pathname: string, href: string) {
-  if (href === AppRoute.FINANCE) return pathname === AppRoute.FINANCE;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function financeLeafActive(pathname: string, submenu: NavSubItem[]): NavLeaf | undefined {
-  for (const sub of submenu) {
-    if (sub.href && isSubNavActive(pathname, sub.href)) return { name: sub.name, href: sub.href };
-    if (sub.children) {
-      const leaf = sub.children.find((c) => isSubNavActive(pathname, c.href));
-      if (leaf) return leaf;
-    }
-  }
-  return undefined;
-}
 
 function getPageTitle(pathname: string): string {
-  if (pathname === AppRoute.FINANCE_INVOICE_CREATE || pathname.endsWith("/receivables/invoices/new")) return "Create invoice";
-  if (pathname === AppRoute.FINANCE_VENDOR_BILL_CREATE || pathname.endsWith("/payables/bills/new")) return "New vendor bill";
-
   for (const section of navigation) {
     for (const item of section.items) {
-      if (item.submenu) {
-        const leaf = financeLeafActive(pathname, item.submenu);
-        if (leaf) return leaf.name;
-        if (isFinancePath(pathname)) return "Finance";
-      } else if (item.href) {
+      if (item.href) {
         if (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))) {
           return item.name;
         }
       }
     }
   }
-  if (pathname === AppRoute.DASHBOARD) return "Dashboard";
   return "Dashboard";
 }
+
+function isSubNavActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 
 export function RootLayout() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
-    Finance: false,
-    Receivables: false,
-    Payables: false,
-    Expenses: false,
-  });
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("theme");
@@ -287,16 +227,6 @@ export function RootLayout() {
       })
     : [];
 
-  useEffect(() => {
-    if (!isFinancePath(location.pathname)) return;
-    setExpandedMenus((prev) => ({
-      ...prev,
-      Finance: true,
-      Receivables: location.pathname.includes("/receivables") ? true : prev.Receivables,
-      Payables: location.pathname.includes("/payables") ? true : prev.Payables,
-      Expenses: location.pathname.includes("/expenses") ? true : prev.Expenses,
-    }));
-  }, [location.pathname]);
 
   useEffect(() => {
     if (darkMode) {

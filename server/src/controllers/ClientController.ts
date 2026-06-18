@@ -10,7 +10,6 @@ import { AuditLogger } from "../utils/AuditLogger";
 import { ClientModel } from "../models/Client";
 import { ComplaintModel } from "../models/Complaint";
 import { EnquiryModel } from "../models/Enquiry";
-import { ClientInvoiceModel } from "../models/ClientInvoice";
 import { getFileStorage } from "../storage";
 
 @autoInjectable()
@@ -213,7 +212,7 @@ export class ClientController {
 
       const branchDetails = await Promise.all(
         branches.map(async (branch) => {
-          const [activeComplaintsCount, activeEnquiriesCount, invoices] = await Promise.all([
+          const [activeComplaintsCount, activeEnquiriesCount] = await Promise.all([
             ComplaintModel.countDocuments({
               $or: [{ clientId: branch._id.toString() }, { clientName: branch.companyName }],
               status: { $in: ["Pending", "In Progress"] }
@@ -222,13 +221,7 @@ export class ClientController {
               $or: [{ clientId: branch._id.toString() }, { clientName: branch.companyName }],
               status: { $in: ["Site Visit Scheduled", "Quotation Prepared", "Follow-up Required"] }
             }),
-            ClientInvoiceModel.find({
-              clientName: branch.companyName,
-              documentStatus: "Approved"
-            }).select("grandTotal").exec()
           ]);
-
-          const revenue = invoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
 
           return {
             id: branch._id.toString(),
@@ -239,7 +232,6 @@ export class ClientController {
             amcStatus: branch.amcStatus,
             activeComplaintsCount,
             activeEnquiriesCount,
-            revenue,
             logoUrl: branch.logoUrl || ""
           };
         })
@@ -251,7 +243,7 @@ export class ClientController {
       const totalActiveAmc = branchDetails.filter(b => b.amcStatus === "Active").length;
       const totalPendingComplaints = branchDetails.reduce((sum, b) => sum + b.activeComplaintsCount, 0);
       const totalActiveEnquiries = branchDetails.reduce((sum, b) => sum + b.activeEnquiriesCount, 0);
-      const totalRevenue = branchDetails.reduce((sum, b) => sum + b.revenue, 0);
+      const totalRevenue = 0;
 
       res.status(StatusCode.OK).json({
         success: true,

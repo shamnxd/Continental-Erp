@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter } from "react-router";
 import { RootLayout } from "./layouts/RootLayout";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { Clients } from "./features/clients/Clients";
@@ -18,20 +18,6 @@ import { AmcSMRCreatePage } from "./features/amc/AmcSMRCreatePage";
 import { AmcVisitDetailPage } from "./features/amc/AmcVisitDetailPage";
 import { Staff } from "./features/staff/Staff";
 import { StaffDetail } from "./features/staff/StaffDetail";
-import { FinanceLayout } from "./features/finance/FinanceLayout";
-import { FinanceOverview } from "./features/finance/FinanceOverview";
-import { FinanceCustomerInvoices } from "./features/finance/FinanceCustomerInvoices";
-import { FinanceCustomerPayments } from "./features/finance/FinanceCustomerPayments";
-import { FinanceOutstandingReceivables } from "./features/finance/FinanceOutstandingReceivables";
-import { FinanceVendorBills } from "./features/finance/FinanceVendorBills";
-import { FinanceVendorPayments } from "./features/finance/FinanceVendorPayments";
-import { FinanceOutstandingPayables } from "./features/finance/FinanceOutstandingPayables";
-import { FinanceExpensesList } from "./features/finance/FinanceExpensesList";
-import { FinanceLedger } from "./features/finance/FinanceLedger";
-import { FinanceReports } from "./features/finance/FinanceReports";
-import { InvoiceFormPage } from "./features/finance/InvoiceFormPage";
-import { InvoiceDetailsPage } from "./features/finance/InvoiceDetailsPage";
-import { VendorBillFormPage } from "./features/finance/VendorBillFormPage";
 import { Reports } from "./features/reports/Reports";
 import { Schedules } from "./features/schedules/Schedules";
 import { ScheduleDetail } from "./features/schedules/ScheduleDetail";
@@ -99,34 +85,6 @@ export const router = createBrowserRouter([
       { path: AppRoute.AMC_VISIT_SMR_CREATE, element: <AmcSMRCreatePage /> },
       { path: AppRoute.STAFF, element: <Staff /> },
       { path: AppRoute.STAFF_DETAIL, element: <StaffDetail /> },
-      { path: AppRoute.INVOICES, element: <Navigate to={AppRoute.FINANCE} replace /> },
-      {
-        path: AppRoute.FINANCE,
-        element: <FinanceLayout />,
-        children: [
-          { index: true, element: <FinanceOverview /> },
-          { path: "receivables", element: <Navigate to={AppRoute.FINANCE_RECEIVABLES_INVOICES} replace /> },
-          { path: "receivables/invoices", element: <FinanceCustomerInvoices /> },
-          { path: "receivables/invoices/new", element: <InvoiceFormPage /> },
-          { path: "receivables/invoices/:invoiceId", element: <InvoiceDetailsPage /> },
-          { path: "receivables/payments", element: <FinanceCustomerPayments /> },
-          { path: "receivables/outstanding", element: <FinanceOutstandingReceivables /> },
-          { path: "receivables/new", element: <Navigate to={AppRoute.FINANCE_INVOICE_CREATE} replace /> },
-          { path: "payables", element: <Navigate to={AppRoute.FINANCE_PAYABLES_BILLS} replace /> },
-          { path: "payables/bills", element: <FinanceVendorBills /> },
-          { path: "payables/bills/new", element: <VendorBillFormPage /> },
-          { path: "payables/payments", element: <FinanceVendorPayments /> },
-          { path: "payables/outstanding", element: <FinanceOutstandingPayables /> },
-          { path: "payables/new", element: <Navigate to={AppRoute.FINANCE_VENDOR_BILL_CREATE} replace /> },
-          { path: "expenses", element: <Navigate to={AppRoute.FINANCE_EXPENSES_DIRECT} replace /> },
-          { path: "expenses/direct", element: <FinanceExpensesList filter="direct" /> },
-          { path: "expenses/travel", element: <FinanceExpensesList filter="travel" /> },
-          { path: "expenses/fuel", element: <FinanceExpensesList filter="fuel" /> },
-          { path: "expenses/misc", element: <FinanceExpensesList filter="misc" /> },
-          { path: "ledger", element: <FinanceLedger /> },
-          { path: "reports", element: <FinanceReports /> },
-        ],
-      },
       { path: AppRoute.REPORTS, element: <Reports /> },
       { path: AppRoute.SCHEDULES, element: <Schedules /> },
       { path: AppRoute.SCHEDULE_DETAIL, element: <ScheduleDetail /> },

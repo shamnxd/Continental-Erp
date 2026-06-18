@@ -2,13 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import { EnquiryModel } from "../models/Enquiry";
 import { AmcModel } from "../models/Amc";
 import { ComplaintModel } from "../models/Complaint";
-import { ClientInvoiceModel } from "../models/ClientInvoice";
-import { QuotationModel } from "../models/Quotation";
 import { ClientModel } from "../models/Client";
 import { ScheduleModel } from "../models/Schedule";
 import { WarrantyModel } from "../models/Warranty";
-import { IncomeEntryModel } from "../models/IncomeEntry";
-import { ExpenseEntryModel } from "../models/ExpenseEntry";
 import { StatusCode } from "../constants/statusCodes";
 
 function calculateChange(thisMonth: number, lastMonth: number): string {
@@ -73,20 +69,11 @@ export class DashboardController {
         ComplaintModel.countDocuments({ status: { $in: ["Pending", "In Progress"] }, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
       ]);
 
-      // Revenue
-      const [incomesThisMonth, incomesLastMonth] = await Promise.all([
-        IncomeEntryModel.find({ incomeDate: { $gte: thisMonthStartStr, $lte: thisMonthEndStr } }).lean().exec(),
-        IncomeEntryModel.find({ incomeDate: { $gte: lastMonthStartStr, $lte: lastMonthEndStr } }).lean().exec()
-      ]);
-      const revThisMonth = incomesThisMonth.reduce((sum, item) => sum + (item.actualReceived || 0), 0);
-      const revLastMonth = incomesLastMonth.reduce((sum, item) => sum + (item.actualReceived || 0), 0);
+      const revThisMonth = 0;
+      const revLastMonth = 0;
 
       // Pending Quotations
-      const [quotPending, quotThisMonth, quotLastMonth] = await Promise.all([
-        QuotationModel.countDocuments({ status: { $in: ["Draft", "Pending Approval"] } }),
-        QuotationModel.countDocuments({ status: { $in: ["Draft", "Pending Approval"] }, createdAt: { $gte: startOfThisMonth } }),
-        QuotationModel.countDocuments({ status: { $in: ["Draft", "Pending Approval"] }, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
-      ]);
+      const [quotPending, quotThisMonth, quotLastMonth] = [0, 0, 0];
 
       // Active Clients
       const [clientTotal, clientThisMonth, clientLastMonth] = await Promise.all([
@@ -95,12 +82,9 @@ export class DashboardController {
         ClientModel.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
       ]);
 
-      // Pending Invoices
-      const [invPending, invThisMonth, invLastMonth] = await Promise.all([
-        ClientInvoiceModel.countDocuments({ paymentState: { $in: ["Open", "Partially Paid", "Overdue"] }, documentStatus: "Approved" }),
-        ClientInvoiceModel.countDocuments({ paymentState: { $in: ["Open", "Partially Paid", "Overdue"] }, documentStatus: "Approved", createdAt: { $gte: startOfThisMonth } }),
-        ClientInvoiceModel.countDocuments({ paymentState: { $in: ["Open", "Partially Paid", "Overdue"] }, documentStatus: "Approved", createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
-      ]);
+      const invPending = 0;
+      const invThisMonth = 0;
+      const invLastMonth = 0;
 
       // Completed Works
       const [compWorksTotal, compWorksThisMonth, compWorksLastMonth] = await Promise.all([
@@ -144,19 +128,11 @@ export class DashboardController {
         });
       }
 
-      const revenueData = await Promise.all(
-        monthsData.map(async (m) => {
-          const [incomes, expenses] = await Promise.all([
-            IncomeEntryModel.find({ incomeDate: { $gte: m.startStr, $lte: m.endStr } }).lean().exec(),
-            ExpenseEntryModel.find({ expenseDate: { $gte: m.startStr, $lte: m.endStr } }).lean().exec()
-          ]);
-          return {
-            month: m.month,
-            revenue: incomes.reduce((sum, item) => sum + (item.actualReceived || 0), 0),
-            expenses: expenses.reduce((sum, item) => sum + (item.actual || 0), 0)
-          };
-        })
-      );
+      const revenueData = monthsData.map((m) => ({
+        month: m.month,
+        revenue: 0,
+        expenses: 0
+      }));
 
       // ─── 4. Fetch Complaints Status Pie Chart Data ────────────────────────
       const [resolvedCount, inProgressCount, pendingCount] = await Promise.all([
@@ -190,12 +166,11 @@ export class DashboardController {
       const limitVal = allAlerts ? 100 : 3;
 
       const alerts: any[] = [];
-      const [soonWarranties, expiredWarranties, overdueAmc, overdueComp, overduePayments] = await Promise.all([
+      const [soonWarranties, expiredWarranties, overdueAmc, overdueComp] = await Promise.all([
         WarrantyModel.find({ status: "Expiring Soon" }).populate("clientRef").limit(limitVal).lean().exec(),
         WarrantyModel.find({ status: "Expired" }).populate("clientRef").limit(limitVal).lean().exec(),
         ScheduleModel.find({ entityType: "amc", scheduledDate: { $lt: now }, status: { $in: ["Scheduled", "In Progress", "Pending"] } }).limit(limitVal).lean().exec(),
         ComplaintModel.find({ expectedResolution: { $lt: now }, status: { $in: ["Pending", "In Progress"] } }).limit(limitVal).lean().exec(),
-        ClientInvoiceModel.find({ dueDate: { $lt: now.toISOString().split("T")[0] }, paymentState: { $in: ["Overdue", "Open", "Partially Paid"] }, documentStatus: "Approved" }).limit(limitVal).lean().exec()
       ]);
 
       soonWarranties.forEach((w: any) => {
@@ -250,26 +225,12 @@ export class DashboardController {
         });
       });
 
-      overduePayments.forEach((inv: any) => {
-        alerts.push({
-          id: `overdue_pay_${inv._id}`,
-          type: "warning",
-          title: `Invoice Overdue: ${inv.invoiceNo}`,
-          client: `${inv.clientName} (Total: ₹${inv.grandTotal.toLocaleString("en-IN")})`,
-          assignee: "Finance Team",
-          time: `Due: ${inv.dueDate} (Outstanding: ₹${(inv.outstanding ?? inv.grandTotal).toLocaleString("en-IN")})`,
-          priority: "High",
-          link: `/finance/invoices/${inv._id}`
-        });
-      });
 
       // ─── 7. Fetch Recent Activities Log ───────────────────────────────────
-      const [latestEnquiries, latestQuotations, latestComplaints, latestAmcs, latestInvoices] = await Promise.all([
+      const [latestEnquiries, latestComplaints, latestAmcs] = await Promise.all([
         EnquiryModel.find().sort({ createdAt: -1 }).limit(3).lean().exec(),
-        QuotationModel.find().sort({ createdAt: -1 }).limit(3).lean().exec(),
         ComplaintModel.find().sort({ createdAt: -1 }).limit(3).lean().exec(),
         AmcModel.find().sort({ createdAt: -1 }).limit(3).lean().exec(),
-        ClientInvoiceModel.find().sort({ createdAt: -1 }).limit(3).lean().exec()
       ]);
 
       const activities: any[] = [];
@@ -282,17 +243,6 @@ export class DashboardController {
           date: e.createdAt,
           time: formatRelativeTime(e.createdAt),
           status: e.status
-        });
-      });
-      latestQuotations.forEach((q: any) => {
-        activities.push({
-          id: `act_quot_${q._id}`,
-          type: "quotation",
-          title: `Quotation created: ${q.quotationNo}`,
-          client: q.clientName,
-          date: q.createdAt,
-          time: formatRelativeTime(q.createdAt),
-          status: q.status
         });
       });
       latestComplaints.forEach((c: any) => {
@@ -315,17 +265,6 @@ export class DashboardController {
           date: a.createdAt,
           time: formatRelativeTime(a.createdAt),
           status: a.status
-        });
-      });
-      latestInvoices.forEach((inv: any) => {
-        activities.push({
-          id: `act_inv_${inv._id}`,
-          type: "invoice",
-          title: `Invoice issued: ${inv.invoiceNo}`,
-          client: inv.clientName,
-          date: inv.createdAt,
-          time: formatRelativeTime(inv.createdAt),
-          status: inv.paymentState
         });
       });
 

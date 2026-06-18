@@ -29,6 +29,7 @@ export class EnquiryRepository extends BaseRepository<IEnquiryDocument, IEnquiry
       date: doc.date,
       clientId: doc.clientId,
       clientName,
+      clientLogoUrl: client?.logoUrl || "",
       contactPerson,
       phone,
       email,

@@ -19,13 +19,18 @@ export class ScheduleRepository
   }
 
   protected toDomain(doc: IScheduleDocument): ISchedule {
+    const client = doc.clientRef as any;
+    const clientLogoUrl = client && typeof client === "object" && "logoUrl" in client ? client.logoUrl : "";
+    const clientRefStr = client && typeof client === "object" && "_id" in client ? client._id.toString() : (doc.clientRef?.toString() || null);
+    const clientName = client && typeof client === "object" && "companyName" in client ? client.companyName : doc.clientName;
     return {
       id: doc._id.toString(),
       entityType: doc.entityType,
       entityId: doc.entityId,
       entityNo: doc.entityNo,
-      clientName: doc.clientName,
-      clientRef: doc.clientRef?.toString() || null,
+      clientName,
+      clientLogoUrl,
+      clientRef: clientRefStr,
       title: doc.title,
       scheduleType: doc.scheduleType,
       scheduledDate: doc.scheduledDate,
@@ -50,6 +55,7 @@ export class ScheduleRepository
   public async findByEntity(entityType: string, entityId: string): Promise<ISchedule[]> {
     const docs = await this.model
       .find({ entityType, entityId })
+      .populate("clientRef")
       .sort({ scheduledDate: 1 })
       .exec();
     return docs.map((doc) => this.toDomain(doc));

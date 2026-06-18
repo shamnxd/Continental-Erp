@@ -239,7 +239,8 @@ export class ClientController {
             amcStatus: branch.amcStatus,
             activeComplaintsCount,
             activeEnquiriesCount,
-            revenue
+            revenue,
+            logoUrl: branch.logoUrl || ""
           };
         })
       );

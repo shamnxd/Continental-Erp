@@ -31,6 +31,7 @@ export class QuotationRepository
       validUntil: doc.validUntil,
       clientId: doc.clientId,
       clientName,
+      clientLogoUrl: client?.logoUrl || "",
       clientAddress,
       gstin,
       enquiryId: doc.enquiryId || undefined,

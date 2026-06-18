@@ -12,6 +12,7 @@ export interface IComplaint {
   clientId: string;
   clientRef?: string;
   clientName: string;
+  clientLogoUrl?: string;
   contactPerson: string;
   phone: string;
   issue: string;

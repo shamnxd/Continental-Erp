@@ -32,6 +32,7 @@ export class ComplaintRepository extends BaseRepository<IComplaintDocument, ICom
       date: doc.date,
       clientId: doc.clientId,
       clientName,
+      clientLogoUrl: client?.logoUrl || "",
       contactPerson,
       phone,
       issue: doc.issue,

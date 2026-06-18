@@ -30,6 +30,7 @@ export interface IEnquiry {
   clientId: string;
   clientRef?: string;
   clientName: string;
+  clientLogoUrl?: string;
   contactPerson: string;
   phone: string;
   email: string;

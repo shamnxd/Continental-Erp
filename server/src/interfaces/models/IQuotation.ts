@@ -21,6 +21,7 @@ export interface IQuotation {
   clientId: string;
   clientRef?: string;
   clientName: string;
+  clientLogoUrl?: string;
   clientAddress?: string;
   gstin?: string;
   enquiryId?: string;

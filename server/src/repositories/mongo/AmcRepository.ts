@@ -13,11 +13,16 @@ export class AmcRepository extends BaseRepository<IAmcDocument, IAmc> implements
   }
 
   protected toDomain(doc: IAmcDocument): IAmc {
+    const client = doc.clientId as any;
+    const clientLogoUrl = client && typeof client === "object" && "logoUrl" in client ? client.logoUrl : "";
+    const clientIdStr = client && typeof client === "object" && "_id" in client ? client._id.toString() : doc.clientId.toString();
+    const clientName = client && typeof client === "object" && "companyName" in client ? client.companyName : doc.clientName;
     return {
       id: doc._id.toString(),
       amcNo: doc.amcNo,
-      clientId: doc.clientId.toString(),
-      clientName: doc.clientName,
+      clientId: clientIdStr,
+      clientName,
+      clientLogoUrl,
       contactPerson: doc.contactPerson,
       phone: doc.phone,
       email: doc.email,
@@ -92,6 +97,11 @@ export class AmcRepository extends BaseRepository<IAmcDocument, IAmc> implements
     return this.toDomain(savedDoc);
   }
 
+  public override async findById(id: string): Promise<IAmc | null> {
+    const doc = await this.model.findById(id).populate("clientId").exec();
+    return doc ? this.toDomain(doc) : null;
+  }
+
   public async findPaginated(query: GetAmcQuery): Promise<PaginatedAmc> {
     const { search, page = 1, limit = 10, status, clientId } = query;
     const mongoFilter: Record<string, unknown> = {};
@@ -119,7 +129,7 @@ export class AmcRepository extends BaseRepository<IAmcDocument, IAmc> implements
 
     const skip = (page - 1) * limit;
     const [docs, total] = await Promise.all([
-      this.model.find(mongoFilter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+      this.model.find(mongoFilter).populate("clientId").sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
       this.model.countDocuments(mongoFilter).exec()
     ]);
 

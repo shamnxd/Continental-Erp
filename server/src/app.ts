@@ -29,6 +29,7 @@ import { remarkRouter } from "./routes/remark.routes";
 import { warrantyRouter } from "./routes/warranty.routes";
 import { kanbanRouter } from "./routes/kanban.routes";
 import { dashboardRouter } from "./routes/dashboard.routes";
+import { tallyRouter } from "./routes/tally.routes";
 
 import { errorHandler } from "./middleware/error.middleware";
 
@@ -79,6 +80,7 @@ app.use("/api/v1/minor-jobs", minorJobRouter);
 app.use("/api/v1/warranties", warrantyRouter);
 app.use("/api/v1/kanban", kanbanRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
+app.use("/api/v1/tally", tallyRouter);
 
 
 // Centralized error handler (must be registered last)

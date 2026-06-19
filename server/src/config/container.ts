@@ -153,6 +153,8 @@ import { AddQuotationRemarkDto, EditQuotationRemarkDto } from "../dtos/quotation
 
 import { IEmailService } from "../interfaces/services/IEmailService";
 import { EmailService } from "../services/EmailService";
+import { ITallySyncService } from "../interfaces/services/ITallySyncService";
+import { TallySyncService } from "../services/TallySyncService";
 
 // Warranty Imports
 import { IWarrantyRepository } from "../interfaces/repositories/IWarrantyRepository";
@@ -312,6 +314,7 @@ container.registerSingleton<ILeaveRequestRepository>("LeaveRequestRepository", L
 
 // Services
 container.registerSingleton<IEmailService>("EmailService", EmailService);
+container.registerSingleton<ITallySyncService>("TallySyncService", TallySyncService);
 
 
 

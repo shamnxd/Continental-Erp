@@ -18,7 +18,11 @@ const clientSchema = new Schema<IClientDocument>(
     projectsCount: { type: Number, default: 0 },
     amcStatus: { type: String, enum: ["Active", "Inactive", "Expired"], default: "Inactive" },
     parentCompany: { type: String, trim: true, default: "" },
-    logoUrl: { type: String, trim: true, default: "" }
+    logoUrl: { type: String, trim: true, default: "" },
+    tallyLedgerName: { type: String, trim: true },
+    tallySyncStatus: { type: String, enum: ["Pending", "Synced", "Failed"], default: "Pending" },
+    tallySyncError: { type: String, default: "" },
+    tallyLastSyncedAt: { type: Date }
   },
   { timestamps: true }
 );

@@ -44,6 +44,10 @@ export interface IPurchaseOrder {
   revision: number;
   revisions?: IPurchaseOrderRevision[];
   activityLog?: IPurchaseOrderActivity[];
+  tallyVoucherNo?: string;
+  tallySyncStatus?: "Pending" | "Synced" | "Failed";
+  tallySyncError?: string;
+  tallyLastSyncedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -69,7 +69,11 @@ const purchaseOrderSchema = new Schema<IPurchaseOrderDocument>(
     pdfDocs: { type: [purchaseOrderDocumentSchema], default: [] },
     revision: { type: Number, required: true, default: 0 },
     revisions: { type: [purchaseOrderRevisionSchema], default: [] },
-    activityLog: { type: [purchaseOrderActivitySchema], default: [] }
+    activityLog: { type: [purchaseOrderActivitySchema], default: [] },
+    tallyVoucherNo: { type: String, trim: true },
+    tallySyncStatus: { type: String, enum: ["Pending", "Synced", "Failed"], default: "Pending" },
+    tallySyncError: { type: String, default: "" },
+    tallyLastSyncedAt: { type: Date }
   },
   { timestamps: true }
 );

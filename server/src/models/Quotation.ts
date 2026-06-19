@@ -62,7 +62,11 @@ const quotationSchema = new Schema<IQuotationDocument>(
     convertedTo: {
       targetType: { type: String, enum: ["project", "amc", "minorjob"] },
       targetId: { type: Schema.Types.ObjectId }
-    }
+    },
+    tallyVoucherNo: { type: String, trim: true },
+    tallySyncStatus: { type: String, enum: ["Pending", "Synced", "Failed"], default: "Pending" },
+    tallySyncError: { type: String, default: "" },
+    tallyLastSyncedAt: { type: Date }
   },
   { timestamps: true },
 );

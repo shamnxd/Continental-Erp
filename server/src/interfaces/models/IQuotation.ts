@@ -45,6 +45,10 @@ export interface IQuotation {
     targetType: "project" | "amc" | "minorjob";
     targetId: string;
   };
+  tallyVoucherNo?: string;
+  tallySyncStatus?: "Pending" | "Synced" | "Failed";
+  tallySyncError?: string;
+  tallyLastSyncedAt?: Date;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

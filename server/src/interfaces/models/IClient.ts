@@ -15,4 +15,8 @@ export interface IClient {
   updatedAt?: Date;
   activeComplaintsCount?: number;
   activeEnquiriesCount?: number;
+  tallyLedgerName?: string;
+  tallySyncStatus?: "Pending" | "Synced" | "Failed";
+  tallySyncError?: string;
+  tallyLastSyncedAt?: Date;
 }

@@ -12,6 +12,7 @@ import { StatusCode } from "../constants/statusCodes";
 import { AuditLogger } from "../utils/AuditLogger";
 import { AuthenticatedRequest } from "../middleware/auth.middleware";
 import { persistUploadedFile } from "../usecases/enquiries/AddEnquiryDrawingUseCase";
+import { ITallySyncService } from "../interfaces/services/ITallySyncService";
 
 @autoInjectable()
 export class ProjectController {
@@ -25,6 +26,7 @@ export class ProjectController {
     @inject("ProjectTaskRepository") private _taskRepository?: IProjectTaskRepository,
     @inject("SubcontractRepository") private _subcontractRepository?: ISubcontractRepository,
     @inject("PurchaseOrderRepository") private _poRepository?: IPurchaseOrderRepository,
+    @inject("TallySyncService") private _tallySyncService?: ITallySyncService,
   ) {}
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -240,6 +242,11 @@ export class ProjectController {
           }
         ]
       });
+
+      if (po && po.status === "Approved") {
+        await this._tallySyncService?.enqueuePurchaseOrder(po);
+      }
+
       res.status(StatusCode.CREATED).json({ success: true, data: po });
     } catch (error) {
       next(error);
@@ -318,6 +325,11 @@ export class ProjectController {
       patch.activityLog = activityLog;
 
       const po = await this._poRepository!.update(poId, patch);
+
+      if (po && po.status === "Approved") {
+        await this._tallySyncService?.enqueuePurchaseOrder(po);
+      }
+
       res.status(StatusCode.OK).json({ success: true, data: po });
     } catch (error) {
       next(error);

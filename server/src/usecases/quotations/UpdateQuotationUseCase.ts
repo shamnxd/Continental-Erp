@@ -4,12 +4,16 @@ import { IQuotationRepository } from "../../interfaces/repositories/IQuotationRe
 import { UpdateQuotationDto } from "../../dtos/quotation.dto";
 import { IQuotation } from "../../interfaces/models/IQuotation";
 import { computeQuotationTotals, normalizeLineItems } from "../../utils/quotationTotals";
+import { ITallySyncService } from "../../interfaces/services/ITallySyncService";
 
 @injectable()
 export class UpdateQuotationUseCase
   implements IUseCase<{ id: string; data: UpdateQuotationDto }, IQuotation | null>
 {
-  constructor(@inject("QuotationRepository") private _quotationRepository: IQuotationRepository) {}
+  constructor(
+    @inject("QuotationRepository") private _quotationRepository: IQuotationRepository,
+    @inject("TallySyncService") private _tallySyncService: ITallySyncService,
+  ) {}
 
   public async execute(input: { id: string; data: UpdateQuotationDto }): Promise<IQuotation | null> {
     const existing = await this._quotationRepository.findById(input.id);
@@ -44,6 +48,10 @@ export class UpdateQuotationUseCase
       patch.lowSideGstPercent = lowSideGstPercent;
     }
 
-    return await this._quotationRepository.update(input.id, patch);
+    const updated = await this._quotationRepository.update(input.id, patch);
+    if (updated && updated.status === "Approved") {
+      await this._tallySyncService.enqueueQuotation(updated);
+    }
+    return updated;
   }
 }

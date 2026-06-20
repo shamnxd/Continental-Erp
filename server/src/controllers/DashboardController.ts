@@ -5,6 +5,8 @@ import { ComplaintModel } from "../models/Complaint";
 import { ClientModel } from "../models/Client";
 import { ScheduleModel } from "../models/Schedule";
 import { WarrantyModel } from "../models/Warranty";
+import { TallyFinancialSnapshotModel } from "../models/TallyFinancialSnapshot";
+import { TallySyncQueueModel } from "../models/TallySyncQueue";
 import { StatusCode } from "../constants/statusCodes";
 
 function calculateChange(thisMonth: number, lastMonth: number): string {
@@ -69,8 +71,13 @@ export class DashboardController {
         ComplaintModel.countDocuments({ status: { $in: ["Pending", "In Progress"] }, createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
       ]);
 
-      const revThisMonth = 0;
-      const revLastMonth = 0;
+      const latestSnapshot = await TallyFinancialSnapshotModel.findOne().sort({ periodStart: -1 });
+      const previousSnapshot = await TallyFinancialSnapshotModel.findOne({
+        periodStart: { $lt: latestSnapshot?.periodStart || new Date() }
+      }).sort({ periodStart: -1 });
+
+      const revThisMonth = latestSnapshot?.revenue || 0;
+      const revLastMonth = previousSnapshot?.revenue || 0;
 
       // Pending Quotations
       const [quotPending, quotThisMonth, quotLastMonth] = [0, 0, 0];
@@ -82,9 +89,9 @@ export class DashboardController {
         ClientModel.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } })
       ]);
 
-      const invPending = 0;
-      const invThisMonth = 0;
-      const invLastMonth = 0;
+      const invPending = await TallySyncQueueModel.countDocuments({ status: "Pending" });
+      const invThisMonth = await TallySyncQueueModel.countDocuments({ status: "Synced", createdAt: { $gte: startOfThisMonth } });
+      const invLastMonth = await TallySyncQueueModel.countDocuments({ status: "Synced", createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } });
 
       // Completed Works
       const [compWorksTotal, compWorksThisMonth, compWorksLastMonth] = await Promise.all([
@@ -128,11 +135,18 @@ export class DashboardController {
         });
       }
 
-      const revenueData = monthsData.map((m) => ({
-        month: m.month,
-        revenue: 0,
-        expenses: 0
-      }));
+      const revenueData = await Promise.all(
+        monthsData.map(async (m) => {
+          const snapshot = await TallyFinancialSnapshotModel.findOne({
+            periodStart: { $gte: m.mStart, $lte: m.mEnd }
+          });
+          return {
+            month: m.month,
+            revenue: snapshot?.revenue || 0,
+            expenses: snapshot?.expenses || 0
+          };
+        })
+      );
 
       // ─── 4. Fetch Complaints Status Pie Chart Data ────────────────────────
       const [resolvedCount, inProgressCount, pendingCount] = await Promise.all([

@@ -5,6 +5,7 @@ import { UpdateClientDto } from "../../dtos/client.dto";
 import { IClient } from "../../interfaces/models/IClient";
 import { AppError } from "../../errors/AppError";
 import { StatusCode } from "../../constants/statusCodes";
+import { ITallySyncService } from "../../interfaces/services/ITallySyncService";
 
 interface UpdateClientRequest {
   id: string;
@@ -15,7 +16,9 @@ interface UpdateClientRequest {
 export class UpdateClientUseCase implements IUseCase<UpdateClientRequest, IClient> {
   constructor(
     @inject("ClientRepository")
-    private _clientRepository: IClientRepository
+    private _clientRepository: IClientRepository,
+    @inject("TallySyncService")
+    private _tallySyncService: ITallySyncService
   ) {}
 
   public async execute(request: UpdateClientRequest): Promise<IClient> {
@@ -23,6 +26,7 @@ export class UpdateClientUseCase implements IUseCase<UpdateClientRequest, IClien
     if (!updatedClient) {
       throw new AppError("Client not found", StatusCode.NOT_FOUND);
     }
+    await this._tallySyncService.enqueueClient(updatedClient);
     return updatedClient;
   }
 }

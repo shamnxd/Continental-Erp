@@ -1,0 +1,14 @@
+{
+  "name": "continental-tally-sync-agent",
+  "version": "1.0.0",
+  "description": "Local Sync Agent for connecting Continental ERP and Tally.ERP 9 / TallyPrime",
+  "main": "tally-agent.js",
+  "scripts": {
+    "start": "node tally-agent.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "ws": "^8.16.0",
+    "fast-xml-parser": "^4.3.6"
+  }
+}

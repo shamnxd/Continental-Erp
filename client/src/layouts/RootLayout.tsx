@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Handshake,
   ShoppingBag,
+  ArrowRightLeft,
 } from "lucide-react";
 import { AppRoute } from "../constants/routes.enum";
 import { getWarrantiesApi } from "../api/warranty.api";
@@ -88,6 +89,19 @@ const navigation: NavSection[] = [
     title: "Finance & Analytics",
     items: [
       { name: "Reports", href: AppRoute.REPORTS, icon: BarChart3 },
+      {
+        name: "Finance & Billing",
+        icon: ArrowRightLeft,
+        submenu: [
+          { name: "Profit & Loss", href: AppRoute.TALLY_INTEGRATION },
+          { name: "Sales Invoices", href: AppRoute.TALLY_INVOICES },
+          { name: "Client Receipts", href: AppRoute.TALLY_RECEIPTS },
+          { name: "Expense Log", href: AppRoute.TALLY_EXPENSES },
+          { name: "Aging Reports", href: AppRoute.TALLY_AGING },
+          { name: "Cash & Bank", href: AppRoute.TALLY_BALANCES },
+          { name: "GST Tax Summary", href: AppRoute.TALLY_TAX_SUMMARY }
+        ]
+      }
     ],
   },
   {
@@ -117,6 +131,7 @@ function getPageTitle(pathname: string): string {
 
 function isSubNavActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
+  if (href === AppRoute.TALLY_INTEGRATION) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -289,7 +304,7 @@ export function RootLayout() {
                           (sub.href && isSubNavActive(location.pathname, sub.href)) ||
                           sub.children?.some((c) => isSubNavActive(location.pathname, c.href)),
                       );
-                      const isExpanded = expandedMenus[item.name] ?? false;
+                      const isExpanded = expandedMenus[item.name] ?? isAnySubmenuActive;
                       return (
                         <div key={item.name}>
                           <button

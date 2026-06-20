@@ -40,6 +40,13 @@ import { Login } from "./features/auth/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AppRoute } from "./constants/routes.enum";
 import { AdminManagement } from "./features/admin/AdminManagement";
+import TallyAnalytics from "./features/admin/TallyAnalytics";
+import InvoiceList from "./features/finance/InvoiceList";
+import ReceiptList from "./features/finance/ReceiptList";
+import ExpenseList from "./features/finance/ExpenseList";
+import AgingReports from "./features/finance/AgingReports";
+import CashBankBalances from "./features/finance/CashBankBalances";
+import TaxSummary from "./features/finance/TaxSummary";
 import { NotFound } from "./components/NotFound";
 import { StaffLogin } from "./features/staff-portal/StaffLogin";
 import { StaffLayout } from "./features/staff-portal/StaffLayout";
@@ -103,6 +110,13 @@ export const router = createBrowserRouter([
       { path: AppRoute.WARRANTY_MANAGEMENT, element: <WarrantyManagement /> },
       { path: AppRoute.WARRANTY_DETAIL, element: <WarrantyDetail /> },
       { path: AppRoute.ADMIN_MANAGEMENT, element: <AdminManagement /> },
+      { path: AppRoute.TALLY_INTEGRATION, element: <TallyAnalytics /> },
+      { path: AppRoute.TALLY_INVOICES, element: <InvoiceList /> },
+      { path: AppRoute.TALLY_RECEIPTS, element: <ReceiptList /> },
+      { path: AppRoute.TALLY_EXPENSES, element: <ExpenseList /> },
+      { path: AppRoute.TALLY_TAX_SUMMARY, element: <TaxSummary /> },
+      { path: AppRoute.TALLY_AGING, element: <AgingReports /> },
+      { path: AppRoute.TALLY_BALANCES, element: <CashBankBalances /> },
       { path: AppRoute.CRITICAL_ALERTS, element: <CriticalAlertsPage /> },
       { path: AppRoute.UPCOMING_TASKS, element: <UpcomingTasksPage /> },
     ],

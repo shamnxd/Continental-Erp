@@ -42,6 +42,13 @@ export enum AppRoute {
   CRITICAL_ALERTS = "/critical-alerts",
   UPCOMING_TASKS = "/upcoming-tasks",
   PUBLIC_COMPLAINT_REGISTER = "/register-complaint",
+  TALLY_INTEGRATION = "/admin/tally",
+  TALLY_INVOICES = "/admin/tally/invoices",
+  TALLY_RECEIPTS = "/admin/tally/receipts",
+  TALLY_EXPENSES = "/admin/tally/expenses",
+  TALLY_TAX_SUMMARY = "/admin/tally/tax",
+  TALLY_AGING = "/admin/tally/aging",
+  TALLY_BALANCES = "/admin/tally/balances",
   // Staff Portal
   STAFF_LOGIN = "/staff/login",
   STAFF_DASHBOARD = "/staff/dashboard",
@@ -81,6 +88,17 @@ export enum ApiRoute {
   PROJECTS = "/projects",
   MINOR_JOBS = "/minor-jobs",
   WARRANTIES = "/warranties",
+  TALLY_STATUS = "/tally/status",
+  TALLY_SYNC_QUEUE = "/tally/sync-queue",
+  TALLY_RETRY = "/tally/sync-queue/:id/retry",
+  TALLY_PULL_LIVE = "/tally/pull-live",
+  TALLY_FINANCIAL_ANALYTICS = "/tally/financial-analytics",
+  TALLY_INVOICES = "/tally/invoices",
+  TALLY_RECEIPTS = "/tally/receipts",
+  TALLY_EXPENSES = "/tally/expenses",
+  TALLY_TAX_SUMMARY = "/tally/tax-summary",
+  TALLY_AGING = "/tally/aging",
+  TALLY_BALANCES = "/tally/balances",
 }
 
 

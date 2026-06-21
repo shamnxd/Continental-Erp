@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental Tally Sync Agent</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Load Premium Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <span class="logo-icon">🛰️</span>
+        <div class="logo-text">
+          <h1>Continental Tally Sync</h1>
+          <p>Local ERP Sync Agent v1.0.0</p>
+        </div>
+      </div>
+      <div class="app-controls">
+        <button id="btn-start" class="btn btn-success">Start Sync</button>
+        <button id="btn-stop" class="btn btn-danger" disabled>Stop Sync</button>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="app-grid">
+      <!-- Left Column: Settings Form -->
+      <section class="card settings-card">
+        <h2>Connection Settings</h2>
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="erp-ws-url">Cloud ERP WebSocket URL</label>
+            <input type="text" id="erp-ws-url" required placeholder="wss://your-erp-domain.com/tally-sync">
+            <small>The secure websocket endpoint of your cloud ERP system.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="tally-token">Tally Sync Token</label>
+            <div class="input-wrapper">
+              <input type="password" id="tally-token" required placeholder="Enter sync token...">
+              <button type="button" id="toggle-token" class="btn-icon">👁️</button>
+            </div>
+            <small>Security token generated on the Cloud ERP dashboard.</small>
+          </div>
+
+          <div class="form-group">
+            <label for="tally-http-url">Local Tally HTTP URL</label>
+            <input type="text" id="tally-http-url" required placeholder="http://localhost:9000">
+            <small>Ensure Tally is running with HTTP Server enabled on port 9000.</small>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="switch-label">
+              <input type="checkbox" id="auto-start">
+              <span class="slider"></span>
+              Auto-run on Windows startup
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="btn-save" class="btn btn-primary">Save Settings</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Status & Control -->
+      <div class="right-column">
+        <!-- Status Panel -->
+        <section class="card status-card">
+          <h2>Connection Status</h2>
+          <div class="status-grid">
+            <div class="status-item" id="ws-status-card">
+              <div class="status-indicator" id="ws-indicator"></div>
+              <div class="status-details">
+                <span class="status-title">Cloud ERP WebSocket</span>
+                <span class="status-value" id="ws-status-text">Disconnected</span>
+              </div>
+            </div>
+
+            <div class="status-item" id="tally-status-card">
+              <div class="status-indicator" id="tally-indicator"></div>
+              <div class="status-details">
+                <span class="status-title">Local Tally ERP</span>
+                <span class="status-value" id="tally-status-text">Offline</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- System Controls Info -->
+        <section class="card info-card">
+          <h2>Quick Reference</h2>
+          <ul class="ref-list">
+            <li><strong>Port 9000:</strong> Tally ERP must be listening on port 9000.</li>
+            <li><strong>Auto-Start:</strong> When enabled, the app launches minimized in the system tray.</li>
+            <li><strong>Safe Mode:</strong> Write operations (pushing to Tally) can be enabled or audited.</li>
+          </ul>
+        </section>
+      </div>
+    </main>
+
+    <!-- Bottom: Live Logs Terminal -->
+    <section class="card logs-card">
+      <div class="logs-header">
+        <h2>Live Sync logs</h2>
+        <div class="logs-actions">
+          <button id="btn-clear-logs" class="btn btn-secondary btn-sm">Clear Terminal</button>
+          <button id="btn-copy-logs" class="btn btn-secondary btn-sm">Copy Logs</button>
+        </div>
+      </div>
+      <div class="console-wrapper">
+        <div id="console-logs" class="console-box">
+          <div class="log-line system">[SYSTEM] Console initialized. Ready to sync.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

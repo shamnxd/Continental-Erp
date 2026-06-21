@@ -41,7 +41,6 @@ export enum AppRoute {
   ADMIN_MANAGEMENT = "/admin-management",
   CRITICAL_ALERTS = "/critical-alerts",
   UPCOMING_TASKS = "/upcoming-tasks",
-  PUBLIC_COMPLAINT_REGISTER = "/register-complaint",
   TALLY_INTEGRATION = "/admin/tally",
   TALLY_INVOICES = "/admin/tally/invoices",
   TALLY_RECEIPTS = "/admin/tally/receipts",
@@ -49,11 +48,6 @@ export enum AppRoute {
   TALLY_TAX_SUMMARY = "/admin/tally/tax",
   TALLY_AGING = "/admin/tally/aging",
   TALLY_BALANCES = "/admin/tally/balances",
-  // Staff Portal
-  STAFF_LOGIN = "/staff/login",
-  STAFF_DASHBOARD = "/staff/dashboard",
-  STAFF_TASKS = "/staff/tasks",
-  STAFF_LEAVES = "/staff/leaves",
 }
 
 export enum ApiRoute {
@@ -73,12 +67,6 @@ export enum ApiRoute {
   ENQUIRIES = "/enquiries",
   QUOTATIONS = "/quotations",
 
-  // Staff Portal
-  STAFF_AUTH_LOGIN = "/staff/auth/login",
-  STAFF_AUTH_LOGOUT = "/staff/auth/logout",
-  STAFF_PORTAL_ME = "/staff/portal/me",
-  STAFF_PORTAL_TASKS = "/staff/portal/tasks",
-  STAFF_PORTAL_LEAVES = "/staff/portal/leaves",
   // Leaves (admin)
   LEAVES = "/leaves",
   COMPLAINT_REQUESTS = "/complaint-requests",
@@ -100,5 +88,3 @@ export enum ApiRoute {
   TALLY_AGING = "/tally/aging",
   TALLY_BALANCES = "/tally/balances",
 }
-
-

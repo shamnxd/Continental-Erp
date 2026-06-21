@@ -1,64 +1,92 @@
-# 🛰️ Continental Tally Sync Agent
+# 🛰️ Continental Tally Sync Agent (Desktop App)
 
-This is the standalone Tally Synchronization Agent designed to run locally in the corporate office environment on the Windows machine where Tally.ERP 9 / TallyPrime is hosted. 
+A standalone Windows desktop application designed to sync transactions between your **Continental Cloud ERP** and a local **Tally.ERP 9 / TallyPrime** installation. 
 
-It establishes a secure WebSocket tunnel with your cloud ERP and maps transactions to Tally's local XML HTTP Server interface.
+Built with **Electron**, it bundles its own Node.js runtime, meaning it **does not require Node.js to be pre-installed on the client machine**. It features a modern configuration GUI dashboard, minimizes to the system tray, and runs automatically on Windows boot.
 
 ---
 
-## 📋 Prerequisites
-1. **Node.js** (v16.0 or higher) installed on the Tally machine.
-2. **Tally.ERP 9 / TallyPrime** running with the **HTTP Server enabled on port 9000** (see configuration steps below).
-3. The ERP server must be running and accessible over the network.
+## ✨ Features
+
+- **Sleek Configuration GUI:** No more environment variables or command prompts. Easily configure Cloud WebSocket URLs, Tally HTTP ports, and authentication tokens via a premium dark-mode interface.
+- **Zero Dependencies for Client PC:** Self-contained executable installer installs the app and dependencies automatically.
+- **Real-Time Logs Terminal:** View live sync details (ledgers, vouchers, purchases, quotations, and expenses) directly inside the app logs window.
+- **System Tray Integration:** Runs silently in the background. Minimizing or closing the app sends it to the system tray to keep your desktop clean.
+- **Windows Boot Auto-Start:** Configurable toggle to automatically register the sync agent to start running silently when the PC is booted.
+- **Tally Connectivity Ping:** Background status checker validates Tally connection state every 15 seconds, turning red or green inside the UI to give instant connectivity feedback.
 
 ---
 
 ## ⚙️ Tally Configuration
-To enable Tally's XML server:
+
+Before starting the agent, you must enable Tally's local XML HTTP Server interface:
+
 1. Open Tally and load your active Company.
 2. Press **`F12`** (Configure) ➔ **`Advanced Configuration`**.
 3. Apply the following settings:
-   *   **Tally is acting as**: `Both` (or Server)
-   *   **Enable ODBC Server**: `Yes`
-   *   **Port**: `9000`
-   *   **Enable HTTP Server**: `Yes`
-   *   **HTTP Server Port**: `9000`
+   - **Tally is acting as**: `Both` (or `Server`)
+   - **Enable ODBC Server**: `Yes`
+   - **Port**: `9000` (or matching your custom Tally URL)
+   - **Enable HTTP Server**: `Yes`
+   - **HTTP Server Port**: `9000`
 4. Press **`Ctrl + A`** to save.
 5. Accept and click **Yes** to restart Tally.
 
 ---
 
-## 🚀 Installation & Running the Agent
+## 💻 Developer Setup & Running Locally
 
-1. **Navigate to the agent directory**:
-   ```bash
-   cd tally-agent
-   ```
+If you are developing or running the agent from source code:
 
-2. **Install the node modules**:
-   ```bash
-   npm install
-   ```
+### 1. Install Node.js
+Ensure Node.js (v18 or higher) is installed on your development machine.
 
-3. **Set Environment Variables (Optional)**:
-   By default, the agent connects to `ws://localhost:5000/tally-sync` (local ERP). For production/cloud deployments, configure these variables in a `.env` file or in your terminal:
-   ```env
-   ERP_WS_URL=wss://your-erp-domain.com/tally-sync
-   TALLY_SYNC_TOKEN=tally_secret_token_123
-   TALLY_HTTP_URL=http://localhost:9000
-   ```
+### 2. Install Dependencies
+Navigate to the `tally-agent` directory and install the packages:
+```bash
+cd tally-agent
+npm install
+```
 
-4. **Start the agent**:
-   ```bash
-   npm start
-   ```
-
-The console will print:
-`🔌 Connecting to Continental Cloud ERP...`
-`✓ Connected to Continental Cloud ERP WebSocket server.`
+### 3. Run the App in Development
+Start the Electron application:
+```bash
+npm start
+```
 
 ---
 
-## 🧪 Testing in Tally Educational Mode
-Tally Educational Mode restricts voucher dates to only the **1st, 2nd, and 31st** of a month. 
-The agent has built-in **Educational Mode Compatibility**: it automatically overrides transaction dates (e.g. 15th of June) to the **1st of the month** (e.g. 1st of June) so Tally imports them successfully without throwing errors.
+## 📦 How to Build the Installer Executable
+
+To compile the application into a single, redistributable Windows setup installer (`.exe`):
+
+### Local Compilation:
+In the `tally-agent` directory, run:
+```bash
+npm run dist
+```
+This packages the app assets and builds the installer. Once completed, the standalone executable setup will be available in:
+`tally-agent/dist/Continental Tally Sync Agent Setup 1.0.0.exe`
+
+### Automated Cloud Builds (GitHub Releases):
+We have integrated a GitHub Actions workflow. When you push code updates, you can publish a release by creating and pushing a Git tag:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+This automatically compiles the Windows installer on GitHub's servers and attaches it to a new GitHub Release for instant client download.
+
+---
+
+## 🚀 Client Installation & Setup
+
+1. Download the compiled `Continental Tally Sync Agent Setup 1.0.0.exe` from your release.
+2. Double-click the installer. It will install the application and create Desktop and Start Menu shortcuts.
+3. Upon launch, enter the credentials:
+   - **Cloud ERP WebSocket URL**: (e.g. `wss://your-erp-domain.com/tally-sync`)
+   - **Tally Sync Token**: The security token from your cloud ERP.
+   - **Local Tally HTTP URL**: (e.g. `http://localhost:9000`)
+4. Toggle **Auto-run on Windows startup** to ensure it runs automatically on reboot.
+5. Click **Save Settings** followed by **Start Sync**.
+6. Verify both status indicators (Cloud ERP WebSocket & Local Tally) turn green.
+7. Close the window — the app will keep running silently in your system tray.

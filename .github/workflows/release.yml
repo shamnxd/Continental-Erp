@@ -1,0 +1,45 @@
+name: Build and Release Tally Sync Agent
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on tagging version, e.g., v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: tally-agent/package-lock.json
+
+      - name: Install Dependencies
+        run: |
+          cd tally-agent
+          npm ci
+
+      - name: Package Application
+        run: |
+          cd tally-agent
+          npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tally-agent/dist/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

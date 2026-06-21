@@ -40,6 +40,7 @@ The system integrates several core modules to manage the full operational cycle 
 *   **Client Invoicing**: Auto-generation of invoices tied to quotations, jobs, and client accounts.
 *   **Vendor Bills (Accounts Payable)**: Billing management for suppliers and subcontractors.
 *   **General Ledger**: Double-entry ledger architecture tracking income and expense entries to monitor operational cash flows.
+*   **Tally Integration**: Dual sync connection pipeline syncing ledgers, vouchers (sales/purchase/receipt/payment), cash/bank balances, and aging outstanding profiles automatically with Tally.ERP 9 and TallyPrime.
 
 ### 7. 🔒 Compliance & Audit Control
 *   **System Audit Logs**: Automated capturing of administrative, financial, and operational operations for internal regulatory review and accountability.
@@ -63,7 +64,8 @@ The system is built on **React** (Frontend Client) and **Node.js/Express/TypeScr
 
 ```bash
 ├── client/                      # Corporate Dispatch Portal (Vite / React / Tailwind)
-└── server/                      # Core Enterprise Services API (Node.js / Express / TS)
+├── server/                      # Core Enterprise Services API (Node.js / Express / TS)
+└── tally-agent/                 # Standalone Tally Sync Desktop Agent (Electron / Settings GUI)
     ├── logs/                    # Rotating log files directory (Git ignored)
     └── src/
         ├── config/              # Dependency injection registries & Env Validation
@@ -134,4 +136,19 @@ LOG_RETENTION_DAYS=3
 2.  **Start Dev server**:
     ```bash
     npm run dev
+    ```
+
+### Tally Sync Agent Setup (`/tally-agent`):
+
+1.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Start Electron Dev App**:
+    ```bash
+    npm start
+    ```
+3.  **Compile Windows installer executable**:
+    ```bash
+    npm run dist
     ```

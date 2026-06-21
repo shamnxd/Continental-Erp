@@ -52,11 +52,12 @@ function updateControlsState(agentActive) {
 toggleTokenBtn.addEventListener("click", () => {
   if (tallyTokenInput.type === "password") {
     tallyTokenInput.type = "text";
-    toggleTokenBtn.textContent = "🙈";
+    toggleTokenBtn.innerHTML = '<i data-lucide="eye-off" class="toggle-eye-icon"></i>';
   } else {
     tallyTokenInput.type = "password";
-    toggleTokenBtn.textContent = "👁️";
+    toggleTokenBtn.innerHTML = '<i data-lucide="eye" class="toggle-eye-icon"></i>';
   }
+  lucide.createIcons();
 });
 
 // Handle Settings Form Submit
@@ -175,3 +176,6 @@ function appendSystemLog(msg) {
   consoleLogs.appendChild(logLine);
   consoleLogs.scrollTop = consoleLogs.scrollHeight;
 }
+
+// Initialize Lucide icons
+lucide.createIcons();

@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import { StaffLogin } from "./features/staff-portal/StaffLogin";
 import { StaffLayout } from "./features/staff-portal/StaffLayout";
 import { StaffDashboard } from "./features/staff-portal/StaffDashboard";
@@ -7,7 +7,7 @@ import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
 import { StaffSchedules } from "./features/staff-portal/StaffSchedules";
 import { NotFound } from "./components/NotFound";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/login",
     element: <StaffLogin />,

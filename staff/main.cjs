@@ -15,6 +15,8 @@ function createWindow() {
     title: "Continental Staff Portal"
   });
 
+  mainWindow.setMenu(null);
+
   // Serve Vite hot-reload server in development (Port 5174), serve compiled files in production
   if (process.env.NODE_ENV === "development") {
     mainWindow.loadURL("http://localhost:5174");

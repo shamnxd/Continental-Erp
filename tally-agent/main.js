@@ -107,6 +107,8 @@ function createWindow() {
     show: false // Show when ready to prevent flicker
   });
 
+  mainWindow.setMenu(null);
+
   mainWindow.loadFile(path.join(__dirname, "ui", "index.html"));
 
   mainWindow.once("ready-to-show", () => {

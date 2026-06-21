@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "Local Sync Agent for connecting Continental ERP and Tally.ERP 9 / TallyPrime",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shamnxd/Continental-Erp.git"
+  },
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win"
+    "dist": "electron-builder --win --publish never"
   },
   "dependencies": {
     "axios": "^1.6.8",

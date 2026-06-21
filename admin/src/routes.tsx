@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createHashRouter } from "react-router";
 import { RootLayout } from "./layouts/RootLayout";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { Clients } from "./features/clients/Clients";
@@ -51,7 +51,7 @@ import { NotFound } from "./components/NotFound";
 import { ComplaintRequests } from "./features/complaints/ComplaintRequests";
 import { ComplaintRequestDetail } from "./features/complaints/ComplaintRequestDetail";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: AppRoute.LOGIN,
     element: <Login />,

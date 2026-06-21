@@ -63,7 +63,9 @@ The system is built on **React** (Frontend Client) and **Node.js/Express/TypeScr
 ## 📁 Repository Workspace Layout
 
 ```bash
-├── client/                      # Corporate Dispatch Portal (Vite / React / Tailwind)
+├── admin/                       # Admin Portal (Vite / React / PWA / Electron)
+├── staff/                       # Staff Portal (Vite / React / PWA / Capacitor / Electron)
+├── client/                      # Customer Complaint Register (Vite / React)
 ├── server/                      # Core Enterprise Services API (Node.js / Express / TS)
 └── tally-agent/                 # Standalone Tally Sync Desktop Agent (Electron / Settings GUI)
     ├── logs/                    # Rotating log files directory (Git ignored)
@@ -127,13 +129,18 @@ LOG_RETENTION_DAYS=3
     npm start
     ```
 
-### Client Workspace Setup (`/client`):
+### Portals Workspaces Setup (`/admin`, `/staff`, `/client`):
 
-1.  **Install dependencies**:
+For any of the portals:
+1.  **Navigate to the folder** (e.g., `cd admin` or `cd staff` or `cd client`):
+    ```bash
+    cd <folder-name>
+    ```
+2.  **Install dependencies**:
     ```bash
     npm install
     ```
-2.  **Start Dev server**:
+3.  **Start Dev server**:
     ```bash
     npm run dev
     ```

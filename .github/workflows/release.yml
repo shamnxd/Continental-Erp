@@ -108,27 +108,46 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Build Web Application
+      # Build Web Applications
       - name: Build Web Code
         run: |
           cd staff
           npm install
           npm run build
+          cd ../admin
+          npm install
+          npm run build
 
       # Sync and Compile Android
-      - name: Build Android Debug APK
+      - name: Build Android Debug APKs
         run: |
+          # Build Staff Portal APK
           cd staff
           npx cap sync android
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
+          
+          # Build Admin ERP APK
+          cd ../../admin
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
-      # Upload Android APK to Release
-      - name: Upload APK to Release
+      # Prepare APKs with unique names
+      - name: Prepare APKs for Release
+        run: |
+          cp staff/android/app/build/outputs/apk/debug/app-debug.apk staff-portal-debug.apk
+          cp admin/android/app/build/outputs/apk/debug/app-debug.apk admin-erp-debug.apk
+
+      # Upload Android APKs to Release
+      - name: Upload APKs to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: staff/android/app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            staff-portal-debug.apk
+            admin-erp-debug.apk
           draft: false
           prerelease: false
         env:

@@ -43,10 +43,10 @@ type NavItem = {
 };
 
 const navigation: NavItem[] = [
-  { name: "Dashboard", href: AppRoute.STAFF_DASHBOARD, icon: LayoutDashboard },
-  { name: "My Tasks", href: AppRoute.STAFF_TASKS, icon: CheckSquare },
-  { name: "Schedules", href: "/staff/schedules", icon: Calendar },
-  { name: "Leave Requests", href: AppRoute.STAFF_LEAVES, icon: CalendarDays },
+  { name: "Dashboard", href: AppRoute.DASHBOARD, icon: LayoutDashboard },
+  { name: "My Tasks", href: AppRoute.TASKS, icon: CheckSquare },
+  { name: "Schedules", href: AppRoute.SCHEDULES, icon: Calendar },
+  { name: "Leave Requests", href: AppRoute.LEAVES, icon: CalendarDays },
 ];
 
 function getPageTitle(pathname: string): string {
@@ -89,7 +89,7 @@ export function StaffLayout() {
 
   useEffect(() => {
     if (!loading && !staff) {
-      navigate(AppRoute.STAFF_LOGIN, { replace: true });
+      navigate(AppRoute.LOGIN, { replace: true });
     }
   }, [staff, loading, navigate]);
 
@@ -110,7 +110,7 @@ export function StaffLayout() {
   const handleLogout = async () => {
     try { await staffApi.post("/staff/auth/logout"); } catch {}
     dispatch(logOut());
-    navigate(AppRoute.STAFF_LOGIN, { replace: true });
+    navigate(AppRoute.LOGIN, { replace: true });
   };
 
   return (

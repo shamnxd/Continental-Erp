@@ -21,7 +21,7 @@ export function StaffLogin() {
 
   useEffect(() => {
     if (staff) {
-      navigate(AppRoute.STAFF_DASHBOARD, { replace: true });
+      navigate(AppRoute.DASHBOARD, { replace: true });
     }
   }, [staff, navigate]);
 
@@ -36,7 +36,7 @@ export function StaffLogin() {
     try {
       const res: any = await staffApi.post("/staff/auth/login", { email, password });
       dispatch(setCredentials({ staff: res.staff, accessToken: res.accessToken }));
-      navigate(AppRoute.STAFF_DASHBOARD, { replace: true });
+      navigate(AppRoute.DASHBOARD, { replace: true });
     } catch (err: any) {
       setError(err?.response?.data?.message || "Invalid email or password");
     } finally {

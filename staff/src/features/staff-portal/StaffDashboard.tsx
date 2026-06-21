@@ -160,7 +160,7 @@ export function StaffDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 */}
           <button
-            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            onClick={() => navigate(AppRoute.TASKS)}
             className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
             <div className="flex items-center justify-between">
@@ -180,7 +180,7 @@ export function StaffDashboard() {
 
           {/* Card 2 */}
           <button
-            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            onClick={() => navigate(AppRoute.TASKS)}
             className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
             <div className="flex items-center justify-between">
@@ -200,7 +200,7 @@ export function StaffDashboard() {
 
           {/* Card 3 */}
           <button
-            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            onClick={() => navigate(AppRoute.TASKS)}
             className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
             <div className="flex items-center justify-between">
@@ -220,7 +220,7 @@ export function StaffDashboard() {
 
           {/* Card 4 */}
           <button
-            onClick={() => navigate(AppRoute.STAFF_LEAVES)}
+            onClick={() => navigate(AppRoute.LEAVES)}
             className="bg-card rounded-xl shadow-sm border border-border p-3.5 hover:shadow transition-all text-left outline-none"
           >
             <div className="flex items-center justify-between">
@@ -334,14 +334,14 @@ export function StaffDashboard() {
         <h2 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h2>
         <div className="flex flex-col sm:flex-row gap-2.5">
           <button
-            onClick={() => navigate(AppRoute.STAFF_LEAVES)}
+            onClick={() => navigate(AppRoute.LEAVES)}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold text-xs transition-all shadow-sm w-full sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Request Leave
           </button>
           <button
-            onClick={() => navigate(AppRoute.STAFF_TASKS)}
+            onClick={() => navigate(AppRoute.TASKS)}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold text-xs transition-all border border-border w-full sm:w-auto"
           >
             View My Tasks

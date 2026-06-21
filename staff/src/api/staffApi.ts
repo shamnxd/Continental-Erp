@@ -136,13 +136,13 @@ export const setupStaffInterceptors = (store: StoreLike, callbacks: AuthCallback
           return staffApi(originalRequest);
         } catch (refreshError) {
           authCallbacks?.logout();
-          window.location.href = "/staff/login";
+          window.location.href = "/#/login";
           return Promise.reject(refreshError);
         }
       }
       if (error.response?.status === 401 && !isAuthRoute(originalRequest?.url)) {
         authCallbacks?.logout();
-        window.location.href = "/staff/login";
+        window.location.href = "/#/login";
       }
       return Promise.reject(error);
     }

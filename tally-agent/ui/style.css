@@ -494,8 +494,8 @@ body {
 
 .console-wrapper {
   flex-grow: 1;
-  background-color: #0f172a;       /* Slate-900 terminal */
-  border: 1px solid #1e293b;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 14px;
   overflow: hidden;
@@ -509,7 +509,7 @@ body {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #e2e8f0;                 /* Slate-200 text */
+  color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-all;
   display: flex;
@@ -519,29 +519,31 @@ body {
 
 /* Log Line Styling */
 .log-line {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid #f1f5f9;
   padding-bottom: 3px;
 }
 
 .log-line .time {
-  color: #64748b;                 /* Slate-500 time */
+  color: var(--text-muted);
   margin-right: 8px;
 }
 
 .log-line.system {
-  color: #38bdf8;                 /* Light blue for system logs */
+  color: var(--color-primary);
+  font-weight: 500;
 }
 
 .log-line.info {
-  color: #cbd5e1;                 /* Slate-300 info text */
+  color: var(--text-secondary);
 }
 
 .log-line.warn {
-  color: #fbbf24;                 /* Yellow warn text */
+  color: #b45309;                 /* Amber-700 for warning text */
 }
 
 .log-line.error {
-  color: #f87171;                 /* Red error text */
+  color: var(--color-danger);     /* Rose-500 for error text */
+  font-weight: 500;
 }
 
 /* Animations */
@@ -564,16 +566,16 @@ body {
 }
 
 .console-box::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #ffffff;
 }
 
 .console-box::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
 .console-box::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #94a3b8;
 }
 
 /* Hide global scrollbar */

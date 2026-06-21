@@ -26,7 +26,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd tally-agent
-          npm ci
+          npm install
 
       - name: Package Application
         run: |

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Continental Admin ERP</string>
+    <string name="title_activity_main">Continental Admin ERP</string>
+    <string name="package_name">com.continental.adminerp</string>
+    <string name="custom_url_scheme">com.continental.adminerp</string>
+</resources>

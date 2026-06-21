@@ -1,6 +1,10 @@
 {
   "name": "@shamnxd/continental-erp",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shamnxd/Continental-Erp.git"
+  },
   "version": "1.0.0",
   "type": "module",
   "main": "main.cjs",

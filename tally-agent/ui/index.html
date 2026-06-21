@@ -9,27 +9,78 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-logo">
-        <span class="logo-icon">🛰️</span>
+    <!-- Left Sidebar (Clean & Light) -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon-container">
+          <i data-lucide="satellite" class="logo-icon-svg"></i>
+        </div>
         <div class="logo-text">
           <h1>Continental Tally Sync</h1>
           <p>Local ERP Sync Agent v1.0.0</p>
         </div>
       </div>
-      <div class="app-controls">
-        <button id="btn-start" class="btn btn-success">Start Sync</button>
-        <button id="btn-stop" class="btn btn-danger" disabled>Stop Sync</button>
-      </div>
-    </header>
+      
+      <div class="sidebar-section">
+        <h2>Connection Status</h2>
+        <div class="status-grid">
+          <div class="status-item" id="ws-status-card">
+            <div class="status-indicator" id="ws-indicator"></div>
+            <div class="status-details">
+              <span class="status-title">Cloud ERP WebSocket</span>
+              <span class="status-value" id="ws-status-text">Disconnected</span>
+            </div>
+          </div>
 
-    <!-- Main Content Grid -->
-    <main class="app-grid">
-      <!-- Left Column: Settings Form -->
+          <div class="status-item" id="tally-status-card">
+            <div class="status-indicator" id="tally-indicator"></div>
+            <div class="status-details">
+              <span class="status-title">Local Tally ERP</span>
+              <span class="status-value" id="tally-status-text">Offline</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <h2>Actions</h2>
+        <div class="app-controls">
+          <button id="btn-start" class="btn btn-success">
+            <i data-lucide="play" class="btn-icon-svg"></i> Start Sync
+          </button>
+          <button id="btn-stop" class="btn btn-danger" disabled>
+            <i data-lucide="square" class="btn-icon-svg"></i> Stop Sync
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar-section quick-ref-section">
+        <h2>Quick Reference</h2>
+        <ul class="ref-list">
+          <li>
+            <i data-lucide="info" class="ref-icon"></i>
+            <span><strong>Port 9000:</strong> Tally ERP must be listening on port 9000.</span>
+          </li>
+          <li>
+            <i data-lucide="zap" class="ref-icon"></i>
+            <span><strong>Auto-Start:</strong> Launches minimized in system tray.</span>
+          </li>
+          <li>
+            <i data-lucide="shield-check" class="ref-icon"></i>
+            <span><strong>Safe Mode:</strong> Write operations can be audited.</span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="app-main">
+      <!-- Settings Form -->
       <section class="card settings-card">
         <h2>Connection Settings</h2>
         <form id="settings-form">
@@ -43,7 +94,9 @@
             <label for="tally-token">Tally Sync Token</label>
             <div class="input-wrapper">
               <input type="password" id="tally-token" required placeholder="Enter sync token...">
-              <button type="button" id="toggle-token" class="btn-icon">👁️</button>
+              <button type="button" id="toggle-token" class="btn-icon">
+                <i data-lucide="eye" class="toggle-eye-icon"></i>
+              </button>
             </div>
             <small>Security token generated on the Cloud ERP dashboard.</small>
           </div>
@@ -63,62 +116,33 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" id="btn-save" class="btn btn-primary">Save Settings</button>
+            <button type="submit" id="btn-save" class="btn btn-primary">
+              <i data-lucide="save" class="btn-icon-svg"></i> Save Settings
+            </button>
           </div>
         </form>
       </section>
 
-      <!-- Right Column: Status & Control -->
-      <div class="right-column">
-        <!-- Status Panel -->
-        <section class="card status-card">
-          <h2>Connection Status</h2>
-          <div class="status-grid">
-            <div class="status-item" id="ws-status-card">
-              <div class="status-indicator" id="ws-indicator"></div>
-              <div class="status-details">
-                <span class="status-title">Cloud ERP WebSocket</span>
-                <span class="status-value" id="ws-status-text">Disconnected</span>
-              </div>
-            </div>
-
-            <div class="status-item" id="tally-status-card">
-              <div class="status-indicator" id="tally-indicator"></div>
-              <div class="status-details">
-                <span class="status-title">Local Tally ERP</span>
-                <span class="status-value" id="tally-status-text">Offline</span>
-              </div>
-            </div>
+      <!-- Live Logs Terminal -->
+      <section class="card logs-card">
+        <div class="logs-header">
+          <h2>Live Sync Logs</h2>
+          <div class="logs-actions">
+            <button id="btn-clear-logs" class="btn btn-secondary btn-sm">
+              <i data-lucide="trash-2" class="btn-icon-svg-sm"></i> Clear
+            </button>
+            <button id="btn-copy-logs" class="btn btn-secondary btn-sm">
+              <i data-lucide="copy" class="btn-icon-svg-sm"></i> Copy
+            </button>
           </div>
-        </section>
-
-        <!-- System Controls Info -->
-        <section class="card info-card">
-          <h2>Quick Reference</h2>
-          <ul class="ref-list">
-            <li><strong>Port 9000:</strong> Tally ERP must be listening on port 9000.</li>
-            <li><strong>Auto-Start:</strong> When enabled, the app launches minimized in the system tray.</li>
-            <li><strong>Safe Mode:</strong> Write operations (pushing to Tally) can be enabled or audited.</li>
-          </ul>
-        </section>
-      </div>
-    </main>
-
-    <!-- Bottom: Live Logs Terminal -->
-    <section class="card logs-card">
-      <div class="logs-header">
-        <h2>Live Sync logs</h2>
-        <div class="logs-actions">
-          <button id="btn-clear-logs" class="btn btn-secondary btn-sm">Clear Terminal</button>
-          <button id="btn-copy-logs" class="btn btn-secondary btn-sm">Copy Logs</button>
         </div>
-      </div>
-      <div class="console-wrapper">
-        <div id="console-logs" class="console-box">
-          <div class="log-line system">[SYSTEM] Console initialized. Ready to sync.</div>
+        <div class="console-wrapper">
+          <div id="console-logs" class="console-box">
+            <div class="log-line system">[SYSTEM] Console initialized. Ready to sync.</div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   </div>
 
   <script src="renderer.js"></script>

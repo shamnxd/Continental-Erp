@@ -43,7 +43,7 @@ jobs:
       # ----------------------------------------------------
       - name: Install & Package Admin Portal
         run: |
-          cd client-portals/admin-portal
+          cd admin
           npm install
           npm run electron:build
         env:
@@ -55,7 +55,7 @@ jobs:
       # ----------------------------------------------------
       - name: Install & Package Staff Desktop
         run: |
-          cd client-portals/staff-portal
+          cd staff
           npm install
           npm run electron:build
         env:
@@ -70,10 +70,10 @@ jobs:
         with:
           files: |
             tally-agent/dist/*.exe
-            client-portals/admin-portal/dist/*.exe
-            client-portals/admin-portal/dist/*.dmg
-            client-portals/staff-portal/dist/*.exe
-            client-portals/staff-portal/dist/*.dmg
+            admin/dist/*.exe
+            admin/dist/*.dmg
+            staff/dist/*.exe
+            staff/dist/*.dmg
           draft: false
           prerelease: false
         env:
@@ -103,14 +103,14 @@ jobs:
       # Build Web Application
       - name: Build Web Code
         run: |
-          cd client-portals/staff-portal
+          cd staff
           npm install
           npm run build
 
       # Sync and Compile Android
       - name: Build Android Debug APK
         run: |
-          cd client-portals/staff-portal
+          cd staff
           npx cap sync android
           cd android
           chmod +x gradlew
@@ -120,7 +120,7 @@ jobs:
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: client-portals/staff-portal/android/app/build/outputs/apk/debug/app-debug.apk
+          files: staff/android/app/build/outputs/apk/debug/app-debug.apk
           draft: false
           prerelease: false
         env:

@@ -7,12 +7,9 @@
   },
   "version": "1.0.0",
   "type": "module",
-  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "electron:dev": "concurrently \"vite\" \"cross-env NODE_ENV=development electron .\"",
-    "electron:build": "vite build && electron-builder --win --mac --publish never"
+    "build": "vite build"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
@@ -94,8 +91,6 @@
     "@vitejs/plugin-react": "4.7.0",
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",
-    "electron": "^42.4.1",
-    "electron-builder": "^26.15.3",
     "tailwindcss": "4.1.12",
     "typescript": "^6.0.3",
     "vite": "^6.4.2",
@@ -116,28 +111,6 @@
   "pnpm": {
     "overrides": {
       "vite": "6.3.5"
-    }
-  },
-  "build": {
-    "appId": "com.continental.adminerp",
-    "productName": "Continental Admin ERP",
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "public/pwa-512x512.png"
-    },
-    "mac": {
-      "target": [
-        "dmg"
-      ],
-      "icon": "public/pwa-512x512.png"
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "createDesktopShortcut": true,
-      "shortcutName": "Continental Admin ERP"
     }
   }
 }

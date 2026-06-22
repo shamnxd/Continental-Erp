@@ -4,12 +4,11 @@ import "./styles/index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Register service worker only in production browser environments, excluding Electron and Capacitor
+// Register service worker only in production browser environments, excluding Capacitor
 if (
   import.meta.env.PROD &&
   typeof window !== "undefined" &&
   "serviceWorker" in navigator &&
-  !navigator.userAgent.includes("Electron") &&
   !(window as any).Capacitor
 ) {
   window.addEventListener("load", () => {

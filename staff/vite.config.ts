@@ -24,11 +24,14 @@ export default defineConfig(({ command }) => ({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       workbox: {
+        cacheId: 'continental-staff',
         maximumFileSizeToCacheInBytes: 5000000,
       },
       manifest: {
+        id: 'continental-staff-portal',
         name: 'Continental Staff Portal',
         short_name: 'Staff Portal',
         description: 'Continental Field Staff & Technicians Service Portal',

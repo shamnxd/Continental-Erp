@@ -24,11 +24,14 @@ export default defineConfig(({ command }) => ({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       workbox: {
+        cacheId: 'continental-admin',
         maximumFileSizeToCacheInBytes: 5000000,
       },
       manifest: {
+        id: 'continental-admin-erp',
         name: 'Continental Admin ERP',
         short_name: 'Admin ERP',
         description: 'Continental Service & Operations Admin ERP Suite',

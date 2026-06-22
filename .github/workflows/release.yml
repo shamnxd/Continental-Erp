@@ -10,16 +10,8 @@ permissions:
 
 jobs:
   build-desktop:
-    name: Build Desktop for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest]
-        include:
-          - os: windows-latest
-            platform: win
-          - os: macos-latest
-            platform: mac
+    name: Build Tally Sync Agent
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Code
@@ -34,7 +26,6 @@ jobs:
       # 1. Build Tally Sync Agent (Windows Only)
       # ----------------------------------------------------
       - name: Install & Package Tally Agent (Windows)
-        if: matrix.os == 'windows-latest'
         run: |
           cd tally-agent
           npm install
@@ -44,43 +35,13 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       # ----------------------------------------------------
-      # 2. Build Admin Portal (Windows & macOS)
+      # 2. Upload Tally Agent Artifacts to Release
       # ----------------------------------------------------
-      - name: Install & Package Admin Portal
-        run: |
-          cd admin
-          npm install
-          npm run build
-          npx electron-builder --${{ matrix.platform }} --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      # ----------------------------------------------------
-      # 3. Build Staff Portal Desktop (Windows & macOS)
-      # ----------------------------------------------------
-      - name: Install & Package Staff Desktop
-        run: |
-          cd staff
-          npm install
-          npm run build
-          npx electron-builder --${{ matrix.platform }} --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      # ----------------------------------------------------
-      # 4. Upload Desktop Artifacts to Release
-      # ----------------------------------------------------
-      - name: Upload Desktop Packages to Release
+      - name: Upload Tally Agent to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             tally-agent/dist/*.exe
-            admin/dist/*.exe
-            admin/dist/*.dmg
-            staff/dist/*.exe
-            staff/dist/*.dmg
           fail_on_unmatched_files: false
           draft: false
           prerelease: false
@@ -138,16 +99,16 @@ jobs:
       # Prepare APKs with unique names
       - name: Prepare APKs for Release
         run: |
-          cp staff/android/app/build/outputs/apk/debug/app-debug.apk staff-portal-debug.apk
-          cp admin/android/app/build/outputs/apk/debug/app-debug.apk admin-erp-debug.apk
+          cp staff/android/app/build/outputs/apk/debug/app-debug.apk staff-portal.apk
+          cp admin/android/app/build/outputs/apk/debug/app-debug.apk admin-erp.apk
 
       # Upload Android APKs to Release
       - name: Upload APKs to Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            staff-portal-debug.apk
-            admin-erp-debug.apk
+            staff-portal.apk
+            admin-erp.apk
           draft: false
           prerelease: false
         env:

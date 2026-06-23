@@ -193,7 +193,7 @@ export function StaffFormModal({ isOpen, onClose, onSuccess, staff = null }: Sta
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Permanent">Permanent Staff</SelectItem>
-                  <SelectItem value="Temporary">Temporary Staff</SelectItem>
+                  <SelectItem value="Outsource">Outsourced Staff</SelectItem>
                 </SelectContent>
               </Select>
             </div>

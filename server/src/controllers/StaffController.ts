@@ -33,10 +33,10 @@ export class StaffController {
 
   public getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const [total, permanent, temporary] = await Promise.all([
+      const [total, permanent, outsource] = await Promise.all([
         StaffModel.countDocuments({}),
         StaffModel.countDocuments({ employmentType: "Permanent" }),
-        StaffModel.countDocuments({ employmentType: "Temporary" }),
+        StaffModel.countDocuments({ employmentType: "Outsource" }),
       ]);
 
       res.status(StatusCode.OK).json({
@@ -44,7 +44,7 @@ export class StaffController {
         data: {
           total,
           permanent,
-          temporary,
+          outsource,
         }
       });
     } catch (error) {

@@ -218,7 +218,7 @@ export function StaffDetail() {
   const employmentBadge =
     staff.employmentType === "Permanent"
       ? { bg: "bg-pink-500/10", color: "text-pink-700", label: "Permanent Staff" }
-      : { bg: "bg-amber-500/10", color: "text-amber-700", label: "Temporary Staff" };
+      : { bg: "bg-amber-500/10", color: "text-amber-700", label: "Outsourced Staff" };
 
   return (
     <div className="space-y-4 pb-8">

@@ -27,12 +27,12 @@ import { useDebounce } from "../../hooks/useDebounce";
 import { ManagementListPage } from "../../components/ManagementListPage";
 import { toast } from "sonner";
 
-type EmploymentFilter = "all" | "Permanent" | "Temporary";
+type EmploymentFilter = "all" | "Permanent" | "Outsource";
 
 const employmentFilterLabels: Record<EmploymentFilter, string> = {
   all: "All Types",
   Permanent: "Permanent",
-  Temporary: "Temporary",
+  Outsource: "Outsource",
 };
 
 const PAGE_SIZE = 10;
@@ -53,7 +53,7 @@ export function Staff() {
   const [changePasswordStaff, setChangePasswordStaff] = useState<StaffRecord | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
-  const [stats, setStats] = useState({ total: 0, permanent: 0, temporary: 0 });
+  const [stats, setStats] = useState({ total: 0, permanent: 0, outsource: 0 });
 
   const lastFetchRef = useRef({ page: 1, search: "", filter: "all" });
 
@@ -64,7 +64,7 @@ export function Staff() {
         setStats({
           total: response.data.total ?? 0,
           permanent: response.data.permanent ?? 0,
-          temporary: response.data.temporary ?? 0,
+          outsource: response.data.outsource ?? 0,
         });
       }
     } catch (err) {
@@ -264,7 +264,7 @@ export function Staff() {
               : "bg-amber-500/10 text-amber-700"
           }`}
         >
-          {s.employmentType}
+          {s.employmentType === "Permanent" ? "Permanent" : "Outsourced"}
         </span>
       ),
       className: "px-4 py-4 w-[110px]",
@@ -365,7 +365,7 @@ export function Staff() {
   const filterChips = [
     { value: "all" as EmploymentFilter, label: "All Types", count: stats.total, tone: "primary" as const },
     { value: "Permanent" as EmploymentFilter, label: "Permanent", count: stats.permanent, tone: "pink" as const },
-    { value: "Temporary" as EmploymentFilter, label: "Temporary", count: stats.temporary, tone: "amber" as const },
+    { value: "Outsource" as EmploymentFilter, label: "Outsourced", count: stats.outsource, tone: "amber" as const },
   ];
 
   const employmentTypeBadge = (type: string) =>
@@ -377,7 +377,7 @@ export function Staff() {
     <>
       <ManagementListPage
         title="Staff Management"
-        subtitle="Manage permanent and temporary team members"
+        subtitle="Manage permanent and outsourced team members"
         headerAction={
           <Button
             onClick={() => setIsAddOpen(true)}

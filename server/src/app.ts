@@ -36,8 +36,46 @@ import { errorHandler } from "./middleware/error.middleware";
 const app = express();
 
 // Standard middlewares
+const allowedOrigins = [
+  "http://localhost:5173", // Admin default
+  "http://localhost:5174", // Staff default
+  "http://localhost:5175", // Client default
+  "http://localhost:5176",
+  "http://localhost:3000",
+];
+
+if (env.FRONTEND_URL) {
+  env.FRONTEND_URL.split(",").forEach((url) => {
+    const trimmed = url.trim();
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
 app.use(cors({
-  origin: env.FRONTEND_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, postman, etc.)
+    if (!origin) return callback(null, true);
+
+    // In development mode, allow any localhost/127.0.0.1 origin
+    if (env.NODE_ENV === "development") {
+      try {
+        const url = new URL(origin);
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+          return callback(null, true);
+        }
+      } catch (err) {
+        // Ignore invalid URL parsing
+      }
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true
 }));
 app.use(express.json());

@@ -5,6 +5,7 @@ import { StaffDashboard } from "./features/staff-portal/StaffDashboard";
 import { StaffTasks } from "./features/staff-portal/StaffTasks";
 import { StaffLeaves } from "./features/staff-portal/StaffLeaves";
 import { StaffSchedules } from "./features/staff-portal/StaffSchedules";
+import { StaffEnquiries } from "./features/staff-portal/StaffEnquiries";
 import { NotFound } from "./components/NotFound";
 import { AppRoute } from "./constants/routes.enum";
 
@@ -22,6 +23,7 @@ export const router = createHashRouter([
       { path: AppRoute.TASKS, element: <StaffTasks /> },
       { path: AppRoute.LEAVES, element: <StaffLeaves /> },
       { path: AppRoute.SCHEDULES, element: <StaffSchedules /> },
+      { path: AppRoute.ENQUIRIES, element: <StaffEnquiries /> },
     ],
   },
   {

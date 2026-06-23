@@ -680,7 +680,7 @@ export function Kanban() {
                               navigate(url);
                             }
                           }}
-                          className={`bg-card rounded-xl border border-border p-3 h-[160px] flex flex-col justify-between shadow-sm hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all ${getLeftBorderClass(task.type)} ${
+                          className={`bg-card rounded-xl border border-border p-3 h-[160px] md:h-[110px] flex flex-col justify-between shadow-sm hover:shadow-md hover:border-pink-650/40 dark:hover:border-pink-900/50 transition-all ${getLeftBorderClass(task.type)} ${
                             task.type !== "Custom" ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
                           } group relative`}
                         >
@@ -764,7 +764,7 @@ export function Kanban() {
                           </div>
 
                           {/* Section 4: Description (fills space and is line-clamp-1) */}
-                          <div className="flex-1 mt-1 min-w-0">
+                          <div className="flex-1 mt-1 min-w-0 md:hidden">
                             {task.description ? (
                               <p className="text-[11px] text-muted-foreground line-clamp-1 leading-normal">
                                 {task.description}
@@ -777,12 +777,12 @@ export function Kanban() {
                           {/* Section 5: Card Footer (Assignee Initials Stack & Due Date) */}
                           <div className="flex items-center justify-between pt-1.5 border-t border-border/30 min-w-0 mt-1.5">
                             {assignees.length === 0 ? (
-                              <div className="flex items-center gap-1 text-muted-foreground/60 text-[10px]">
+                              <div className="flex items-center gap-1 text-muted-foreground/60 text-[10px] md:hidden">
                                 <User className="h-3.5 w-3.5" />
                                 <span>Unassigned</span>
                               </div>
                             ) : (
-                              <div className="flex items-center min-w-0" title={task.assignee}>
+                              <div className="flex items-center min-w-0 md:hidden" title={task.assignee}>
                                 <div className="flex -space-x-1.5 overflow-hidden mr-1.5 shrink-0">
                                   {assignees.slice(0, 3).map((name, idx) => (
                                     <div
@@ -805,7 +805,7 @@ export function Kanban() {
                             )}
 
                             {task.dueDate && (
-                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0">
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold shrink-0 ml-auto">
                                 <Calendar className="h-3 w-3 text-pink-650" />
                                 {new Date(task.dueDate).toLocaleDateString("en-IN", {
                                   month: "short",

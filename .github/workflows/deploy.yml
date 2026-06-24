@@ -85,7 +85,15 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
+          debug: true
           script: |
-            cd /www/server/panel/data/compose/b6463d1afcc11be500b3dfa0d2d35314/
-            docker compose pull
-            docker compose up -d --remove-orphans
+            COMPOSE_DIR=$(grep -rl "contproj-server" /www/server/panel/data/compose/ | head -n 1 | xargs dirname)
+            if [ -n "$COMPOSE_DIR" ]; then
+              echo "Found Compose directory at: $COMPOSE_DIR"
+              cd "$COMPOSE_DIR"
+              docker compose pull
+              docker compose up -d --remove-orphans
+            else
+              echo "ERROR: Could not find aaPanel docker-compose directory containing contproj-server"
+              exit 1
+            fi

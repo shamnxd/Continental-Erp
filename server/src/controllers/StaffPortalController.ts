@@ -8,6 +8,10 @@ import { AppError } from "../errors/AppError";
 import { StatusCode } from "../constants/statusCodes";
 import { ComplaintModel } from "../models/Complaint";
 import { ScheduleModel } from "../models/Schedule";
+import { EnquiryModel } from "../models/Enquiry";
+import { IUseCase } from "../interfaces/usecases/IUseCase";
+import { IEnquiry } from "../interfaces/models/IEnquiry";
+import { AddEnquiryRemarkDto } from "../dtos/enquiryRemark.dto";
 import mongoose from "mongoose";
 
 export class StaffPortalController {
@@ -115,6 +119,57 @@ export class StaffPortalController {
       } as ILeaveRequest);
 
       res.status(StatusCode.CREATED).json({ success: true, data: leave });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /** GET /api/v1/staff/portal/enquiries */
+  public getEnquiries = async (req: StaffAuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const staffId = req.staff!.id;
+      const enquiries = await EnquiryModel.find({ assignedStaffId: staffId })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      res.status(StatusCode.OK).json({ success: true, data: enquiries });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /** POST /api/v1/staff/portal/enquiries/:id/remarks */
+  public addEnquiryRemark = async (req: StaffAuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const staffName = req.staff!.fullName;
+      const enquiryId = req.params.id;
+      const remarkDto = req.body as AddEnquiryRemarkDto;
+
+      if (!remarkDto.text || !remarkDto.text.trim()) {
+        throw new AppError("Remark text is required", StatusCode.BAD_REQUEST);
+      }
+
+      // Check that the enquiry is actually assigned to this staff member
+      const enquiryExists = await EnquiryModel.findOne({ _id: enquiryId, assignedStaffId: req.staff!.id });
+      if (!enquiryExists) {
+        throw new AppError("Enquiry not found or not assigned to you", StatusCode.NOT_FOUND);
+      }
+
+      const addRemarkUseCase = container.resolve<
+        IUseCase<{ enquiryId: string; data: AddEnquiryRemarkDto; user: string }, IEnquiry | null>
+      >("AddEnquiryRemarkUseCase");
+
+      const enquiry = await addRemarkUseCase.execute({
+        enquiryId,
+        data: remarkDto,
+        user: staffName,
+      });
+
+      if (!enquiry) {
+        throw new AppError("Enquiry not found", StatusCode.NOT_FOUND);
+      }
+
+      res.status(StatusCode.OK).json({ success: true, data: enquiry });
     } catch (error) {
       next(error);
     }

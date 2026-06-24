@@ -1,0 +1,66 @@
+services:
+  # Node.js Express Backend API
+  server:
+    image: ${SERVER_IMAGE}
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: contproj-server
+    restart: always
+    ports:
+      - "127.0.0.1:5000:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - MONGO_URI=${MONGO_URI}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ACCESS_EXPIRES_IN=${JWT_ACCESS_EXPIRES_IN}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+      - COOKIE_NAME_REFRESH=${COOKIE_NAME_REFRESH}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS}
+      - FRONTEND_URL=${FRONTEND_URL}
+    volumes:
+      - ${UPLOADS_VOLUME_PATH}:/app/uploads
+      - ${LOGS_VOLUME_PATH}:/app/logs
+
+  # Admin Dashboard Frontend
+  admin:
+    image: ${ADMIN_IMAGE}
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: contproj-admin
+    restart: always
+    ports:
+      - "127.0.0.1:8081:80"
+
+  # Staff Portal Frontend
+  staff:
+    image: ${STAFF_IMAGE}
+    build:
+      context: ./staff
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: contproj-staff
+    restart: always
+    ports:
+      - "127.0.0.1:8082:80"
+
+  # Client Dashboard Frontend
+  client:
+    image: ${CLIENT_IMAGE}
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: contproj-client
+    restart: always
+    ports:
+      - "127.0.0.1:8083:80"

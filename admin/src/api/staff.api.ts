@@ -86,7 +86,7 @@ export async function getStaffStatsApi(): Promise<{
   data: {
     total: number;
     permanent: number;
-    temporary: number;
+    outsource: number;
   };
 }> {
   return await api.get(`${ApiRoute.STAFF}/stats`);

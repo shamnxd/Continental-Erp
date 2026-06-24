@@ -45,6 +45,7 @@ type NavItem = {
 const navigation: NavItem[] = [
   { name: "Dashboard", href: AppRoute.DASHBOARD, icon: LayoutDashboard },
   { name: "My Tasks", href: AppRoute.TASKS, icon: CheckSquare },
+  { name: "My Enquiries", href: AppRoute.ENQUIRIES, icon: FileText },
   { name: "Schedules", href: AppRoute.SCHEDULES, icon: Calendar },
   { name: "Leave Requests", href: AppRoute.LEAVES, icon: CalendarDays },
 ];

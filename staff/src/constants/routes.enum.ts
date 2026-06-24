@@ -4,4 +4,5 @@ export enum AppRoute {
   TASKS = "/tasks",
   LEAVES = "/leaves",
   SCHEDULES = "/schedules",
+  ENQUIRIES = "/enquiries",
 }

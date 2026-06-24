@@ -17,7 +17,7 @@ const StaffBaseSchema = z.object({
   city: z.string().min(1, "City is required"),
   role: roleEnum,
   customRole: z.string().optional().or(z.literal("")),
-  employmentType: z.enum(["Permanent", "Temporary"]).default("Permanent"),
+  employmentType: z.enum(["Permanent", "Outsource"]).default("Permanent"),
   specialization: z.string().optional().or(z.literal("")),
   status: z.enum(["Available", "On Site", "On Leave", "Inactive"]).default("Available"),
   notes: z.string().optional().or(z.literal("")),

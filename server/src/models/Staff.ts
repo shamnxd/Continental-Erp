@@ -17,7 +17,7 @@ const staffSchema = new Schema<IStaffDocument>(
     customRole: { type: String, trim: true, default: "" },
     employmentType: {
       type: String,
-      enum: ["Permanent", "Temporary"],
+      enum: ["Permanent", "Outsource"],
       required: true,
       default: "Permanent"
     },

@@ -1,4 +1,4 @@
-export type StaffEmploymentType = "Permanent" | "Temporary";
+export type StaffEmploymentType = "Permanent" | "Outsource";
 export type StaffStatus = "Available" | "On Site" | "On Leave" | "Inactive";
 
 export const STAFF_ROLE_PRESETS = [

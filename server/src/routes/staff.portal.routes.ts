@@ -11,5 +11,7 @@ router.get("/me", controller.getMe);
 router.get("/tasks", controller.getTasks);
 router.get("/leaves", controller.getLeaves);
 router.post("/leaves", controller.createLeave);
+router.get("/enquiries", controller.getEnquiries);
+router.post("/enquiries/:id/remarks", controller.addEnquiryRemark);
 
 export const staffPortalRouter = router;
